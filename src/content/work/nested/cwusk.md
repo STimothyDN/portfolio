@@ -9,6 +9,6 @@ description: |
 tags:
   - Docker
   - Django
-  - PHP
+  - React
   - Wagtail CMS
 ---
