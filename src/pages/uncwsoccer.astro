@@ -2,6 +2,7 @@
 import Hero from '../components/Hero.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import App from '../components/App.svelte'
+import Sources from '../components/Sources.svelte'
 ---
 
 <BaseLayout title="UNC Women's Soccer Team" description="Data Visualisation of the history of UNC Women's Soccer">
@@ -21,6 +22,8 @@ import App from '../components/App.svelte'
 	</section>
 
 		<App client:load />
+		<Sources client:load />
+
 </BaseLayout>
 
 <style>
