@@ -1,0 +1,72 @@
+---
+import Hero from '../components/Hero.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import App from '../components/App.svelte'
+---
+
+<BaseLayout title="UNC Women's Soccer Team" description="Data Visualisation of the history of UNC Women's Soccer">
+	<Hero title="The History of UNC's Women's Soccer Team" tagline="A Hidden Dynasty" />
+	
+	<section>
+		<div class="content">
+			<p>
+				Discover the UNC Women's Soccer Team's hidden dynasty, an inspiring tale of relentless dedication, unparalleled teamwork, and unrivaled success that has shaped modern soccer.
+			</p>
+
+			<p>
+				<br>
+				The University of North Carolina (UNC) Women's Soccer Team, established in 1979, has an unparalleled history of success, earning the reputation as a dominant force in collegiate soccer. Under the leadership of legendary coach Anson Dorrance, the team has won an astounding 22 NCAA National Championships, making them the most successful women's college soccer team in history. Throughout the years, the Tar Heels have produced numerous professional players and national team members, such as Mia Hamm, Kristine Lilly, and Tobin Heath. The team's extraordinary achievements and long-lasting legacy have not only revolutionized women's soccer in the United States, but have also set the standard for excellence in the sport worldwide.
+			</p>
+		</div>
+	</section>
+
+		<App client:load />
+</BaseLayout>
+
+<style>
+
+	section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		color: var(--gray-200);
+	}
+
+	.section-title {
+		grid-column-start: 1;
+		font-size: var(--text-xl);
+		color: var(--gray-0);
+	}
+
+	.content {
+		margin: 36px 5px 36px 5px;
+		grid-column: 2 / 4;
+	}
+
+	.content :global(a) {
+		text-decoration: 1px solid underline transparent;
+		text-underline-offset: 0.25em;
+		transition: text-decoration-color var(--theme-transition);
+	}
+
+	.content :global(a:hover),
+	.content :global(a:focus) {
+		text-decoration-color: currentColor;
+	}
+
+	@media (min-width: 50em) {
+		.about {
+			display: grid;
+			grid-template-columns: 1fr 60% 1fr;
+		}
+
+		.about > :global(:first-child) {
+			grid-column-start: 2;
+		}
+
+		section {
+			display: contents;
+			font-size: var(--text-lg);
+		}
+	}
+</style>
