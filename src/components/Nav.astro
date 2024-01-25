@@ -13,7 +13,7 @@ const textLinks: { label: string; href: string }[] = [
 const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 	{ label: 'Instagram', href: 'https://www.instagram.com/timothy.rjs/', icon: 'instagram-logo' },
 	{ label: 'GitHub', href: 'https://github.com/STimothyDN', icon: 'github-logo' },
-	{ label: 'YouTube', href: 'https://www.youtube.com/@timothynavarro4341/featured', icon: 'youtube-logo' },
+	{ label: 'YouTube', href: 'https://www.youtube.com/@timothydiamse/featured', icon: 'youtube-logo' },
 	{ label: 'Soundcloud', href:'https://soundcloud.com/timothy-diamse-navarro', icon: 'soundcloud-logo' },
 ];
 ---
@@ -60,7 +60,7 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 			<div class="socials">
 				{
 					iconLinks.map(({ href, icon, label }) => (
-						<a href={href} class="social">
+						<a href={href} class="social" target="_blank">
 							<span class="sr-only">{label}</span>
 							<Icon icon={icon} />
 						</a>
