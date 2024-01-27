@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@astrojs/svelte": "^5.0.3",
+    "@sveltejs/pancake": "^0.0.18",
     "@vercel/analytics": "^1.1.2",
     "astro": "^4.2.4",
     "d3-hierarchy": "^3.1.2",
