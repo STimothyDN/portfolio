@@ -5,12 +5,9 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 // Component Imports
-import CallToAction from '../components/CallToAction.astro';
-import Grid from '../components/Grid.astro';
 import Hero from '../components/Hero.astro';
 import Icon from '../components/Icon.astro';
 import Pill from '../components/Pill.astro';
-import PortfolioPreview from '../components/PortfolioPreview.astro';
 
 // Page section components
 import ContactCTA from '../components/ContactCTA.astro';
@@ -30,14 +27,14 @@ const projects = (await getCollection('work'))
 		<div class="wrapper stack gap-8 lg:gap-20">
 			<header class="hero">
 				<Hero
-					title="Timothy Navarro"
+					title="Timothy Navarro."
 					tagline="I am a Full Stack Software Developer currently based in Research Triangle Park, North Carolina"
 					align="start"
 				>
 					<div class="roles">
 						<a href = "/work"><Pill><Icon icon="code" size="1.33em" /> Developer</Pill></a>
-						<a href = "https://soundcloud.com/timothy-diamse-navarro"><Pill><Icon icon="producer" size="1.33em" /> Producer</Pill></a>
-						<a href = "https://docs.google.com/document/d/1It_OJS21vwgpbcy6P4QIGzRIacEXh6JH8Os51Dc4qtc/edit?usp=sharing"><Pill><Icon icon="cook" size="1.33em" /> Cook</Pill></a>
+						<a href = "https://soundcloud.com/timo_on_duty"><Pill><Icon icon="producer" size="1.33em" /> Producer</Pill></a>
+						<a href = "https://docs.google.com/document/d/1It_OJS21vwgpbcy6P4QIGzRIacEXh6JH8Os51Dc4qtc/edit?usp=sharing"><Pill><Icon icon="cook" size="1.33em" /> Home Cook</Pill></a>
 					</div>
 				</Hero>
 
