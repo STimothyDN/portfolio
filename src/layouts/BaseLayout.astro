@@ -124,6 +124,9 @@ const { title, description } = Astro.props;
 
 				// Draw meteors with a fading tail.
 				function drawMeteors() {
+					const computedStyles = getComputedStyle(document.documentElement);
+					const starColor = computedStyles.getPropertyValue('--star-color').trim();
+
 					meteors.forEach(m => {
 						const progress = m.life / m.maxLife;
 						const opacity = 1 - progress; // Fade out over time.
@@ -133,7 +136,7 @@ const { title, description } = Astro.props;
 						ctx.beginPath();
 						ctx.moveTo(m.x, m.y);
 						ctx.lineTo(tailX, tailY);
-						ctx.strokeStyle = `rgba(255,255,255,${opacity})`;
+						ctx.strokeStyle = `rgba(${starColor},${opacity})`;
 						ctx.lineWidth = 2;
 						ctx.stroke();
 					});
@@ -144,6 +147,10 @@ const { title, description } = Astro.props;
 					// Clear the canvas.
 					ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+					// Get the computed star color (returns a string like "0, 0, 0" or "255, 255, 255")
+					const computedStyles = getComputedStyle(document.documentElement);
+					const starColor = computedStyles.getPropertyValue('--star-color').trim();
+
 					// Animate static stars.
 					stars.forEach(star => {
 						star.alpha += star.twinkleSpeed;
@@ -152,7 +159,8 @@ const { title, description } = Astro.props;
 						}
 						ctx.beginPath();
 						ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-						ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+						// Use the starColor in your RGBA string
+						ctx.fillStyle = `rgba(${starColor}, ${star.alpha})`;
 						ctx.fill();
 					});
 
