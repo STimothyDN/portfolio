@@ -20,18 +20,164 @@ const { title, description } = Astro.props;
 		<MainHead title={title} description={description} />
 	</head>
 	<body>
+		<!-- 
+			The canvas element (with class "twinkling-stars") renders both the static stars 
+			and the meteors. The page content is wrapped in .content so it appears above.
+		-->
 		<div class="stack backgrounds">
-			<Nav />
-			<slot />
-			<Footer />
+			<canvas class="twinkling-stars"></canvas>
+			<div class="content">
+				<Nav />
+				<slot />
+				<Footer />
+			</div>
 		</div>
 
 		<script>
 			// Add “loaded” class once the document has completely loaded.
 			addEventListener('load', () => document.documentElement.classList.add('loaded'));
+
+			(function() {
+				const canvas = document.querySelector('.twinkling-stars');
+				const ctx = canvas.getContext('2d');
+				
+				let stars = [];
+				let meteors = [];
+				const starCount = 1000; // Adjust for more stars if desired.
+
+				// Generate random stars with position, size, and twinkle speed.
+				function initStars() {
+					canvas.width = window.innerWidth;
+					canvas.height = window.innerHeight;
+					stars = [];
+					for (let i = 0; i < starCount; i++) {
+						stars.push({
+							x: Math.random() * canvas.width,
+							y: Math.random() * canvas.height,
+							radius: Math.random() * 0.5 + 0.5,
+							alpha: Math.random(),
+							twinkleSpeed: (Math.random() * 0.03 + 0.005) * (Math.random() < 0.5 ? 1 : -1)
+						});
+					}
+				}
+
+				// Helper function: returns a random point along the canvas perimeter.
+				function randomPointOnPerimeter() {
+					const side = Math.floor(Math.random() * 4);
+					let x, y;
+					const offset = 20; // Start a bit off-canvas.
+					if (side === 0) { // Top edge.
+						x = Math.random() * canvas.width;
+						y = -offset;
+					} else if (side === 1) { // Right edge.
+						x = canvas.width + offset;
+						y = Math.random() * canvas.height;
+					} else if (side === 2) { // Bottom edge.
+						x = Math.random() * canvas.width;
+						y = canvas.height + offset;
+					} else { // Left edge.
+						x = -offset;
+						y = Math.random() * canvas.height;
+					}
+					return { x, y };
+				}
+
+				// Create a meteor with a random trajectory determined by two random perimeter points.
+				function spawnMeteor() {
+					const start = randomPointOnPerimeter();
+					let end = randomPointOnPerimeter();
+					// Ensure the end point is not too close to the start point.
+					while (Math.hypot(end.x - start.x, end.y - start.y) < 50) {
+						end = randomPointOnPerimeter();
+					}
+					// Calculate the angle from start to end.
+					const dx = end.x - start.x;
+					const dy = end.y - start.y;
+					const angle = Math.atan2(dy, dx);
+					// Randomize speed.
+					const speed = Math.random() * 5 + 5; // Pixels per frame.
+					const vx = speed * Math.cos(angle);
+					const vy = speed * Math.sin(angle);
+					const length = Math.random() * 80 + 80; // Meteor tail length.
+					const maxLife = Math.random() * 20 + 30; // Lifespan in frames.
+					
+					meteors.push({ x: start.x, y: start.y, vx, vy, speed, length, life: 0, maxLife });
+				}
+
+				// Update positions of active meteors and remove expired ones.
+				function updateMeteors() {
+					for (let i = meteors.length - 1; i >= 0; i--) {
+						const m = meteors[i];
+						m.x += m.vx;
+						m.y += m.vy;
+						m.life++;
+						// Remove the meteor if it has exceeded its lifespan or gone off-screen.
+						if (
+							m.life > m.maxLife ||
+							m.x < -50 || m.x > canvas.width + 50 ||
+							m.y < -50 || m.y > canvas.height + 50
+						) {
+							meteors.splice(i, 1);
+						}
+					}
+				}
+
+				// Draw meteors with a fading tail.
+				function drawMeteors() {
+					meteors.forEach(m => {
+						const progress = m.life / m.maxLife;
+						const opacity = 1 - progress; // Fade out over time.
+						// Compute tail end by normalizing the velocity vector.
+						const tailX = m.x - (m.vx / m.speed) * m.length;
+						const tailY = m.y - (m.vy / m.speed) * m.length;
+						ctx.beginPath();
+						ctx.moveTo(m.x, m.y);
+						ctx.lineTo(tailX, tailY);
+						ctx.strokeStyle = `rgba(255,255,255,${opacity})`;
+						ctx.lineWidth = 2;
+						ctx.stroke();
+					});
+				}
+
+				// Main animation loop: draws stars and updates/draws meteors.
+				function animateStars() {
+					// Clear the canvas.
+					ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+					// Animate static stars.
+					stars.forEach(star => {
+						star.alpha += star.twinkleSpeed;
+						if (star.alpha <= 0.3 || star.alpha >= 1) {
+							star.twinkleSpeed = -star.twinkleSpeed;
+						}
+						ctx.beginPath();
+						ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+						ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+						ctx.fill();
+					});
+
+					// Randomly spawn a meteor with a small chance each frame.
+					if (Math.random() < 0.025) {  // Adjust probability as desired.
+						spawnMeteor();
+					}
+
+					// Update and render meteors.
+					updateMeteors();
+					drawMeteors();
+
+					requestAnimationFrame(animateStars);
+				}
+
+				// Reinitialize stars on window resize.
+				window.addEventListener('resize', initStars);
+
+				initStars();
+				animateStars();
+			})();
 		</script>
 
 		<style>
+			/* --- Existing Background Variables & Styles --- */
 			:root {
 				--_placeholder-bg: linear-gradient(transparent, transparent);
 				--bg-image-main: url('/assets/backgrounds/bg-main-light-800w.jpg');
@@ -54,8 +200,6 @@ const { title, description } = Astro.props;
 				--bg-blend-mode: lighten;
 			}
 
-			/* These backgrounds are displayed below the fold, so we lazy load them
-			   once the `.loaded` class has been set.  */
 			:root.loaded {
 				--bg-image-subtle-1: url('/assets/backgrounds/bg-subtle-1-light-800w.jpg');
 				--bg-image-subtle-2: url('/assets/backgrounds/bg-subtle-2-light-800w.jpg');
@@ -88,20 +232,38 @@ const { title, description } = Astro.props;
 				}
 			}
 
+			/* --- .backgrounds Container Styles --- */
 			.backgrounds {
 				min-height: 100%;
 				isolation: isolate;
+				position: relative;
 				background:
 					/*noise*/ url('/assets/backgrounds/noise.png') top center/220px repeat,
 					/*footer*/ var(--bg-image-footer) bottom center/var(--bg-gradient-size) no-repeat,
 					/*header1*/ var(--bg-image-main-curves) top center/var(--bg-gradient-size) no-repeat,
 					/*header2*/ var(--bg-image-main) top center/var(--bg-gradient-size) no-repeat,
 					/*base*/ var(--gray-999);
-				background-blend-mode: /*noise*/ overlay, /*footer*/ var(--bg-blend-mode),
-					/*header1*/ var(--bg-svg-blend-mode), /*header2*/ normal, /*base*/ normal;
+				background-blend-mode: overlay, var(--bg-blend-mode), var(--bg-svg-blend-mode), normal, normal;
 			}
+
+			/* --- Canvas Styles for Stars & Meteors --- */
+			.twinkling-stars {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				pointer-events: none;
+				z-index: 1;
+			}
+
+			/* Ensure main content appears above the canvas */
+			.content {
+				position: relative;
+				z-index: 2;
+			}
+
 			@media (forced-colors: active) {
-				/* Deactivate custom backgrounds for high contrast users. */
 				.backgrounds {
 					background: none;
 					background-blend-mode: none;
