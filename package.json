@@ -1,5 +1,5 @@
 {
-  "name": "",
+  "name": "timothy-navarro-portfolio",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
@@ -11,13 +11,10 @@
   },
   "dependencies": {
     "@astrojs/vue": "^5.1.4",
-    "@sveltejs/pancake": "^0.0.18",
     "@vercel/analytics": "^1.1.2",
     "@vitejs/plugin-vue": "^5.2.1",
     "astro": "^5.17.3",
     "d3": "^7.9.0",
-    "d3-hierarchy": "^3.1.2",
-    "svelte": "^4.2.9",
     "vue": "^3.5.13"
   }
 }
