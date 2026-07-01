@@ -36,7 +36,7 @@ vars (Vercel dashboard) so production builds can generate image URLs.
 Put a shoot's photos in a local folder, then run:
 
 ```bash
-npm run upload-shoot -- <folder> <shoot-slug> "<Title>" <YYYY-MM-DD> ["Location"]
+npm run upload-shoot -- <folder> <shoot-slug> "<Title>" <YYYY-MM-DD> ["Location"] [--missing-photo-location "Location"] [--prompt-missing-photo-locations]
 ```
 
 Example:
@@ -48,8 +48,8 @@ npm run upload-shoot -- ~/Desktop/gg-park 2026-06-15-golden-gate-park "Golden Ga
 This will:
 
 1. Read every image in the folder (`.jpg` / `.jpeg` / `.png` / `.webp`), sorted by filename.
-2. Extract each photo's dimensions and EXIF (camera, lens, focal length, aperture,
-   shutter speed, ISO, capture date).
+2. Extract each photo's dimensions, EXIF (camera, lens, focal length, aperture,
+   shutter speed, ISO, capture date), and GPS coordinates when the file includes them.
 3. Upload each file to Bunny Storage at `photography/<shoot-slug>/<filename>`.
 4. Write `src/content/photography/<shoot-slug>.json` with everything filled in
    **except captions**, which are left blank for you.
@@ -73,6 +73,45 @@ npm run upload-shoot -- ~/Desktop/gg-park-more 2026-06-15-golden-gate-park "Gold
 
 `--force` **merges**: new photos are appended, and captions you already wrote are
 preserved (never overwritten).
+
+### Selecting locations for photos without GPS
+
+If a photo has GPS metadata, the upload script writes it automatically:
+
+```jsonc
+"location": {
+  "latitude": 37.76942,
+  "longitude": -122.48621,
+  "source": "exif"
+}
+```
+
+If a batch of photos does **not** have GPS, you can give every missing photo a manual
+location during upload:
+
+```bash
+npm run upload-shoot -- ~/Desktop/gg-park 2026-06-15-golden-gate-park "Golden Gate Park" 2026-06-15 --missing-photo-location "Golden Gate Park, San Francisco, CA"
+```
+
+For mixed-location shoots, ask the uploader to prompt only for photos that do not already
+have GPS or a preserved manual location:
+
+```bash
+npm run upload-shoot -- ~/Desktop/city-walk 2026-06-15-city-walk "City Walk" 2026-06-15 --prompt-missing-photo-locations
+```
+
+You can also hand-edit any individual photo later:
+
+```jsonc
+"location": {
+  "name": "Stow Lake, Golden Gate Park",
+  "latitude": 37.76942,
+  "longitude": -122.48621,
+  "source": "manual"
+}
+```
+
+Manual locations are preserved when you re-run the upload with `--force`.
 
 ---
 
@@ -99,6 +138,12 @@ preserved (never overwritten).
         "shutterSpeed": "1/500s",
         "iso": 200,
         "capturedAt": "2026-06-15T07:12:00.000Z"
+      },
+      "location": {               // optional; auto-filled from GPS when present
+        "name": "Stow Lake, Golden Gate Park", // optional manual label
+        "latitude": 37.76942,     // optional, useful for future map/interactive work
+        "longitude": -122.48621,
+        "source": "manual"        // "exif" or "manual"
       }
     }
   ]
@@ -106,8 +151,8 @@ preserved (never overwritten).
 ```
 
 You can safely hand-edit any field. The only ones the script fills for you are
-`filename`, `width`, `height`, and `exif` — `caption`, `description`, and `coverPhoto`
-are yours.
+`filename`, `width`, `height`, `exif`, and GPS-backed `location` — `caption`,
+`description`, `coverPhoto`, and manual `location` labels are yours.
 
 ---
 

@@ -38,33 +38,37 @@
 						</div>
 
 						<Transition name="info-panel">
-							<div v-if="showInfo && current?.exif" class="info-panel">
+							<div v-if="showInfo && hasInfo" class="info-panel">
 								<dl>
-									<template v-if="current.exif.camera">
+									<template v-if="formattedLocation">
+										<dt>Location</dt>
+										<dd>{{ formattedLocation }}</dd>
+									</template>
+									<template v-if="current.exif?.camera">
 										<dt>Camera</dt>
 										<dd>{{ current.exif.camera }}</dd>
 									</template>
-									<template v-if="current.exif.lens">
+									<template v-if="current.exif?.lens">
 										<dt>Lens</dt>
 										<dd>{{ current.exif.lens }}</dd>
 									</template>
-									<template v-if="current.exif.focalLength">
+									<template v-if="current.exif?.focalLength">
 										<dt>Focal Length</dt>
 										<dd>{{ current.exif.focalLength }}</dd>
 									</template>
-									<template v-if="current.exif.aperture">
+									<template v-if="current.exif?.aperture">
 										<dt>Aperture</dt>
 										<dd>{{ current.exif.aperture }}</dd>
 									</template>
-									<template v-if="current.exif.shutterSpeed">
+									<template v-if="current.exif?.shutterSpeed">
 										<dt>Shutter Speed</dt>
 										<dd>{{ current.exif.shutterSpeed }}</dd>
 									</template>
-									<template v-if="current.exif.iso">
+									<template v-if="current.exif?.iso">
 										<dt>ISO</dt>
 										<dd>{{ current.exif.iso }}</dd>
 									</template>
-									<template v-if="current.exif.capturedAt">
+									<template v-if="current.exif?.capturedAt">
 										<dt>Captured</dt>
 										<dd>{{ formattedCapturedAt }}</dd>
 									</template>
@@ -96,6 +100,7 @@ let lastFocusedElement = null;
 let touchStartX = 0;
 
 const current = computed(() => props.photos[currentIndex.value]);
+const hasInfo = computed(() => Boolean(current.value?.exif || current.value?.location));
 
 const formattedCapturedAt = computed(() => {
 	if (!current.value?.exif?.capturedAt) return '';
@@ -107,6 +112,14 @@ const formattedCapturedAt = computed(() => {
 		hour: 'numeric',
 		minute: '2-digit',
 	});
+});
+
+const formattedLocation = computed(() => {
+	const location = current.value?.location;
+	if (!location) return '';
+	if (location.name) return location.name;
+	if (location.latitude === undefined || location.longitude === undefined) return '';
+	return `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
 });
 
 function preload(index) {

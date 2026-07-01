@@ -8,15 +8,18 @@
  * `node scripts/upload-shoot.mjs` will not have BUNNY_STORAGE_* available.
  *
  * Usage:
- *   npm run upload-shoot -- <folder> <shoot-slug> "<Title>" <YYYY-MM-DD> ["Location"] [--force]
+ *   npm run upload-shoot -- <folder> <shoot-slug> "<Title>" <YYYY-MM-DD> ["Location"] [--missing-photo-location "Location"] [--prompt-missing-photo-locations] [--force]
  *
  * Examples:
  *   npm run upload-shoot -- ./photos 2026-06-30-golden-gate-park "Golden Gate Park" 2026-06-30 "San Francisco, CA"
+ *   npm run upload-shoot -- ./photos 2026-06-30-golden-gate-park "Golden Gate Park" 2026-06-30 --missing-photo-location "San Francisco, CA"
+ *   npm run upload-shoot -- ./photos 2026-06-30-city-walk "City Walk" 2026-06-30 --prompt-missing-photo-locations
  *   npm run upload-shoot -- ./more-photos 2026-06-30-golden-gate-park "Golden Gate Park" 2026-06-30 --force
  */
 
 import { readdir, readFile, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
+import readline from 'node:readline/promises';
 import exifr from 'exifr';
 import { imageSize } from 'image-size';
 
@@ -26,14 +29,39 @@ const CONTENT_DIR = path.resolve(import.meta.dirname, '../src/content/photograph
 function usageAndExit(message) {
 	if (message) console.error(`\nError: ${message}\n`);
 	console.error(
-		'Usage: npm run upload-shoot -- <folder> <shoot-slug> "<Title>" <YYYY-MM-DD> ["Location"] [--force]'
+		'Usage: npm run upload-shoot -- <folder> <shoot-slug> "<Title>" <YYYY-MM-DD> ["Location"] [--missing-photo-location "Location"] [--prompt-missing-photo-locations] [--force]'
 	);
 	process.exit(1);
 }
 
 function parseArgs(argv) {
-	const force = argv.includes('--force');
-	const positional = argv.filter((a) => a !== '--force');
+	const positional = [];
+	let force = false;
+	let missingPhotoLocation;
+	let promptMissingPhotoLocations = false;
+
+	for (let i = 0; i < argv.length; i++) {
+		const arg = argv[i];
+		if (arg === '--force') {
+			force = true;
+			continue;
+		}
+		if (arg === '--missing-photo-location') {
+			missingPhotoLocation = argv[i + 1];
+			if (!missingPhotoLocation || missingPhotoLocation.startsWith('--')) {
+				usageAndExit('--missing-photo-location requires a location value.');
+			}
+			i++;
+			continue;
+		}
+		if (arg === '--prompt-missing-photo-locations') {
+			promptMissingPhotoLocations = true;
+			continue;
+		}
+		if (arg.startsWith('--')) usageAndExit(`Unknown option "${arg}".`);
+		positional.push(arg);
+	}
+
 	const [folder, slug, title, date, location] = positional;
 	if (!folder || !slug || !title || !date) {
 		usageAndExit('Missing required arguments.');
@@ -41,7 +69,7 @@ function parseArgs(argv) {
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
 		usageAndExit(`Date must be in YYYY-MM-DD format, got "${date}".`);
 	}
-	return { folder, slug, title, date, location, force };
+	return { folder, slug, title, date, location, missingPhotoLocation, promptMissingPhotoLocations, force };
 }
 
 function requireEnv(name) {
@@ -71,8 +99,37 @@ function formatCamera(make, model) {
 	return [make, model].filter(Boolean).join(' ');
 }
 
+function decimalGpsCoordinate(value, ref) {
+	let coordinate;
+	if (typeof value === 'number') {
+		coordinate = value;
+	} else if (Array.isArray(value) && value.length >= 3) {
+		const [degrees, minutes, seconds] = value.map(Number);
+		coordinate = degrees + minutes / 60 + seconds / 3600;
+	}
+
+	if (!Number.isFinite(coordinate)) return undefined;
+	if (ref === 'S' || ref === 'W') return -Math.abs(coordinate);
+	return coordinate;
+}
+
+function extractExifLocation(exif) {
+	const latitude = decimalGpsCoordinate(exif.latitude ?? exif.GPSLatitude, exif.GPSLatitudeRef);
+	const longitude = decimalGpsCoordinate(exif.longitude ?? exif.GPSLongitude, exif.GPSLongitudeRef);
+
+	if (latitude === undefined || longitude === undefined) return undefined;
+	return { latitude, longitude, source: 'exif' };
+}
+
+function manualLocation(name) {
+	if (!name) return undefined;
+	const trimmed = name.trim();
+	if (!trimmed) return undefined;
+	return { name: trimmed, source: 'manual' };
+}
+
 async function extractPhotoMeta(buffer) {
-	const exif = await exifr.parse(buffer).catch(() => null);
+	const exif = await exifr.parse(buffer, { exif: true, gps: true, ifd0: true, tiff: true }).catch(() => null);
 
 	let width;
 	let height;
@@ -93,11 +150,12 @@ async function extractPhotoMeta(buffer) {
 	const shutterSpeed = formatShutterSpeed(exif.ExposureTime);
 	const iso = exif.ISO;
 	const capturedAt = exif.DateTimeOriginal instanceof Date ? exif.DateTimeOriginal.toISOString() : undefined;
+	const location = extractExifLocation(exif);
 
 	const exifData = { camera, lens, focalLength, aperture, shutterSpeed, iso, capturedAt };
 	const hasExif = Object.values(exifData).some((v) => v !== undefined);
 
-	return { width, height, exif: hasExif ? exifData : undefined };
+	return { width, height, exif: hasExif ? exifData : undefined, location };
 }
 
 async function uploadToBunny({ zone, region, accessKey, shootSlug, filename, buffer }) {
@@ -127,7 +185,9 @@ async function fileExists(filePath) {
 }
 
 async function main() {
-	const { folder, slug, title, date, location, force } = parseArgs(process.argv.slice(2));
+	const { folder, slug, title, date, location, missingPhotoLocation, promptMissingPhotoLocations, force } = parseArgs(
+		process.argv.slice(2)
+	);
 
 	const zone = requireEnv('BUNNY_STORAGE_ZONE');
 	const accessKey = requireEnv('BUNNY_STORAGE_ACCESS_KEY');
@@ -160,24 +220,36 @@ async function main() {
 
 	console.log(`Uploading ${filenames.length} photo(s) from ${folder} to shoot "${slug}"...\n`);
 
+	const rl = promptMissingPhotoLocations ? readline.createInterface({ input: process.stdin, output: process.stdout }) : null;
 	const photos = [];
-	for (const [i, filename] of filenames.entries()) {
-		const filePath = path.join(folder, filename);
-		const buffer = await readFile(filePath);
+	try {
+		for (const [i, filename] of filenames.entries()) {
+			const filePath = path.join(folder, filename);
+			const buffer = await readFile(filePath);
 
-		const meta = await extractPhotoMeta(buffer);
-		await uploadToBunny({ zone, region, accessKey, shootSlug: slug, filename, buffer });
+			const meta = await extractPhotoMeta(buffer);
+			await uploadToBunny({ zone, region, accessKey, shootSlug: slug, filename, buffer });
 
-		const existing = existingPhotosByFilename.get(filename);
-		photos.push({
-			filename,
-			caption: existing?.caption ?? '',
-			width: meta.width,
-			height: meta.height,
-			exif: meta.exif,
-		});
+			const existing = existingPhotosByFilename.get(filename);
+			let photoLocation = existing?.location ?? meta.location ?? manualLocation(missingPhotoLocation);
+			if (!photoLocation && rl) {
+				const answer = await rl.question(`Location for ${filename} (blank to skip): `);
+				photoLocation = manualLocation(answer);
+			}
 
-		console.log(`Uploaded ${i + 1}/${filenames.length}: ${filename}`);
+			photos.push({
+				filename,
+				caption: existing?.caption ?? '',
+				width: meta.width,
+				height: meta.height,
+				exif: meta.exif,
+				location: photoLocation,
+			});
+
+			console.log(`Uploaded ${i + 1}/${filenames.length}: ${filename}`);
+		}
+	} finally {
+		rl?.close();
 	}
 
 	// Preserve any existing photos not present in this batch (e.g. a --force run

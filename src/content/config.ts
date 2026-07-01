@@ -11,12 +11,24 @@ const exifSchema = z.object({
 	capturedAt: z.coerce.date().optional(),
 });
 
+const photoLocationSchema = z
+	.object({
+		name: z.string().optional(),
+		latitude: z.number().min(-90).max(90).optional(),
+		longitude: z.number().min(-180).max(180).optional(),
+		source: z.enum(['exif', 'manual']).optional(),
+	})
+	.refine((location) => location.name || (location.latitude !== undefined && location.longitude !== undefined), {
+		message: 'Photo locations need either a name or latitude and longitude.',
+	});
+
 const photoSchema = z.object({
 	filename: z.string(),
 	caption: z.string().default(''),
 	width: z.number().optional(),
 	height: z.number().optional(),
 	exif: exifSchema.optional(),
+	location: photoLocationSchema.optional(),
 });
 
 export const collections = {

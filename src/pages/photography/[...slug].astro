@@ -41,6 +41,7 @@ const lightboxPhotos = data.photos.map((photo) => ({
 	exif: photo.exif
 		? { ...photo.exif, capturedAt: photo.exif.capturedAt?.toISOString() }
 		: undefined,
+	location: photo.location,
 }));
 ---
 
