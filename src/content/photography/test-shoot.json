@@ -1,0 +1,20 @@
+{
+	"title": "Test Shoot",
+	"date": "2026-06-30",
+	"location": "Local Dev",
+	"description": "Temporary local fixture for verifying the gallery UI before real Bunny.net photos exist. Remove before shipping.",
+	"photos": [
+		{ "filename": "test-01.svg", "caption": "Golden hour over the ridge.", "width": 1600, "height": 1067, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 23mm f/1.4", "focalLength": "23mm", "aperture": "f/2.8", "shutterSpeed": "1/500s", "iso": 200, "capturedAt": "2026-06-30T18:12:00" } },
+		{ "filename": "test-02.svg", "caption": "Portrait against the old brick wall.", "width": 1067, "height": 1600, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 56mm f/1.2", "focalLength": "56mm", "aperture": "f/1.8", "shutterSpeed": "1/320s", "iso": 160, "capturedAt": "2026-06-30T18:20:00" } },
+		{ "filename": "test-03.svg", "caption": "", "width": 1600, "height": 1067, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 23mm f/1.4", "focalLength": "23mm", "aperture": "f/4", "shutterSpeed": "1/250s", "iso": 200, "capturedAt": "2026-06-30T18:25:00" } },
+		{ "filename": "test-04.svg", "caption": "Wide shot of the harbor at dusk.", "width": 1600, "height": 1200, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 16mm f/1.4", "focalLength": "16mm", "aperture": "f/8", "shutterSpeed": "1/125s", "iso": 400, "capturedAt": "2026-06-30T19:02:00" } },
+		{ "filename": "test-05.svg", "caption": "Close-up detail shot.", "width": 1067, "height": 1600, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 56mm f/1.2", "focalLength": "56mm", "aperture": "f/1.2", "shutterSpeed": "1/1000s", "iso": 125, "capturedAt": "2026-06-30T19:10:00" } },
+		{ "filename": "test-06.svg", "caption": "", "width": 1600, "height": 900, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 16mm f/1.4", "focalLength": "16mm", "aperture": "f/5.6", "shutterSpeed": "1/250s", "iso": 200, "capturedAt": "2026-06-30T19:22:00" } },
+		{ "filename": "test-07.svg", "caption": "Reflections in the tide pool.", "width": 1200, "height": 1600, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 23mm f/1.4", "focalLength": "23mm", "aperture": "f/2", "shutterSpeed": "1/640s", "iso": 160, "capturedAt": "2026-06-30T19:35:00" } },
+		{ "filename": "test-08.svg", "caption": "Last light before it was gone.", "width": 1600, "height": 1067, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 56mm f/1.2", "focalLength": "56mm", "aperture": "f/2.8", "shutterSpeed": "1/400s", "iso": 200, "capturedAt": "2026-06-30T19:48:00" } },
+		{ "filename": "test-09.svg", "caption": "", "width": 1600, "height": 1067, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 16mm f/1.4", "focalLength": "16mm", "aperture": "f/8", "shutterSpeed": "1/60s", "iso": 800, "capturedAt": "2026-06-30T20:05:00" } },
+		{ "filename": "test-10.svg", "caption": "Quiet street, blue hour.", "width": 1067, "height": 1600, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 23mm f/1.4", "focalLength": "23mm", "aperture": "f/1.4", "shutterSpeed": "1/60s", "iso": 1600, "capturedAt": "2026-06-30T20:22:00" } },
+		{ "filename": "test-11.svg", "caption": "Panorama from the overlook.", "width": 1600, "height": 900, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 16mm f/1.4", "focalLength": "16mm", "aperture": "f/11", "shutterSpeed": "1/30s", "iso": 400, "capturedAt": "2026-06-30T20:35:00" } },
+		{ "filename": "test-12.svg", "caption": "Last frame of the day.", "width": 1400, "height": 1400, "exif": { "camera": "Fujifilm X-T5", "lens": "XF 56mm f/1.2", "focalLength": "56mm", "aperture": "f/1.2", "shutterSpeed": "1/500s", "iso": 125, "capturedAt": "2026-06-30T20:48:00" } }
+	]
+}
