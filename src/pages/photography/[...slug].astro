@@ -1,0 +1,120 @@
+---
+import { type CollectionEntry, getCollection } from 'astro:content';
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+import ContactCTA from '../../components/ContactCTA.astro';
+import Hero from '../../components/Hero.astro';
+import Icon from '../../components/Icon.astro';
+import PhotoGrid from '../../components/PhotoGrid.astro';
+import PhotoLightbox from '../../components/PhotoLightbox.vue';
+import { bunnyImageUrl } from '../../utils/bunny';
+
+interface Props {
+	entry: CollectionEntry<'photography'>;
+}
+
+export async function getStaticPaths() {
+	const shoots = await getCollection('photography');
+	return shoots.map((entry) => ({
+		params: { slug: entry.id },
+		props: { entry },
+	}));
+}
+
+const { entry } = Astro.props;
+const { data, id } = entry;
+const formattedDate = data.date.toLocaleDateString('en-US', {
+	year: 'numeric',
+	month: 'long',
+	day: 'numeric',
+	timeZone: 'UTC',
+});
+
+const lightboxPhotos = data.photos.map((photo) => ({
+	filename: photo.filename,
+	caption: photo.caption,
+	fullUrl: bunnyImageUrl(id, photo.filename, { width: 2000, format: 'webp', quality: 90 }),
+	thumbUrl: bunnyImageUrl(id, photo.filename, { width: 400, format: 'webp', quality: 75 }),
+	width: photo.width,
+	height: photo.height,
+	exif: photo.exif
+		? { ...photo.exif, capturedAt: photo.exif.capturedAt?.toISOString() }
+		: undefined,
+}));
+---
+
+<BaseLayout title={data.title} description={data.description ?? `Photos from ${data.title}`}>
+	<div class="stack gap-20">
+		<div class="stack gap-15">
+			<header>
+				<div class="wrapper stack gap-2">
+					<a class="back-link" href="/photography/"><Icon icon="arrow-left" /> Photography</a>
+					<Hero title={data.title} align="start">
+						<div class="details">
+							<p class="meta">
+								{formattedDate}
+								{data.location && <> · {data.location}</>}
+								 · {data.photos.length} photos
+							</p>
+							{data.description && <p class="description">{data.description}</p>}
+						</div>
+					</Hero>
+				</div>
+			</header>
+			<main class="wrapper">
+				<PhotoGrid shootSlug={id} photos={data.photos} />
+				<PhotoLightbox client:idle photos={lightboxPhotos} />
+			</main>
+		</div>
+		<ContactCTA />
+	</div>
+</BaseLayout>
+
+<style>
+	header {
+		padding-bottom: 2.5rem;
+		border-bottom: 1px solid var(--gray-800);
+	}
+
+	.back-link {
+		display: none;
+	}
+
+	.details {
+		display: flex;
+		flex-direction: column;
+		padding: 0.5rem;
+		gap: 0.75rem;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.meta {
+		font-size: var(--text-md);
+		color: var(--gray-400);
+	}
+
+	.description {
+		font-size: var(--text-lg);
+		max-width: 54ch;
+	}
+
+	.back-link {
+		text-decoration: 1px solid underline transparent;
+		text-underline-offset: 0.25em;
+		transition: text-decoration-color var(--theme-transition);
+	}
+
+	.back-link:hover,
+	.back-link:focus {
+		text-decoration-color: currentColor;
+	}
+
+	@media (min-width: 50em) {
+		.back-link {
+			display: block;
+			align-self: flex-start;
+		}
+	}
+</style>

@@ -1,0 +1,94 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+import { bunnyImageUrl, bunnySrcSet } from '../utils/bunny';
+
+interface Props {
+	shootSlug: string;
+	photos: CollectionEntry<'photography'>['data']['photos'];
+}
+
+const { shootSlug, photos } = Astro.props;
+---
+
+<div class="masonry">
+	{
+		photos.map((photo, i) => (
+			<button
+				type="button"
+				class="tile"
+				data-photo-grid-item
+				data-index={i}
+				aria-label={`Open photo ${i + 1}: ${photo.caption || photo.filename}`}
+			>
+				<img
+					src={bunnyImageUrl(shootSlug, photo.filename, { width: 500, format: 'webp', quality: 75 })}
+					srcset={bunnySrcSet(shootSlug, photo.filename, [400, 800, 1200], { format: 'webp', quality: 75 })}
+					sizes="(min-width: 50em) 33vw, 50vw"
+					alt={photo.caption || ''}
+					loading="lazy"
+					decoding="async"
+					style={photo.width && photo.height ? `aspect-ratio: ${photo.width} / ${photo.height};` : undefined}
+				/>
+			</button>
+		))
+	}
+</div>
+
+<script>
+	function initPhotoGrid() {
+		document.querySelectorAll<HTMLButtonElement>('[data-photo-grid-item]').forEach((el) => {
+			el.addEventListener('click', () => {
+				const index = Number(el.dataset.index);
+				window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { index } }));
+			});
+		});
+	}
+
+	initPhotoGrid();
+	document.addEventListener('astro:page-load', initPhotoGrid);
+</script>
+
+<style>
+	.masonry {
+		columns: 2;
+		column-gap: 1rem;
+	}
+
+	.tile {
+		display: block;
+		width: 100%;
+		margin: 0 0 1rem;
+		padding: 0;
+		border: 1px solid var(--gray-800);
+		border-radius: 0.75rem;
+		overflow: hidden;
+		background: var(--gradient-subtle);
+		box-shadow: var(--shadow-sm);
+		break-inside: avoid;
+		cursor: pointer;
+		transition: box-shadow var(--theme-transition);
+	}
+
+	.tile:hover,
+	.tile:focus-visible {
+		box-shadow: var(--shadow-md);
+	}
+
+	.tile img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	@media (min-width: 50em) {
+		.masonry {
+			columns: 3;
+			column-gap: 1.5rem;
+		}
+
+		.tile {
+			margin-bottom: 1.5rem;
+		}
+	}
+</style>

@@ -1,0 +1,39 @@
+---
+import { getCollection } from 'astro:content';
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+import ContactCTA from '../../components/ContactCTA.astro';
+import ShootPreview from '../../components/ShootPreview.astro';
+import Hero from '../../components/Hero.astro';
+import Grid from '../../components/Grid.astro';
+
+const shoots = (await getCollection('photography')).sort(
+	(a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+---
+
+<BaseLayout
+	title="Photography | Timothy Navarro"
+	description="A collection of photo shoots by Timothy Navarro"
+>
+	<div class="stack gap-20">
+		<main class="wrapper stack gap-8">
+			<Hero
+				title="Photography"
+				tagline="A collection of shoots I've captured, one day at a time."
+				align="start"
+			/>
+			<Grid variant="offset">
+				{
+					shoots.map((shoot) => (
+						<li>
+							<ShootPreview shoot={shoot} />
+						</li>
+					))
+				}
+			</Grid>
+		</main>
+		<ContactCTA />
+	</div>
+</BaseLayout>
