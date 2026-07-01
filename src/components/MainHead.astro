@@ -35,6 +35,9 @@ const {
 		if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
 			return localStorage.getItem('theme');
 		}
+		if (document.documentElement.dataset.section === 'photography') {
+			return 'light';
+		}
 		return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 	};
 	const applyTheme = () => {

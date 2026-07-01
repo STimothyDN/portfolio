@@ -20,6 +20,20 @@ type Meteor = {
 	maxAge: number;
 };
 
+type Cloud = {
+	x: number;
+	y: number;
+	sprite: CloudSprite;
+	speed: number;
+	phase: number;
+};
+
+type CloudSprite = {
+	canvas: HTMLCanvasElement;
+	width: number;
+	height: number;
+};
+
 type StarSprite = {
 	canvas: HTMLCanvasElement;
 	size: number;
@@ -36,11 +50,15 @@ const MIN_STARS = 280;
 const MAX_STARS = 1000;
 const MAX_DPR = 2;
 const TARGET_FRAME_MS = 1000 / 30;
+const DAY_TARGET_FRAME_MS = 1000 / 18;
 const METEORS_PER_SECOND = 0.35;
 const MAX_METEORS = 1;
 const PERIMETER_OFFSET = 24;
 const OUTER_PADDING = 72;
 const STAR_SIZES = [0.95, 1.4, 2.15, 3.25, 4.15];
+const CLOUD_DENSITY = 1 / (420 * 320);
+const MIN_CLOUDS = 4;
+const MAX_CLOUDS = 11;
 
 const clamp = (value: number, min: number, max: number) =>
 	Math.min(Math.max(value, min), max);
@@ -55,13 +73,16 @@ const currentStarColor = () =>
 	getComputedStyle(document.documentElement).getPropertyValue('--star-color').trim() || '255, 255, 255';
 
 const starsAreHidden = () => document.documentElement.dataset.section === 'photography';
+const isNightTheme = () => document.documentElement.classList.contains('theme-dark');
 
 class SoftStarfield {
 	private canvas: HTMLCanvasElement | null = null;
 	private ctx: CanvasRenderingContext2D | null = null;
 	private stars: Star[] = [];
 	private meteors: Meteor[] = [];
+	private clouds: Cloud[] = [];
 	private starSprites: StarSprite[] = [];
+	private sunlightSprite: CloudSprite | null = null;
 	private rafId = 0;
 	private resizeRafId = 0;
 	private width = 0;
@@ -169,7 +190,9 @@ class SoftStarfield {
 		this.canvas.height = Math.ceil(nextHeight * nextDpr);
 		this.ctx.setTransform(nextDpr, 0, 0, nextDpr, 0, 0);
 		this.createStarSprites();
+		this.createSunlightSprite();
 		this.reconcileStars(forceRebuild);
+		this.reconcileClouds(forceRebuild || sizeChanged);
 	}
 
 	private reconcileStars(forceRebuild: boolean) {
@@ -278,7 +301,9 @@ class SoftStarfield {
 	}
 
 	private tick = (now: number) => {
-		if (now - this.lastFrame < TARGET_FRAME_MS) {
+		const targetFrameMs = isNightTheme() ? TARGET_FRAME_MS : DAY_TARGET_FRAME_MS;
+
+		if (now - this.lastFrame < targetFrameMs) {
 			this.rafId = requestAnimationFrame(this.tick);
 			return;
 		}
@@ -293,6 +318,11 @@ class SoftStarfield {
 		if (!this.ctx) return;
 
 		this.clear();
+		if (!isNightTheme()) {
+			this.drawDaySky(deltaSeconds, elapsedSeconds);
+			return;
+		}
+
 		this.drawStars(elapsedSeconds);
 
 		if (Math.random() < METEORS_PER_SECOND * deltaSeconds) {
@@ -306,6 +336,10 @@ class SoftStarfield {
 	private drawStaticFrame() {
 		if (!this.ctx || starsAreHidden()) return;
 		this.clear();
+		if (!isNightTheme()) {
+			this.drawDaySky(0, performance.now() / 1000);
+			return;
+		}
 		this.drawStars(performance.now() / 1000);
 	}
 
@@ -334,6 +368,170 @@ class SoftStarfield {
 		}
 
 		this.ctx.restore();
+	}
+
+	private reconcileClouds(forceRebuild: boolean) {
+		const targetCount = clamp(
+			Math.round(this.width * this.height * CLOUD_DENSITY),
+			MIN_CLOUDS,
+			MAX_CLOUDS,
+		);
+
+		if (forceRebuild) {
+			this.clouds = [];
+		}
+
+		if (this.clouds.length > targetCount) {
+			this.clouds.length = targetCount;
+		}
+
+		while (this.clouds.length < targetCount) {
+			this.clouds.push(this.createCloud(true));
+		}
+	}
+
+	private createCloud(spreadAcrossViewport = false): Cloud {
+		const width = randomBetween(160, 390) * clamp(this.width / 1180, 0.78, 1.28);
+		const height = width * randomBetween(0.28, 0.44);
+		const sprite = this.createCloudSprite(width, height, randomBetween(0.18, 0.34));
+		const topSkyLimit = Math.min(this.height * 0.36, 330);
+		const upperSkyY = randomBetween(this.height * 0.035, topSkyLimit);
+		const lowerSkyY = randomBetween(topSkyLimit, Math.min(this.height * 0.58, topSkyLimit + 170));
+
+		return {
+			x: spreadAcrossViewport
+				? randomBetween(-width * 1.2, this.width + width * 1.2)
+				: this.width + randomBetween(24, this.width * 0.34 + width),
+			y: Math.random() < 0.82 ? upperSkyY : lowerSkyY,
+			sprite,
+			speed: randomBetween(4, 15) * clamp(this.width / 1180, 0.75, 1.2),
+			phase: randomBetween(0, Math.PI * 2),
+		};
+	}
+
+	private createCloudSprite(width: number, height: number, alpha: number): CloudSprite {
+		const padding = 28;
+		const logicalWidth = width + padding * 2;
+		const logicalHeight = height + padding * 2;
+		const spriteDpr = Math.min(this.dpr, 1.5);
+		const canvas = document.createElement('canvas');
+		const ctx = canvas.getContext('2d')!;
+		const puffs = [
+			{ x: 0.16, y: 0.58, w: 0.36, h: 0.42 },
+			{ x: 0.34, y: 0.42, w: 0.42, h: 0.56 },
+			{ x: 0.52, y: 0.34, w: 0.46, h: 0.66 },
+			{ x: 0.72, y: 0.5, w: 0.38, h: 0.46 },
+			{ x: 0.46, y: 0.62, w: 0.72, h: 0.32 },
+		];
+
+		canvas.width = Math.ceil(logicalWidth * spriteDpr);
+		canvas.height = Math.ceil(logicalHeight * spriteDpr);
+		ctx.scale(spriteDpr, spriteDpr);
+
+		const x = padding;
+		const y = padding;
+		const highlight = ctx.createLinearGradient(x, y, x + width, y + height);
+		highlight.addColorStop(0, `rgba(255, 255, 255, ${alpha * 1.05})`);
+		highlight.addColorStop(0.52, `rgba(255, 255, 255, ${alpha})`);
+		highlight.addColorStop(1, `rgba(202, 211, 223, ${alpha * 0.36})`);
+
+		ctx.filter = 'blur(0.45px)';
+		ctx.fillStyle = `rgba(117, 132, 154, ${alpha * 0.08})`;
+		for (const puff of puffs) {
+			ctx.beginPath();
+			ctx.ellipse(
+				x + width * puff.x + 13,
+				y + height * puff.y + 15,
+				width * puff.w * 0.5,
+				height * puff.h * 0.5,
+				0,
+				0,
+				Math.PI * 2,
+			);
+			ctx.fill();
+		}
+
+		ctx.fillStyle = highlight;
+		for (const puff of puffs) {
+			ctx.beginPath();
+			ctx.ellipse(
+				x + width * puff.x,
+				y + height * puff.y,
+				width * puff.w * 0.5,
+				height * puff.h * 0.5,
+				0,
+				0,
+				Math.PI * 2,
+			);
+			ctx.fill();
+		}
+
+		ctx.filter = 'none';
+
+		return { canvas, width: logicalWidth, height: logicalHeight };
+	}
+
+	private drawDaySky(deltaSeconds: number, elapsedSeconds: number) {
+		if (!this.ctx) return;
+
+		this.reconcileClouds(false);
+		this.meteors = [];
+		this.drawSunlight();
+
+		for (const cloud of this.clouds) {
+			cloud.x -= cloud.speed * deltaSeconds;
+			const drift = Math.sin(elapsedSeconds * 0.16 + cloud.phase) * 5;
+			this.drawCloud(cloud, drift);
+
+			if (cloud.x + cloud.sprite.width < -OUTER_PADDING) {
+				Object.assign(cloud, this.createCloud(false));
+			}
+		}
+	}
+
+	private createSunlightSprite() {
+		const canvas = document.createElement('canvas');
+		const ctx = canvas.getContext('2d')!;
+
+		canvas.width = Math.ceil(this.width * this.dpr);
+		canvas.height = Math.ceil(this.height * this.dpr);
+		ctx.scale(this.dpr, this.dpr);
+
+		const sunX = this.width * 0.16;
+		const sunY = -this.height * 0.12;
+		const radius = Math.max(this.width, this.height) * 0.72;
+		const glow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, radius);
+
+		glow.addColorStop(0, 'rgba(255, 244, 194, 0.18)');
+		glow.addColorStop(0.28, 'rgba(255, 230, 166, 0.08)');
+		glow.addColorStop(0.72, 'rgba(255, 255, 255, 0.018)');
+		glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+		ctx.fillStyle = glow;
+		ctx.fillRect(0, 0, this.width, this.height);
+		this.sunlightSprite = { canvas, width: this.width, height: this.height };
+	}
+
+	private drawSunlight() {
+		if (!this.ctx) return;
+
+		if (!this.sunlightSprite) {
+			this.createSunlightSprite();
+		}
+
+		this.ctx.drawImage(this.sunlightSprite!.canvas, 0, 0, this.width, this.height);
+	}
+
+	private drawCloud(cloud: Cloud, drift: number) {
+		if (!this.ctx) return;
+
+		this.ctx.drawImage(
+			cloud.sprite.canvas,
+			cloud.x,
+			cloud.y + drift,
+			cloud.sprite.width,
+			cloud.sprite.height,
+		);
 	}
 
 	private updateMeteors(deltaSeconds: number) {
