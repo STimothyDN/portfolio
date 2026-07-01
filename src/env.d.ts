@@ -8,3 +8,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
 	readonly env: ImportMetaEnv;
 }
+
+interface Window {
+	/** Guards the theme MutationObserver against re-registration on each swap. */
+	__themeObserver?: boolean;
+	/** Guards the section-transition lifecycle listeners against double registration. */
+	__sectionTransition?: boolean;
+}

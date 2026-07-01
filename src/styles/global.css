@@ -119,6 +119,96 @@
 	--star-color: 255, 255, 255;
 }
 
+/*
+ * Editorial theme — scoped to the photography section only.
+ * Set server-side as `data-section="photography"` on <html> (see BaseLayout.astro),
+ * so it renders correctly on direct load / no-JS. Uses `:root[data-section=...]`
+ * (specificity 0,2,0) plus later source order so it wins over `:root.theme-dark`
+ * (also 0,2,0) regardless of the user's saved dark/light preference. Every
+ * component reads these tokens, so this restyles the whole section with no
+ * per-component edits.
+ */
+:root[data-section='photography'] {
+	/* Grays — warm near-black inks on a clean white page */
+	--gray-0: #111010;
+	--gray-50: #1c1a19;
+	--gray-100: #262322; /* headings (h1–h5) */
+	--gray-200: #3a3634; /* body text */
+	--gray-300: #6b6560;
+	--gray-400: #938c85; /* meta text */
+	--gray-500: #a9a29b;
+	--gray-600: #c7c0b8;
+	--gray-700: #ded8d0;
+	--gray-800: #ece9e3; /* hairline borders */
+	--gray-900: #f7f5f1; /* warm off-white surfaces */
+	--gray-999-basis: 40, 33%, 99%;
+	--gray-999_40: hsla(var(--gray-999-basis), 0.4);
+	--gray-999: #fdfcfa; /* page background */
+
+	/* Accent — editorial ink + a warm champagne/taupe, no purple */
+	--accent-light: #c9b89a;
+	--accent-regular: #1a1a1a;
+	--accent-dark: #000000;
+	--accent-overlay: rgba(17, 16, 16, 0.06);
+	--accent-subtle-overlay: rgba(17, 16, 16, 0.05);
+	--accent-text-over: #fdfcfa;
+
+	--link-color: #1a1a1a;
+
+	/* Gradients — flat/soft editorial equivalents */
+	--gradient-stop-1: #ded8d0;
+	--gradient-stop-2: #c9b89a;
+	--gradient-stop-3: #8a7d64;
+	--gradient-subtle: linear-gradient(150deg, var(--gray-900) 0%, var(--gray-999) 100%);
+	--gradient-accent: linear-gradient(150deg, #ded8d0, #c9b89a, #8a7d64);
+	--gradient-accent-orange: linear-gradient(150deg, #d8c3a1, #c9b89a, #8a7d64);
+	--gradient-stroke: linear-gradient(180deg, var(--gray-800), var(--gray-700));
+
+	/* Shadows — softer for a light background */
+	--shadow-sm: 0px 6px 3px rgba(17, 16, 16, 0.01), 0px 4px 2px rgba(17, 16, 16, 0.01),
+		0px 2px 2px rgba(17, 16, 16, 0.02), 0px 0px 1px rgba(17, 16, 16, 0.03);
+	--shadow-md: 0px 28px 11px rgba(17, 16, 16, 0.01), 0px 16px 10px rgba(17, 16, 16, 0.03),
+		0px 7px 7px rgba(17, 16, 16, 0.04), 0px 2px 4px rgba(17, 16, 16, 0.05);
+	--shadow-lg: 0px 62px 25px rgba(17, 16, 16, 0.01), 0px 35px 21px rgba(17, 16, 16, 0.04),
+		0px 16px 16px rgba(17, 16, 16, 0.07), 0px 4px 9px rgba(17, 16, 16, 0.08);
+
+	/* Fonts — editorial serif + script accent */
+	--font-brand: 'Playfair Display', Georgia, 'Times New Roman', serif;
+	--font-body: 'Playfair Display', Georgia, 'Times New Roman', serif;
+	--font-script: 'Playfair Display', cursive;
+
+	/* Stars invisible on white (canvas also faded via opacity) */
+	--star-color: 253, 252, 250;
+}
+
+/* Editorial polish */
+html[data-section='photography'] body {
+	line-height: 1.6;
+}
+
+html[data-section='photography'] h1,
+html[data-section='photography'] h2,
+html[data-section='photography'] h3,
+html[data-section='photography'] h4,
+html[data-section='photography'] h5 {
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+/* Hero title becomes a flowing script flourish (Tangerine renders small — scale up). */
+html[data-section='photography'] .hero h1 {
+	font-family: var(--font-script);
+	font-weight: 700;
+	line-height: 0.9;
+	letter-spacing: 0;
+	font-size: clamp(4.5rem, 14vw, 9rem);
+}
+
+/* Hide the dark/light toggle — the editorial theme is fixed. */
+html[data-section='photography'] nav .theme-toggle {
+	display: none;
+}
+
 html,
 body {
 	height: 100%;
@@ -229,6 +319,120 @@ h5 {
 }
 .gap-48 {
 	gap: 12rem;
+}
+
+/* ============================================================
+ * Section transition — the page itself drains like liquid.
+ * Driven by <html data-drain="in|out"> (see scripts/section-transition.ts),
+ * animating the native View Transition root snapshots so the outgoing page
+ * drains away / the incoming page pours in behind a wavy mask + turbulence
+ * displacement (#liquid-drain filter in BaseLayout) — no opaque middle frame.
+ * ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+	:root {
+		/* Covering (white) region is generously taller than the viewport with an
+		 * organic, turbulence-displaced "gooey" top edge; mask-position slides the
+		 * waterline across the snapshot. The extra height guarantees full coverage
+		 * (with margin) at the covered end so no sliver of the other page peeks
+		 * through. The goo lives inside the mask (feTurbulence + feDisplacementMap on
+		 * the fill path) so the revealed edge is irregular rather than a perfect sine. */
+		--drain-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20200%20300'%20preserveAspectRatio%3D'none'%3E%3Cfilter%20id%3D'g'%20x%3D'-30%25'%20y%3D'-30%25'%20width%3D'160%25'%20height%3D'160%25'%3E%3CfeTurbulence%20type%3D'fractalNoise'%20baseFrequency%3D'0.01%200.02'%20numOctaves%3D'2'%20seed%3D'4'%20result%3D'n'%2F%3E%3CfeDisplacementMap%20in%3D'SourceGraphic'%20in2%3D'n'%20scale%3D'5'%20xChannelSelector%3D'R'%20yChannelSelector%3D'G'%2F%3E%3C%2Ffilter%3E%3Cpath%20filter%3D'url(%23g)'%20fill%3D'%23ffffff'%20d%3D'M-20%2C100%20Q-10%2C92%200%2C100%20T20%2C100%20T40%2C100%20T60%2C100%20T80%2C100%20T100%2C100%20T120%2C100%20T140%2C100%20T160%2C100%20T180%2C100%20T200%2C100%20T220%2C100%20L220%2C320%20L-20%2C320%20Z'%2F%3E%3C%2Fsvg%3E");
+		--drain-dur-in: 5000ms; /* super slow — a very gradual drip/melt */
+		--drain-dur-out: 1800ms; /* cross-transform back */
+		--drain-ease-in: cubic-bezier(0.45, 0, 0.55, 0.35); /* melt: cling, then ooze */
+		--drain-ease-out: cubic-bezier(0.33, 0, 0.2, 1); /* settle into place */
+	}
+
+	/* ---- ENTER photography: the dark page melts/drains away ---- */
+	/* Reveal via mask, so don't cross-fade/blend the snapshots. */
+	html[data-drain='in']::view-transition-old(root),
+	html[data-drain='in']::view-transition-new(root) {
+		mix-blend-mode: normal;
+	}
+	/* Dark page (old) sits on top and drains downward behind the gooey waterline,
+	 * revealing the editorial page (new) directly beneath. */
+	html[data-drain='in']::view-transition-old(root) {
+		z-index: 2;
+		-webkit-mask-image: var(--drain-mask);
+		mask-image: var(--drain-mask);
+		/* Wider than the viewport so mask-position-x can drift, morphing the gooey
+		 * edge horizontally as it drains (the mask image itself can't animate). */
+		-webkit-mask-size: 140% 300%;
+		mask-size: 140% 300%;
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		filter: url(#liquid-drain);
+		will-change: mask-position, transform;
+		animation: liquid-drain-away var(--drain-dur-in) var(--drain-ease-in) forwards;
+	}
+	html[data-drain='in']::view-transition-new(root) {
+		z-index: 1;
+		animation: none;
+	}
+
+	/* Slide the waterline down (y: 60% → -8%, fully covered → fully drained) while
+	 * the x drifts/wobbles so the gooey lobes flow sideways as they descend. The
+	 * white band is 3x tall (full coverage at the top end) and 40% wider than the
+	 * viewport (room for the x drift without exposing a side gap). */
+	@keyframes liquid-drain-away {
+		0% {
+			mask-position: 0% 60%;
+			-webkit-mask-position: 0% 60%;
+			transform: translateY(0) scale(1);
+		}
+		25% {
+			mask-position: 22% 42%;
+			-webkit-mask-position: 22% 42%;
+		}
+		50% {
+			mask-position: 9% 27%;
+			-webkit-mask-position: 9% 27%;
+		}
+		75% {
+			mask-position: 34% 10%;
+			-webkit-mask-position: 34% 10%;
+		}
+		100% {
+			mask-position: 55% -8%;
+			-webkit-mask-position: 55% -8%;
+			transform: translateY(7vh) scale(1.04);
+		}
+	}
+
+	/* ---- LEAVE photography: slow, subtle cross-transform into the space theme ---- */
+	/* No mask, no motion — the editorial page gently dissolves into the space theme
+	 * over the duration so elements feel like they morph in place. Normal blend (not
+	 * plus-lighter) avoids a bright mid-transition flash between the white and dark
+	 * themes, keeping it subtle. */
+	html[data-drain='out']::view-transition-old(root),
+	html[data-drain='out']::view-transition-new(root) {
+		mix-blend-mode: normal;
+		animation-duration: var(--drain-dur-out);
+		animation-timing-function: var(--drain-ease-out);
+		animation-fill-mode: both;
+	}
+	html[data-drain='out']::view-transition-old(root) {
+		animation-name: vt-fade-out;
+	}
+	html[data-drain='out']::view-transition-new(root) {
+		animation-name: vt-fade-in;
+	}
+	@keyframes vt-fade-out {
+		from {
+			opacity: 1;
+		}
+		to {
+			opacity: 0;
+		}
+	}
+	@keyframes vt-fade-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
 }
 
 @media (min-width: 50em) {

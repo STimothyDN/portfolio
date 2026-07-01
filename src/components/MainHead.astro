@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
 
 interface Props {
 	title?: string | undefined;
@@ -22,9 +23,11 @@ const {
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
-	href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,700;1,400&family=Rubik:wght@500;600&display=swap"
+	href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,700;1,400&family=Rubik:wght@500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Tangerine:wght@400;700&display=swap"
 	rel="stylesheet"
 />
+
+<ClientRouter />
 
 <script is:inline>
 	// This code is inlined in the head to make dark mode instant & blocking.
@@ -34,15 +37,33 @@ const {
 		}
 		return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 	};
-	const isDark = getThemePreference() === 'dark';
-	document.documentElement.classList[isDark ? 'add' : 'remove']('theme-dark');
+	const applyTheme = () => {
+		const isDark = getThemePreference() === 'dark';
+		document.documentElement.classList[isDark ? 'add' : 'remove']('theme-dark');
+	};
+	applyTheme();
 
-	if (typeof localStorage !== 'undefined') {
-		// Watch the document element and persist user preference when it changes.
+	// Register persistence + swap handling once (this `is:inline` script re-executes
+	// on every ClientRouter navigation, so guard against duplicate listeners).
+	if (typeof localStorage !== 'undefined' && !window.__themeObserver) {
+		window.__themeObserver = true;
+
+		// Persist the user's preference whenever the theme class changes (e.g. toggle).
 		const observer = new MutationObserver(() => {
 			const isDark = document.documentElement.classList.contains('theme-dark');
 			localStorage.setItem('theme', isDark ? 'dark' : 'light');
 		});
-		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+		const observe = () =>
+			observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+		observe();
+
+		// ClientRouter swaps the <html> attributes on navigation, which transiently
+		// drops `theme-dark`. Pause persistence across the swap and reapply the saved
+		// theme afterward so the preference is never clobbered.
+		document.addEventListener('astro:before-swap', () => observer.disconnect());
+		document.addEventListener('astro:after-swap', () => {
+			applyTheme();
+			observe();
+		});
 	}
 </script>

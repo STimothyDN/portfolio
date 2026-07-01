@@ -13,16 +13,26 @@ interface Props {
 }
 
 const { title, description } = Astro.props;
+
+// Which "world" is this page in? The photography section gets the editorial
+// theme (see global.css `html[data-section="photography"]`). Computed server-side
+// so the correct theme is applied on direct load / no-JS, and travels with each
+// route's HTML across ClientRouter swaps.
+const path = Astro.url.pathname;
+const section =
+	path === '/photography' || path.startsWith('/photography/') ? 'photography' : 'default';
 ---
 
-<html lang="en">
+<html lang="en" data-section={section}>
 	<head>
 		<MainHead title={title} description={description} />
 	</head>
 	<body>
-		<!-- 
-			The canvas element (with class "twinkling-stars") renders both the static stars 
+		<!--
+			The canvas element (with class "twinkling-stars") renders both the static stars
 			and the meteors. The page content is wrapped in .content so it appears above.
+			The canvas is intentionally NOT persisted: on a section transition we want it
+			captured in the View Transition snapshot so it drains away with the page.
 		-->
 		<div class="stack backgrounds">
 			<canvas class="twinkling-stars"></canvas>
@@ -33,14 +43,38 @@ const { title, description } = Astro.props;
 			</div>
 		</div>
 
+		<!--
+			Turbulence displacement filter for the "liquid drain" section transition. It's
+			referenced by ::view-transition-old/new(root) in global.css to warp the draining
+			page like fluid. Lives here so it exists in the live document during the swap.
+		-->
+		<svg class="liquid-defs" width="0" height="0" aria-hidden="true" focusable="false">
+			<defs>
+				<filter id="liquid-drain" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+					<feTurbulence type="fractalNoise" baseFrequency="0.009 0.013" numOctaves="2" seed="7" result="noise">
+						<animate attributeName="baseFrequency" dur="7s" values="0.009 0.013;0.013 0.02;0.009 0.013" repeatCount="indefinite" />
+					</feTurbulence>
+					<!-- scale starts at 0 (crisp page) and is ramped up during the drain by
+					     section-transition.ts, so the "goo-ification" builds gradually. -->
+					<feDisplacementMap id="liquid-disp" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G" />
+				</filter>
+			</defs>
+		</svg>
+
+		<script>
+			import '../scripts/section-transition';
+		</script>
+
 		<script>
 			// Add “loaded” class once the document has completely loaded.
 			addEventListener('load', () => document.documentElement.classList.add('loaded'));
 
 			(function() {
-				const canvas = document.querySelector('.twinkling-stars');
-				const ctx = canvas.getContext('2d');
-				
+				// This module runs once (ES module). The star canvas is re-created on every
+				// ClientRouter swap (it's part of the snapshotted page), so we (re)bind to the
+				// current canvas after each navigation and cancel the previous RAF loop to
+				// avoid stacking loops.
+				let canvas, ctx, rafId;
 				let stars = [];
 				let meteors = [];
 				const starCount = 1000; // Adjust for more stars if desired.
@@ -173,14 +207,27 @@ const { title, description } = Astro.props;
 					updateMeteors();
 					drawMeteors();
 
-					requestAnimationFrame(animateStars);
+					rafId = requestAnimationFrame(animateStars);
+				}
+
+				// (Re)bind to the current canvas and (re)start the loop.
+				function start() {
+					const el = document.querySelector('.twinkling-stars');
+					if (!el) return;
+					canvas = el;
+					ctx = canvas.getContext('2d');
+					if (rafId) cancelAnimationFrame(rafId);
+					meteors = [];
+					initStars();
+					animateStars();
 				}
 
 				// Reinitialize stars on window resize.
-				window.addEventListener('resize', initStars);
+				window.addEventListener('resize', () => { if (canvas) initStars(); });
 
-				initStars();
-				animateStars();
+				start();
+				// After each ClientRouter swap the canvas node is replaced — rebind to it.
+				document.addEventListener('astro:after-swap', start);
 			})();
 		</script>
 
@@ -254,6 +301,22 @@ const { title, description } = Astro.props;
 				background-blend-mode: overlay, var(--bg-blend-mode), var(--bg-svg-blend-mode), normal, normal;
 			}
 
+			/* --- Editorial theme: neutralize the space imagery --- */
+			/* `:root[...]` (0,2,0) + source order beats `:root.theme-dark` (0,2,0). */
+			:root[data-section='photography'] {
+				--bg-image-main: none;
+				--bg-image-main-curves: none;
+				--bg-image-subtle-1: none;
+				--bg-image-subtle-2: none;
+				--bg-image-footer: none;
+				--bg-blend-mode: normal;
+				--bg-svg-blend-mode: normal;
+			}
+			html[data-section='photography'] .backgrounds {
+				background: var(--gray-999);
+				background-blend-mode: normal;
+			}
+
 			/* --- Canvas Styles for Stars & Meteors --- */
 			.twinkling-stars {
 				position: absolute;
@@ -263,6 +326,19 @@ const { title, description } = Astro.props;
 				height: 100%;
 				pointer-events: none;
 				z-index: 1;
+				transition: opacity 600ms ease;
+			}
+
+			/* Stars fade out in the editorial world (kept alive, just invisible). */
+			html[data-section='photography'] .twinkling-stars {
+				opacity: 0;
+			}
+
+			.liquid-defs {
+				position: absolute;
+				width: 0;
+				height: 0;
+				overflow: hidden;
 			}
 
 			/* Ensure main content appears above the canvas */
