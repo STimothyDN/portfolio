@@ -5,12 +5,40 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 import ContactCTA from '../../components/ContactCTA.astro';
 import ShootPreview from '../../components/ShootPreview.astro';
-import Hero from '../../components/Hero.astro';
 import Grid from '../../components/Grid.astro';
+import PhotographyGlobe from '../../components/PhotographyGlobe.vue';
+import { bunnyImageUrl } from '../../utils/bunny';
 
 const shoots = (await getCollection('photography')).sort(
 	(a, b) => b.data.date.valueOf() - a.data.date.valueOf()
 );
+
+// Collect every photo coordinate across all shoots, deduped to one pin per
+// unique location (rounded to ~11m). Many photos in a shoot share a coordinate,
+// so this keeps the globe from rendering dozens of stacked pins. Each pin also
+// carries a handful of sample thumbnails taken at that location — the globe
+// picks one at random to preview when the pin is hovered.
+const MAX_SAMPLES_PER_PIN = 10;
+type GlobePin = { lat: number; lon: number; name?: string; images: string[] };
+const pinMap = new Map<string, GlobePin>();
+for (const shoot of shoots) {
+	for (const photo of shoot.data.photos) {
+		const loc = photo.location;
+		if (!loc || loc.latitude === undefined || loc.longitude === undefined) continue;
+		const lat = Math.round(loc.latitude * 1e4) / 1e4;
+		const lon = Math.round(loc.longitude * 1e4) / 1e4;
+		const key = `${lat},${lon}`;
+		let pin = pinMap.get(key);
+		if (!pin) {
+			pin = { lat, lon, name: loc.name, images: [] };
+			pinMap.set(key, pin);
+		}
+		if (pin.images.length < MAX_SAMPLES_PER_PIN) {
+			pin.images.push(bunnyImageUrl(shoot.id, photo.filename, { width: 440, quality: 72, format: 'webp' }));
+		}
+	}
+}
+const globePins: GlobePin[] = [...pinMap.values()];
 ---
 
 <BaseLayout
@@ -18,22 +46,165 @@ const shoots = (await getCollection('photography')).sort(
 	description="A collection of photo shoots by Timothy Navarro"
 >
 	<div class="stack gap-20">
-		<main class="wrapper stack gap-8">
-			<Hero
-				title="TiMo From 3,"
-				tagline="He shoots! He-"
-				align="start"
-			/>
-			<Grid variant="offset">
-				{
-					shoots.map((shoot) => (
-						<li>
-							<ShootPreview shoot={shoot} />
-						</li>
-					))
-				}
-			</Grid>
-		</main>
+		<div class="photography-page stack" data-photo-snap-root>
+			<header class="photography-landing">
+				<PhotographyGlobe client:idle pins={globePins} />
+				<div class="landing-veil"></div>
+				<div class="wrapper header-shell">
+					<div class="title-dock">
+						<div class="landing-title">
+							<h1>TiMo From 3,</h1>
+							<p class="tagline">He shoots! He-</p>
+						</div>
+					</div>
+				</div>
+			</header>
+			<main class="shoot-stage" data-photo-stage>
+				<div class="stage-header">
+					<div class="wrapper stage-header-inner">
+						<p class="stage-title">TiMo From 3,</p>
+						<p class="stage-tagline">He shoots! He-</p>
+					</div>
+				</div>
+				<div class="wrapper stage-body">
+					<Grid variant="offset">
+						{
+							shoots.map((shoot) => (
+								<li>
+									<ShootPreview shoot={shoot} />
+								</li>
+							))
+						}
+					</Grid>
+				</div>
+			</main>
+		</div>
 		<ContactCTA />
 	</div>
 </BaseLayout>
+
+<style>
+	.photography-page {
+		gap: 0;
+		height: calc(100svh - 7.5rem);
+		overflow-y: auto;
+		scroll-snap-type: y proximity;
+		scroll-behavior: smooth;
+	}
+
+	.photography-landing {
+		position: relative;
+		min-height: 100%;
+		overflow: hidden;
+		border-bottom: 1px solid var(--gray-800);
+		background: var(--gray-999);
+		scroll-snap-align: start;
+	}
+
+	/*
+	 * The "slit" the globe tucks into: an opaque band matching the page
+	 * background, sitting above the globe canvas but below the title text, so
+	 * the bottom ~quarter of the Earth disappears into the page.
+	 */
+	.landing-veil {
+		position: absolute;
+		inset: auto 0 0 0;
+		height: 30%;
+		z-index: 1;
+		background: var(--gray-999);
+		box-shadow: 0 -1px 0 var(--gray-800);
+	}
+
+	.header-shell {
+		position: relative;
+		z-index: 2;
+		display: grid;
+		min-height: inherit;
+		/* let hover reach the globe canvas; only the title text stays interactive */
+		pointer-events: none;
+	}
+
+	.landing-title {
+		pointer-events: auto;
+	}
+
+	.title-dock {
+		display: flex;
+		align-items: end;
+		padding-block: clamp(3rem, 10svh, 8rem) clamp(1.5rem, 4vw, 3rem);
+	}
+
+	h1 {
+		max-width: 13ch;
+		line-height: 0.88;
+		letter-spacing: 0;
+		color: var(--gray-0);
+		font-size: clamp(3.5rem, 10vw, 8rem);
+	}
+
+	.tagline {
+		max-width: 58ch;
+		margin-top: clamp(0.75rem, 2vw, 1.25rem);
+		padding-top: clamp(0.75rem, 2vw, 1.25rem);
+		border-top: 1px solid var(--gray-800);
+		font-size: var(--text-lg);
+		color: var(--gray-200);
+	}
+
+	.shoot-stage {
+		position: relative;
+		min-height: 100%;
+		scroll-snap-align: start;
+	}
+
+	/*
+	 * The pinned title. `position: sticky` keeps it in normal flow, so the grid
+	 * always sits *below* it (never underneath, the way the old fixed overlay did)
+	 * and it pins to the top of the scroll container as the grid scrolls past.
+	 */
+	.stage-header {
+		position: sticky;
+		top: 0;
+		z-index: 4;
+		padding-block: clamp(0.75rem, 2vw, 1.5rem);
+		background: var(--gray-999);
+		border-bottom: 1px solid var(--gray-800);
+	}
+
+	.stage-header-inner {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem 1rem;
+	}
+
+	.stage-title {
+		font-size: var(--text-2xl);
+		line-height: 1;
+		letter-spacing: 0;
+		color: var(--gray-0);
+	}
+
+	.stage-tagline {
+		font-size: var(--text-md);
+		color: var(--gray-300);
+	}
+
+	.stage-body {
+		padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 8vw, 6rem);
+	}
+
+	@media (min-width: 50em) {
+		h1 {
+			max-width: 14ch;
+		}
+
+		.photography-landing {
+			min-height: 100%;
+		}
+
+		.photography-page {
+			height: calc(100svh - 9rem);
+		}
+	}
+</style>

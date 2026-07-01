@@ -4,7 +4,6 @@ import { type CollectionEntry, getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
 import ContactCTA from '../../components/ContactCTA.astro';
-import Hero from '../../components/Hero.astro';
 import Icon from '../../components/Icon.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import PhotoLightbox from '../../components/PhotoLightbox.vue';
@@ -47,25 +46,43 @@ const lightboxPhotos = data.photos.map((photo) => ({
 
 <BaseLayout title={data.title} description={data.description ?? `Photos from ${data.title}`}>
 	<div class="stack gap-20">
-		<div class="stack gap-15">
-			<header>
-				<div class="wrapper stack gap-2">
+		<div class="shoot-page stack" data-photo-snap-root>
+			<header class="shoot-landing">
+				<div class="wrapper header-shell">
 					<a class="back-link" href="/photography/"><Icon icon="arrow-left" /> Photography</a>
-					<Hero title={data.title} align="start">
-						<div class="details">
-							<p class="meta">
+					<div class="title-dock">
+						<div class="landing-title">
+							<h1>{data.title}</h1>
+							<div class="details">
+								<p class="meta">
+									{formattedDate}
+									{data.location && <> · {data.location}</>}
+									 · {data.photos.length} photos
+								</p>
+								{data.description && <p class="description">{data.description}</p>}
+							</div>
+						</div>
+					</div>
+				</div>
+			</header>
+			<main class="photo-stage" data-photo-stage>
+				<div class="stage-header">
+					<div class="wrapper stage-header-inner">
+						<a class="back-link" href="/photography/"><Icon icon="arrow-left" /> Photography</a>
+						<div class="stage-heading">
+							<p class="stage-title">{data.title}</p>
+							<p class="stage-meta">
 								{formattedDate}
 								{data.location && <> · {data.location}</>}
 								 · {data.photos.length} photos
 							</p>
-							{data.description && <p class="description">{data.description}</p>}
 						</div>
-					</Hero>
+					</div>
 				</div>
-			</header>
-			<main class="wrapper">
-				<PhotoGrid shootSlug={id} photos={data.photos} />
-				<PhotoLightbox client:idle photos={lightboxPhotos} />
+				<div class="wrapper stage-body">
+					<PhotoGrid shootSlug={id} photos={data.photos} />
+					<PhotoLightbox client:idle photos={lightboxPhotos} />
+				</div>
 			</main>
 		</div>
 		<ContactCTA />
@@ -73,22 +90,71 @@ const lightboxPhotos = data.photos.map((photo) => ({
 </BaseLayout>
 
 <style>
-	header {
-		padding-bottom: 2.5rem;
+	.shoot-page {
+		gap: 0;
+		height: calc(100svh - 7.5rem);
+		overflow-y: auto;
+		scroll-snap-type: y proximity;
+		scroll-behavior: smooth;
+	}
+
+	.shoot-landing {
+		position: relative;
+		min-height: 100%;
+		padding-bottom: 0;
 		border-bottom: 1px solid var(--gray-800);
+		background: var(--gray-999);
+		scroll-snap-align: start;
+	}
+
+	.header-shell {
+		display: grid;
+		grid-template-rows: auto 1fr;
+		min-height: inherit;
+		padding-top: clamp(0.75rem, 2vw, 1.5rem);
 	}
 
 	.back-link {
-		display: none;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		align-self: flex-start;
+		justify-self: flex-start;
+		position: relative;
+		z-index: 2;
+		padding-block: 0.25rem;
+		text-decoration: 1px solid underline transparent;
+		text-underline-offset: 0.25em;
+		transition: text-decoration-color var(--theme-transition);
+	}
+
+	.back-link:hover,
+	.back-link:focus {
+		text-decoration-color: currentColor;
+	}
+
+	.title-dock {
+		display: flex;
+		align-items: end;
+		padding-block: clamp(3rem, 10svh, 8rem) clamp(1.5rem, 4vw, 3rem);
+	}
+
+	h1 {
+		max-width: 13ch;
+		line-height: 0.88;
+		letter-spacing: 0;
+		color: var(--gray-0);
+		font-size: clamp(3.5rem, 10vw, 8rem);
 	}
 
 	.details {
 		display: flex;
 		flex-direction: column;
-		padding: 0.5rem;
-		gap: 0.75rem;
-		justify-content: center;
-		align-items: center;
+		max-width: 58ch;
+		margin-top: clamp(0.75rem, 2vw, 1.25rem);
+		padding-top: clamp(0.75rem, 2vw, 1.25rem);
+		gap: 0.65rem;
+		border-top: 1px solid var(--gray-800);
 	}
 
 	.meta {
@@ -101,21 +167,66 @@ const lightboxPhotos = data.photos.map((photo) => ({
 		max-width: 54ch;
 	}
 
-	.back-link {
-		text-decoration: 1px solid underline transparent;
-		text-underline-offset: 0.25em;
-		transition: text-decoration-color var(--theme-transition);
+	.photo-stage {
+		position: relative;
+		min-height: 100%;
+		scroll-snap-align: start;
 	}
 
-	.back-link:hover,
-	.back-link:focus {
-		text-decoration-color: currentColor;
+	/*
+	 * The pinned title. `position: sticky` keeps it in normal flow, so the photo
+	 * grid always sits *below* it and it pins to the top of the scroll container
+	 * as the grid scrolls past. Back-link stays reachable while browsing photos.
+	 */
+	.stage-header {
+		position: sticky;
+		top: 0;
+		z-index: 4;
+		padding-block: clamp(0.75rem, 2vw, 1.25rem);
+		background: var(--gray-999);
+		border-bottom: 1px solid var(--gray-800);
+	}
+
+	.stage-header-inner {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	.stage-heading {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.25rem 1rem;
+	}
+
+	.stage-title {
+		font-size: var(--text-2xl);
+		line-height: 1;
+		letter-spacing: 0;
+		color: var(--gray-0);
+	}
+
+	.stage-meta {
+		font-size: var(--text-md);
+		color: var(--gray-400);
+	}
+
+	.stage-body {
+		padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 8vw, 6rem);
 	}
 
 	@media (min-width: 50em) {
-		.back-link {
-			display: block;
-			align-self: flex-start;
+		h1 {
+			max-width: 14ch;
+		}
+
+		.shoot-landing {
+			min-height: 100%;
+		}
+
+		.shoot-page {
+			height: calc(100svh - 9rem);
 		}
 	}
 </style>

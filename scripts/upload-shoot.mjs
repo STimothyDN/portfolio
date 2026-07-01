@@ -82,6 +82,19 @@ function requireEnv(name) {
 	return value;
 }
 
+function storageHostFromRegion(region) {
+	const trimmed = region.trim();
+	if (!trimmed) return 'storage.bunnycdn.com';
+
+	try {
+		const url = new URL(trimmed);
+		return url.hostname;
+	} catch {
+		// Accept either a full storage hostname or Bunny's short region code.
+		return trimmed.includes('.') ? trimmed : `${trimmed}.storage.bunnycdn.com`;
+	}
+}
+
 function naturalSort(a, b) {
 	return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 }
@@ -159,15 +172,21 @@ async function extractPhotoMeta(buffer) {
 }
 
 async function uploadToBunny({ zone, region, accessKey, shootSlug, filename, buffer }) {
-	const host = region ? `${region}.storage.bunnycdn.com` : 'storage.bunnycdn.com';
+	const host = storageHostFromRegion(region);
 	const url = `https://${host}/${zone}/photography/${shootSlug}/${filename}`;
 
 	for (let attempt = 1; attempt <= 2; attempt++) {
-		const res = await fetch(url, {
-			method: 'PUT',
-			headers: { AccessKey: accessKey, 'Content-Type': 'application/octet-stream' },
-			body: buffer,
-		});
+		let res;
+		try {
+			res = await fetch(url, {
+				method: 'PUT',
+				headers: { AccessKey: accessKey, 'Content-Type': 'application/octet-stream' },
+				body: buffer,
+			});
+		} catch (error) {
+			const cause = error.cause?.message ? ` (${error.cause.message})` : '';
+			throw new Error(`Upload failed for ${filename}: ${error.message}${cause}`);
+		}
 		if (res.ok) return;
 		if (attempt === 2) {
 			throw new Error(`Upload failed for ${filename}: ${res.status} ${res.statusText}`);

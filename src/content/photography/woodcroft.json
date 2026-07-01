@@ -1,0 +1,533 @@
+{
+  "title": "Walks Around Woodcroft",
+  "date": "2026-06-30",
+  "location": "Durham, NC",
+  "coverPhoto": "DSC_0552.JPG",
+  "photos": [
+    {
+      "filename": "DSC_0517.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T14:52:43.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0519.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T14:53:46.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0523.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/8",
+        "shutterSpeed": "1/60s",
+        "iso": 800,
+        "capturedAt": "2026-06-30T14:55:01.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0526.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/4",
+        "shutterSpeed": "1/60s",
+        "iso": 200,
+        "capturedAt": "2026-06-30T14:55:37.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0529.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T14:56:27.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0531.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/4",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T14:59:32.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0533.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/4",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:00:30.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0535.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/4",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:01:00.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0537.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/4",
+        "shutterSpeed": "1/60s",
+        "iso": 450,
+        "capturedAt": "2026-06-30T15:02:26.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0539.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/4",
+        "shutterSpeed": "1/60s",
+        "iso": 125,
+        "capturedAt": "2026-06-30T15:05:46.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0546.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.5",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:07:48.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0547.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.5",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:09:08.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0550.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.5",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:10:00.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0552.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.5",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:12:28.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0562.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/16",
+        "shutterSpeed": "1/60s",
+        "iso": 320,
+        "capturedAt": "2026-06-30T15:27:52.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0566.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:29:40.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0570.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/320s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:31:34.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0571.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:37:27.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0573.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:38:25.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0575.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:38:42.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0576.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:38:44.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0577.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:38:46.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0578.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:41:35.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0582.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:42:34.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_0586.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-06-30T15:48:51.000Z"
+      },
+      "location": {
+        "name": "Woodcroft, Durham, NC",
+        "latitude": 35.9439,
+        "longitude": -78.9531,
+        "source": "manual"
+      }
+    }
+  ]
+}

@@ -232,6 +232,10 @@ html[data-section='photography'] body {
 	line-height: 1.6;
 }
 
+html[data-section='photography'] {
+	overscroll-behavior-y: contain;
+}
+
 html[data-section='photography'] h1,
 html[data-section='photography'] h2,
 html[data-section='photography'] h3,

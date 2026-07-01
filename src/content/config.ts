@@ -54,13 +54,18 @@ export const collections = {
 	}),
 	photography: defineCollection({
 		loader: glob({ pattern: '**/*.json', base: './src/content/photography' }),
-		schema: z.object({
-			title: z.string(),
-			date: z.coerce.date(),
-			location: z.string().optional(),
-			description: z.string().optional(),
-			coverPhoto: z.string().optional(),
-			photos: z.array(photoSchema).min(1),
-		}),
+		schema: z
+			.object({
+				title: z.string(),
+				date: z.coerce.date(),
+				location: z.string().optional(),
+				description: z.string().optional(),
+				coverPhoto: z.string().optional(),
+				photos: z.array(photoSchema).min(1),
+			})
+			.refine((shoot) => !shoot.coverPhoto || shoot.photos.some((photo) => photo.filename === shoot.coverPhoto), {
+				message: 'coverPhoto must match one of the filenames in photos.',
+				path: ['coverPhoto'],
+			}),
 	}),
 };

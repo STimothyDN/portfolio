@@ -42,7 +42,7 @@ npm run upload-shoot -- <folder> <shoot-slug> "<Title>" <YYYY-MM-DD> ["Location"
 Example:
 
 ```bash
-npm run upload-shoot -- ~/Desktop/gg-park 2026-06-15-golden-gate-park "Golden Gate Park" 2026-06-15 "San Francisco, CA"
+npm run upload-shoot -- /Users/timothynavarro/Pictures/20260630_073639 woodcroft "Walking Around Woodcroft" 2026-06-30 "Durham, NC"
 ```
 
 This will:
