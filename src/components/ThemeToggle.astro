@@ -78,11 +78,25 @@ import Icon from './Icon.astro';
 				button.setAttribute('aria-pressed', String(dark));
 			};
 
-			// Toggle the theme when a user clicks the button.
-			button.addEventListener('click', () => setTheme(!this.isDark()));
+			// Toggle the theme when a user clicks the button. This is the only place
+			// the preference is persisted — an explicit choice, not a page-load state.
+			button.addEventListener('click', () => {
+				const dark = !this.isDark();
+				setTheme(dark);
+				try {
+					localStorage.setItem('theme', dark ? 'dark' : 'light');
+				} catch {
+					/* storage unavailable (private mode etc.) — theme still applies */
+				}
+			});
 
-			// Initialize button state to reflect current theme.
-			setTheme(this.isDark());
+			// Initialize button state to reflect current theme (only the button —
+			// setting the class here would save a theme the user never chose).
+			// During a ClientRouter swap this constructor runs before `astro:after-swap`
+			// reapplies `theme-dark` to the fresh <html>, so re-sync a frame later.
+			const syncButton = () => button.setAttribute('aria-pressed', String(this.isDark()));
+			syncButton();
+			requestAnimationFrame(syncButton);
 		}
 
 		isDark() {

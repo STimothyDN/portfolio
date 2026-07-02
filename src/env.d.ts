@@ -10,7 +10,7 @@ interface ImportMeta {
 }
 
 interface Window {
-	/** Guards the theme MutationObserver against re-registration on each swap. */
+	/** Guards the theme after-swap listener against re-registration on each swap. */
 	__themeObserver?: boolean;
 	/** Guards the section-transition lifecycle listeners against double registration. */
 	__sectionTransition?: boolean;
