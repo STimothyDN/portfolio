@@ -17,6 +17,12 @@
         "shutterSpeed": "1/160s",
         "iso": 100,
         "capturedAt": "2026-07-01T21:44:21.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -32,6 +38,12 @@
         "shutterSpeed": "1/60s",
         "iso": 720,
         "capturedAt": "2026-07-01T22:35:31.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -47,6 +59,12 @@
         "shutterSpeed": "1/60s",
         "iso": 1250,
         "capturedAt": "2026-07-01T22:44:47.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -62,6 +80,12 @@
         "shutterSpeed": "1/60s",
         "iso": 1100,
         "capturedAt": "2026-07-01T22:45:21.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -77,6 +101,12 @@
         "shutterSpeed": "1/60s",
         "iso": 1100,
         "capturedAt": "2026-07-01T23:08:47.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -92,6 +122,12 @@
         "shutterSpeed": "1/60s",
         "iso": 1400,
         "capturedAt": "2026-07-01T23:09:01.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -107,6 +143,12 @@
         "shutterSpeed": "1/80s",
         "iso": 180,
         "capturedAt": "2026-07-01T23:09:59.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -122,6 +164,12 @@
         "shutterSpeed": "1/80s",
         "iso": 5600,
         "capturedAt": "2026-07-01T23:26:15.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -137,6 +185,12 @@
         "shutterSpeed": "1/30s",
         "iso": 9000,
         "capturedAt": "2026-07-01T23:26:39.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -152,6 +206,12 @@
         "shutterSpeed": "1/80s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:33:39.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -167,6 +227,12 @@
         "shutterSpeed": "1/100s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:34:08.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -182,6 +248,12 @@
         "shutterSpeed": "1/1600s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:35:06.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -197,6 +269,12 @@
         "shutterSpeed": "1/1250s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:35:22.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -212,6 +290,12 @@
         "shutterSpeed": "1/4000s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:36:29.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -227,6 +311,12 @@
         "shutterSpeed": "1/4000s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:37:24.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -242,6 +332,12 @@
         "shutterSpeed": "1/1600s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:38:13.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -257,6 +353,12 @@
         "shutterSpeed": "1/200s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:38:57.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -272,6 +374,12 @@
         "shutterSpeed": "1/2500s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:39:23.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -287,6 +395,12 @@
         "shutterSpeed": "1/200s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:41:07.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -302,6 +416,12 @@
         "shutterSpeed": "1/1250s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:42:28.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -317,6 +437,12 @@
         "shutterSpeed": "1/4000s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:44:32.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -332,6 +458,12 @@
         "shutterSpeed": "1/1000s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:45:39.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -347,6 +479,12 @@
         "shutterSpeed": "1/4000s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:50:09.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -362,6 +500,12 @@
         "shutterSpeed": "1/125s",
         "iso": 250,
         "capturedAt": "2026-07-01T23:52:43.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -377,6 +521,12 @@
         "shutterSpeed": "1/160s",
         "iso": 360,
         "capturedAt": "2026-07-01T23:52:58.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -392,6 +542,12 @@
         "shutterSpeed": "1/100s",
         "iso": 220,
         "capturedAt": "2026-07-01T23:53:19.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -407,6 +563,12 @@
         "shutterSpeed": "1/80s",
         "iso": 160,
         "capturedAt": "2026-07-01T23:54:06.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -422,6 +584,12 @@
         "shutterSpeed": "1/100s",
         "iso": 100,
         "capturedAt": "2026-07-01T23:57:32.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -437,6 +605,12 @@
         "shutterSpeed": "1/100s",
         "iso": 560,
         "capturedAt": "2026-07-02T00:11:59.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -452,6 +626,12 @@
         "shutterSpeed": "1/80s",
         "iso": 560,
         "capturedAt": "2026-07-02T00:41:03.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -467,6 +647,12 @@
         "shutterSpeed": "1/100s",
         "iso": 180,
         "capturedAt": "2026-07-02T00:41:22.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -482,6 +668,12 @@
         "shutterSpeed": "1/30s",
         "iso": 800,
         "capturedAt": "2026-07-02T00:45:08.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -497,6 +689,12 @@
         "shutterSpeed": "1/60s",
         "iso": 2500,
         "capturedAt": "2026-07-02T01:01:01.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -512,6 +710,12 @@
         "shutterSpeed": "1/60s",
         "iso": 4500,
         "capturedAt": "2026-07-02T01:01:38.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -527,6 +731,12 @@
         "shutterSpeed": "1/80s",
         "iso": 4500,
         "capturedAt": "2026-07-02T01:01:42.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -542,6 +752,12 @@
         "shutterSpeed": "1/125s",
         "iso": 800,
         "capturedAt": "2026-07-02T01:02:52.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -557,6 +773,12 @@
         "shutterSpeed": "1/80s",
         "iso": 360,
         "capturedAt": "2026-07-02T01:04:26.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -572,6 +794,12 @@
         "shutterSpeed": "1/80s",
         "iso": 5600,
         "capturedAt": "2026-07-02T01:04:32.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -587,6 +815,12 @@
         "shutterSpeed": "1/80s",
         "iso": 5600,
         "capturedAt": "2026-07-02T01:04:36.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -602,6 +836,12 @@
         "shutterSpeed": "1/80s",
         "iso": 3200,
         "capturedAt": "2026-07-02T01:05:23.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -617,6 +857,12 @@
         "shutterSpeed": "1/100s",
         "iso": 900,
         "capturedAt": "2026-07-02T01:05:33.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -632,6 +878,12 @@
         "shutterSpeed": "1/80s",
         "iso": 3200,
         "capturedAt": "2026-07-02T01:06:10.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -647,6 +899,12 @@
         "shutterSpeed": "1/80s",
         "iso": 2500,
         "capturedAt": "2026-07-02T01:09:04.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -662,6 +920,12 @@
         "shutterSpeed": "1/80s",
         "iso": 28800,
         "capturedAt": "2026-07-02T01:09:32.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -677,6 +941,12 @@
         "shutterSpeed": "1/20s",
         "iso": 2200,
         "capturedAt": "2026-07-02T01:11:48.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -692,6 +962,12 @@
         "shutterSpeed": "1/60s",
         "iso": 2200,
         "capturedAt": "2026-07-02T01:12:05.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -707,6 +983,12 @@
         "shutterSpeed": "1/80s",
         "iso": 14400,
         "capturedAt": "2026-07-02T01:12:42.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -722,6 +1004,12 @@
         "shutterSpeed": "1/100s",
         "iso": 5000,
         "capturedAt": "2026-07-02T01:14:10.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -737,6 +1025,12 @@
         "shutterSpeed": "1/100s",
         "iso": 14400,
         "capturedAt": "2026-07-02T01:14:47.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -752,6 +1046,12 @@
         "shutterSpeed": "1/80s",
         "iso": 1800,
         "capturedAt": "2026-07-02T01:23:13.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -767,6 +1067,12 @@
         "shutterSpeed": "1/80s",
         "iso": 14400,
         "capturedAt": "2026-07-02T01:23:37.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -782,6 +1088,12 @@
         "shutterSpeed": "1/160s",
         "iso": 5000,
         "capturedAt": "2026-07-02T01:23:49.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -797,6 +1109,12 @@
         "shutterSpeed": "1/100s",
         "iso": 3600,
         "capturedAt": "2026-07-02T01:27:31.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -812,6 +1130,12 @@
         "shutterSpeed": "1/100s",
         "iso": 18000,
         "capturedAt": "2026-07-02T01:29:35.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -827,6 +1151,12 @@
         "shutterSpeed": "1/80s",
         "iso": 900,
         "capturedAt": "2026-07-02T02:26:23.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -842,6 +1172,12 @@
         "shutterSpeed": "1/60s",
         "iso": 7200,
         "capturedAt": "2026-07-02T02:27:08.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -857,6 +1193,12 @@
         "shutterSpeed": "1/40s",
         "iso": 5600,
         "capturedAt": "2026-07-02T02:27:50.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -872,6 +1214,12 @@
         "shutterSpeed": "1/60s",
         "iso": 1400,
         "capturedAt": "2026-07-02T02:29:34.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -887,6 +1235,12 @@
         "shutterSpeed": "1/80s",
         "iso": 3200,
         "capturedAt": "2026-07-02T02:30:36.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -902,6 +1256,12 @@
         "shutterSpeed": "1/100s",
         "iso": 720,
         "capturedAt": "2026-07-02T02:33:13.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -917,6 +1277,12 @@
         "shutterSpeed": "1/80s",
         "iso": 900,
         "capturedAt": "2026-07-02T02:34:02.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -932,6 +1298,12 @@
         "shutterSpeed": "1/60s",
         "iso": 1000,
         "capturedAt": "2026-07-02T02:34:06.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -947,6 +1319,12 @@
         "shutterSpeed": "1/60s",
         "iso": 1250,
         "capturedAt": "2026-07-02T02:35:17.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -962,6 +1340,12 @@
         "shutterSpeed": "1/100s",
         "iso": 5000,
         "capturedAt": "2026-07-02T02:35:52.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     },
     {
@@ -977,6 +1361,12 @@
         "shutterSpeed": "1/80s",
         "iso": 900,
         "capturedAt": "2026-07-02T02:37:34.000Z"
+      },
+      "location": {
+        "name": "Chapel Hill, NC",
+        "latitude": 35.9132,
+        "longitude": -79.0558,
+        "source": "manual"
       }
     }
   ]

@@ -26,8 +26,8 @@ const EARTH_R = 1;
 const SPHERE_SEG = 64;
 const CAM_FOV = 32; // vertical field of view (degrees)
 const DEFAULT_DIST = 4.15; // camera distance for the birds-eye default view
-const MIN_DIST = 1.28; // hard max-zoom cap — a state-sized cluster fills the frame here
-const GENERAL_ZOOM_DIST = DEFAULT_DIST * 0.68; // hover with no nearby pins
+const MIN_DIST = 1.35; // hard max-zoom cap — a state-sized cluster fills the frame here
+const GENERAL_ZOOM_DIST = 2.4; // hover with no nearby pins
 const NEIGHBOR_RAD = 0.62; // ~35deg: pins within this of the cursor count as "vicinity"
 const FRAME_FILL = 0.72; // a cluster is framed to fill ~72% of the half-viewport
 const HOVER_PX = 26; // cursor-to-pin pixel radius that counts as hovering a pin
@@ -42,12 +42,12 @@ const SMOOTH = 5; // camera lerp responsiveness
 const FRAME_HALF_ANGLE = Math.tan(((CAM_FOV / 2) * Math.PI) / 180) * FRAME_FILL;
 
 /**
- * Camera distance (in sphere radii) needed so a surface cap of angular radius
- * `alpha` around the sub-camera point fills the target fraction of the frame.
+ * Distance from the cluster centre (in sphere radii) so a cluster of angular
+ * radius `alpha` fills the target fraction of the frame. Tighter clusters map
+ * below MIN_DIST and get clamped to the max-zoom cap by the caller.
  */
 function frameDistanceForRadius(alpha: number): number {
-	const a = Math.max(alpha, 0.0001);
-	return Math.cos(a) + Math.sin(a) / FRAME_HALF_ANGLE;
+	return alpha / FRAME_HALF_ANGLE;
 }
 
 /** lat/lon (degrees) -> unit vector on the sphere, matching an equirectangular map. */
@@ -146,23 +146,6 @@ class GlobeController {
 			host.addEventListener('pointermove', this.onPointerMove);
 			host.addEventListener('pointerleave', this.onPointerLeave);
 		}
-
-		if (import.meta.env.DEV) (window as unknown as { __globe: GlobeController }).__globe = this;
-	}
-
-	/** Dev-only: current on-screen pixel position of each pin. */
-	debugPins() {
-		return this.pinLocalPos.map((p) => {
-			const w = p.clone();
-			this.earthGroup.localToWorld(w);
-			const facing = w.dot(this.camera.position.clone().sub(w)) > 0;
-			const ndc = w.project(this.camera);
-			return {
-				facing,
-				x: Math.round(((ndc.x + 1) / 2) * this.hostW),
-				y: Math.round(((1 - ndc.y) / 2) * this.hostH),
-			};
-		});
 	}
 
 	private initRenderer() {
@@ -273,7 +256,11 @@ class GlobeController {
 		const loader = new THREE.TextureLoader(manager);
 		const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
-		const day = loader.load(`${base}/globe/earth-day.jpg`);
+		// Desktop zooms in, so it needs the sharp 8K map; touch devices never zoom
+		// (and want a lighter payload), so they get the 2K one. three.js clamps the
+		// 8K down automatically on GPUs whose max texture size is smaller.
+		const dayFile = this.canHover ? 'earth-day-8k.jpg' : 'earth-day-2k.jpg';
+		const day = loader.load(`${base}/globe/${dayFile}`);
 		day.colorSpace = THREE.SRGBColorSpace;
 		day.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
 		const normal = loader.load(`${base}/globe/earth-normal.jpg`);
@@ -329,9 +316,21 @@ class GlobeController {
 		}
 	}
 
+	private lookTarget = new THREE.Vector3();
+	private surfTmp = new THREE.Vector3();
+
 	private placeCamera() {
-		this.camera.position.copy(this.pivot).addScaledVector(this.curDir, this.curDist);
-		this.camera.lookAt(this.pivot);
+		// At rest, look at the low pivot so the south pole tucks into the slit; as we
+		// zoom in, slide the look-at toward the aimed surface point so the cluster centres.
+		const zoomT = THREE.MathUtils.clamp(
+			(DEFAULT_DIST - this.curDist) / (DEFAULT_DIST - MIN_DIST),
+			0,
+			1
+		);
+		this.surfTmp.copy(this.curDir).multiplyScalar(EARTH_R);
+		this.lookTarget.lerpVectors(this.pivot, this.surfTmp, zoomT);
+		this.camera.position.copy(this.lookTarget).addScaledVector(this.curDir, this.curDist);
+		this.camera.lookAt(this.lookTarget);
 	}
 
 	/* ---- pointer / hover-zoom --------------------------------------- */
