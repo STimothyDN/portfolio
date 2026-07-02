@@ -47,35 +47,35 @@ const lightboxPhotos = data.photos.map((photo) => ({
 <BaseLayout title={data.title} description={data.description ?? `Photos from ${data.title}`}>
 	<div class="stack gap-20">
 		<div class="shoot-page stack" data-photo-snap-root>
-			<header class="shoot-landing">
-				<div class="wrapper header-shell">
+			<header class="shoot-landing" data-photo-landing>
+				<div class="wrapper landing-shell">
 					<a class="back-link" href="/photography/"><Icon icon="arrow-left" /> Photography</a>
-					<div class="title-dock">
-						<div class="landing-title">
-							<h1>{data.title}</h1>
-							<div class="details">
-								<p class="meta">
-									{formattedDate}
-									{data.location && <> · {data.location}</>}
-									 · {data.photos.length} photos
-								</p>
-								{data.description && <p class="description">{data.description}</p>}
-							</div>
-						</div>
-					</div>
 				</div>
 			</header>
 			<main class="photo-stage" data-photo-stage>
-				<div class="stage-header">
-					<div class="wrapper stage-header-inner">
-						<a class="back-link" href="/photography/"><Icon icon="arrow-left" /> Photography</a>
-						<div class="stage-heading">
-							<p class="stage-title">{data.title}</p>
-							<p class="stage-meta">
+				<div class="stage-header" data-photo-title>
+					<div class="wrapper">
+						<div class="back-reveal">
+							<div class="back-reveal-inner">
+								<a class="back-link" href="/photography/"><Icon icon="arrow-left" /> Photography</a>
+							</div>
+						</div>
+						<h1>{data.title}</h1>
+						<div class="details">
+							<p class="meta">
 								{formattedDate}
 								{data.location && <> · {data.location}</>}
 								 · {data.photos.length} photos
 							</p>
+							{
+								data.description && (
+									<div class="description-reveal">
+										<div class="description-reveal-inner">
+											<p class="description">{data.description}</p>
+										</div>
+									</div>
+								)
+							}
 						</div>
 					</div>
 				</div>
@@ -90,27 +90,39 @@ const lightboxPhotos = data.photos.map((photo) => ({
 </BaseLayout>
 
 <style>
-	.shoot-page {
-		gap: 0;
-		height: calc(100svh - 7.5rem);
-		overflow-y: auto;
+	/*
+	 * Same soft-snap structure as the photography index: sections snap on the
+	 * page scroller (<body> — see the note there), and a single title block
+	 * starts docked at the bottom of the first viewport, pins via sticky, and
+	 * morphs to a compact header. One element — no duplicate title mid-snap.
+	 */
+	:global(html[data-section='photography']),
+	:global(html[data-section='photography'] body) {
 		scroll-snap-type: y proximity;
-		scroll-behavior: smooth;
+	}
+
+	.shoot-page {
+		/*
+		 * Refined at runtime by photo-section-snap.ts; no-JS approximations.
+		 * The title height fallback is looser here — shoot titles and
+		 * descriptions vary in length.
+		 */
+		--photo-landing-offset: 7.5rem;
+		--photo-title-h: calc(clamp(3.5rem, 10vw, 8rem) * 0.88 + 11rem);
+		gap: 0;
 	}
 
 	.shoot-landing {
 		position: relative;
-		min-height: 100%;
-		padding-bottom: 0;
-		border-bottom: 1px solid var(--gray-800);
+		z-index: 0;
+		height: calc(100svh - var(--photo-landing-offset));
 		background: var(--gray-999);
 		scroll-snap-align: start;
+		/* Snap the landing back to the true top of the page, nav included. */
+		scroll-margin-top: var(--photo-landing-offset);
 	}
 
-	.header-shell {
-		display: grid;
-		grid-template-rows: auto 1fr;
-		min-height: inherit;
+	.landing-shell {
 		padding-top: clamp(0.75rem, 2vw, 1.5rem);
 	}
 
@@ -118,10 +130,6 @@ const lightboxPhotos = data.photos.map((photo) => ({
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
-		align-self: flex-start;
-		justify-self: flex-start;
-		position: relative;
-		z-index: 2;
 		padding-block: 0.25rem;
 		text-decoration: 1px solid underline transparent;
 		text-underline-offset: 0.25em;
@@ -133,10 +141,52 @@ const lightboxPhotos = data.photos.map((photo) => ({
 		text-decoration-color: currentColor;
 	}
 
-	.title-dock {
-		display: flex;
-		align-items: end;
-		padding-block: clamp(3rem, 10svh, 8rem) clamp(1.5rem, 4vw, 3rem);
+	/* Pulled up over the landing so the title docks at the first viewport's fold. */
+	.photo-stage {
+		position: relative;
+		z-index: 1;
+		min-height: 100svh;
+		margin-top: calc(-1 * var(--photo-title-h));
+		scroll-snap-align: start;
+	}
+
+	/*
+	 * The single title block: masthead-sized while docked, compact once pinned
+	 * (`.is-stuck`, toggled by photo-section-snap.ts). The back link collapses
+	 * into it while docked (the landing shows its own, a viewport away) and is
+	 * revealed when pinned, so it stays reachable while browsing photos.
+	 */
+	.stage-header {
+		position: sticky;
+		top: 0;
+		z-index: 4;
+		padding-block: clamp(1.25rem, 3vw, 2rem) clamp(1.5rem, 4vw, 3rem);
+		background: var(--gray-999);
+		border-bottom: 1px solid transparent;
+	}
+
+	.stage-header.is-stuck {
+		padding-block: clamp(0.75rem, 2vw, 1.25rem);
+		border-bottom-color: var(--gray-800);
+	}
+
+	.back-reveal {
+		display: grid;
+		grid-template-rows: 0fr;
+		opacity: 0;
+		/* visibility keeps the collapsed copy out of tab order and clicks */
+		visibility: hidden;
+	}
+
+	.back-reveal-inner {
+		overflow: hidden;
+		min-height: 0;
+	}
+
+	.is-stuck .back-reveal {
+		grid-template-rows: 1fr;
+		opacity: 1;
+		visibility: visible;
 	}
 
 	h1 {
@@ -145,6 +195,10 @@ const lightboxPhotos = data.photos.map((photo) => ({
 		letter-spacing: 0;
 		color: var(--gray-0);
 		font-size: clamp(3.5rem, 10vw, 8rem);
+	}
+
+	.is-stuck h1 {
+		font-size: var(--text-2xl);
 	}
 
 	.details {
@@ -157,9 +211,33 @@ const lightboxPhotos = data.photos.map((photo) => ({
 		border-top: 1px solid var(--gray-800);
 	}
 
+	.is-stuck .details {
+		margin-top: 0.35rem;
+		padding-top: 0;
+		gap: 0;
+		border-top-color: transparent;
+	}
+
 	.meta {
 		font-size: var(--text-md);
 		color: var(--gray-400);
+	}
+
+	.description-reveal {
+		display: grid;
+		grid-template-rows: 1fr;
+		opacity: 1;
+	}
+
+	.description-reveal-inner {
+		overflow: hidden;
+		min-height: 0;
+	}
+
+	.is-stuck .description-reveal {
+		grid-template-rows: 0fr;
+		opacity: 0;
+		visibility: hidden;
 	}
 
 	.description {
@@ -167,49 +245,48 @@ const lightboxPhotos = data.photos.map((photo) => ({
 		max-width: 54ch;
 	}
 
-	.photo-stage {
-		position: relative;
-		min-height: 100%;
-		scroll-snap-align: start;
+	@media (prefers-reduced-motion: no-preference) {
+		.stage-header {
+			transition:
+				padding 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				border-color 450ms ease;
+		}
+
+		h1 {
+			transition: font-size 450ms cubic-bezier(0.33, 1, 0.68, 1);
+		}
+
+		.details {
+			transition:
+				margin-top 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				padding-top 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				gap 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				border-color 450ms ease;
+		}
+
+		.back-reveal,
+		.description-reveal {
+			transition:
+				grid-template-rows 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				opacity 450ms ease,
+				visibility 0s;
+		}
+
+		/* Whichever block is *hiding* keeps its visibility until the collapse ends. */
+		.back-reveal,
+		.is-stuck .description-reveal {
+			transition-delay: 0s, 0s, 450ms;
+		}
+
+		.is-stuck .back-reveal {
+			transition-delay: 0s;
+		}
 	}
 
-	/*
-	 * The pinned title. `position: sticky` keeps it in normal flow, so the photo
-	 * grid always sits *below* it and it pins to the top of the scroll container
-	 * as the grid scrolls past. Back-link stays reachable while browsing photos.
-	 */
-	.stage-header {
-		position: sticky;
-		top: 0;
-		z-index: 4;
-		padding-block: clamp(0.75rem, 2vw, 1.25rem);
-		background: var(--gray-999);
-		border-bottom: 1px solid var(--gray-800);
-	}
-
-	.stage-header-inner {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-	}
-
-	.stage-heading {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: baseline;
-		gap: 0.25rem 1rem;
-	}
-
-	.stage-title {
-		font-size: var(--text-2xl);
-		line-height: 1;
-		letter-spacing: 0;
-		color: var(--gray-0);
-	}
-
-	.stage-meta {
-		font-size: var(--text-md);
-		color: var(--gray-400);
+	/* photo-section-snap.ts sets this while reading the un-stuck height. */
+	.stage-header[data-measuring],
+	.stage-header[data-measuring] * {
+		transition: none !important;
 	}
 
 	.stage-body {
@@ -221,12 +298,8 @@ const lightboxPhotos = data.photos.map((photo) => ({
 			max-width: 14ch;
 		}
 
-		.shoot-landing {
-			min-height: 100%;
-		}
-
 		.shoot-page {
-			height: calc(100svh - 9rem);
+			--photo-landing-offset: 9rem;
 		}
 	}
 </style>

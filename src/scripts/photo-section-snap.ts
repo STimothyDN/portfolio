@@ -8,50 +8,130 @@ declare global {
 const prefersReducedMotion = () =>
 	window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Photography routes stack two full-height sections: a landing masthead and the
-// content stage. The snap between them is handled natively by CSS
-// (`scroll-snap-type: y proximity`), which stays soft — it only eases toward a
-// section when the scroll comes to rest near it, and never fights an in-progress
-// gesture. All this script adds on top is keyboard section-jumps.
+// The photography index stacks a full-viewport landing (the globe) above the
+// shoot stage, whose single title block starts docked at the bottom of the
+// first viewport (the stage is pulled up over the landing by --photo-title-h)
+// and pins to the top via `position: sticky`. The soft snap between the two
+// sections is native CSS (`scroll-snap-type: y proximity` on the document
+// scroller) — it only eases toward a section when the scroll comes to rest
+// near it, and never fights an in-progress gesture. This script adds:
+//   1. real measurements for the layout's CSS vars (the stylesheet ships
+//      approximate no-JS fallbacks),
+//   2. the `.is-stuck` toggle that morphs the title from masthead to compact
+//      header once it pins, and
+//   3. keyboard section-jumps between landing and stage.
 function initPhotoSectionSnap() {
 	window.__photoSectionSnapController?.abort();
 
 	const root = document.querySelector<HTMLElement>('[data-photo-snap-root]');
+	const landing = document.querySelector<HTMLElement>('[data-photo-landing]');
 	const stage = document.querySelector<HTMLElement>('[data-photo-stage]');
-	if (!root || !stage || document.documentElement.dataset.section !== 'photography') return;
+	const title = document.querySelector<HTMLElement>('[data-photo-title]');
+	if (!root || !landing || !stage || !title) return;
+	if (document.documentElement.dataset.section !== 'photography') return;
 
 	const controller = new AbortController();
 	window.__photoSectionSnapController = controller;
+	const { signal } = controller;
 
-	// The stage's scroll offset within the scroll container (`offsetTop` resolves
-	// against `.content`, a positioned ancestor, so it can't be used here).
-	const stageTop = () =>
-		Math.round(stage.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop);
+	// global.css gives html and body `height: 100%; overflow-x: hidden`, which
+	// makes <body> the element that actually scrolls (window.scrollY stays 0).
+	// Read/write both so this keeps working if that ever changes — the
+	// non-scrolling one is a no-op.
+	const body = document.body;
+	const scrollPos = () => window.scrollY + body.scrollTop;
 
-	const scrollToSection = (targetTop: number) =>
-		root.scrollTo({ top: targetTop, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+	// Scroll offset the title pins at; kept fresh by measure().
+	let stageTop = 0;
+	let stuck = title.classList.contains('is-stuck');
+
+	const measure = () => {
+		// Chrome above the landing (nav + its margin) — sizes the landing so the
+		// docked title's bottom edge lands exactly on the first viewport's fold.
+		const landingTop = Math.round(landing.getBoundingClientRect().top + scrollPos());
+		root.style.setProperty('--photo-landing-offset', `${Math.max(0, landingTop)}px`);
+
+		// The title's natural (un-stuck) height drives the stage's pull-up margin.
+		// [data-measuring] disables the morph transitions so both the un-stuck
+		// read and the restore commit instantly, without re-playing the morph.
+		title.setAttribute('data-measuring', '');
+		title.classList.remove('is-stuck');
+		const titleHeight = title.offsetHeight;
+		title.classList.toggle('is-stuck', stuck);
+		void title.offsetHeight; // commit restored state while transitions are off
+		title.removeAttribute('data-measuring');
+		root.style.setProperty('--photo-title-h', `${Math.round(titleHeight)}px`);
+
+		stageTop = Math.round(stage.getBoundingClientRect().top + scrollPos());
+	};
+
+	// Hysteresis keeps the morph from flickering when the scroll rests right on
+	// the snap point (where the title has pinned but not yet travelled past).
+	const STICK_AT = 48;
+	const UNSTICK_AT = 8;
+	const onScroll = () => {
+		const y = scrollPos();
+		if (!stuck && y >= stageTop + STICK_AT) {
+			stuck = true;
+			title.classList.add('is-stuck');
+		} else if (stuck && y <= stageTop + UNSTICK_AT) {
+			stuck = false;
+			title.classList.remove('is-stuck');
+		}
+	};
+
+	const scrollToY = (top: number) => {
+		const behavior = prefersReducedMotion() ? ('auto' as const) : ('smooth' as const);
+		window.scrollTo({ top, behavior });
+		body.scrollTo({ top, behavior });
+	};
 
 	const handleKeydown = (event: KeyboardEvent) => {
 		if (event.metaKey || event.ctrlKey || event.altKey) return;
 
-		const contentTop = stageTop();
+		const target = event.target as HTMLElement | null;
+		if (
+			target &&
+			(target.isContentEditable || /^(?:INPUT|TEXTAREA|SELECT|BUTTON)$/.test(target.tagName))
+		)
+			return;
+
 		const downKeys = new Set(['ArrowDown', 'PageDown', ' ']);
 		const upKeys = new Set(['ArrowUp', 'PageUp']);
+		const y = scrollPos();
 
-		// Jump landing → content, and back, but leave the keys alone once the reader
+		// Jump landing → stage, and back, but leave the keys alone once the reader
 		// is browsing the grid so it scrolls normally.
-		if (downKeys.has(event.key) && root.scrollTop < contentTop - 4) {
+		if (downKeys.has(event.key) && y < stageTop - 4) {
 			event.preventDefault();
-			scrollToSection(contentTop);
-		} else if (upKeys.has(event.key) && root.scrollTop > 0 && root.scrollTop < contentTop) {
+			scrollToY(stageTop);
+		} else if (upKeys.has(event.key) && y > 0 && y <= stageTop + 4) {
 			event.preventDefault();
-			scrollToSection(0);
+			scrollToY(0);
 		}
 	};
 
-	document.addEventListener('keydown', handleKeydown, { capture: true, signal: controller.signal });
+	document.addEventListener('keydown', handleKeydown, { capture: true, signal });
+	window.addEventListener('scroll', onScroll, { passive: true, signal });
+	body.addEventListener('scroll', onScroll, { passive: true, signal });
 
-	root.scrollTop = 0;
+	let measureRaf = 0;
+	const queueMeasure = () => {
+		cancelAnimationFrame(measureRaf);
+		measureRaf = requestAnimationFrame(() => {
+			measure();
+			onScroll();
+		});
+	};
+	window.addEventListener('resize', queueMeasure, { signal });
+
+	measure();
+	onScroll();
+	// The masthead uses a display font — its metrics (and so the title height)
+	// settle once fonts finish loading.
+	document.fonts?.ready.then(() => {
+		if (!signal.aborted) queueMeasure();
+	});
 }
 
 const queueInitPhotoSectionSnap = () => requestAnimationFrame(initPhotoSectionSnap);
