@@ -1,0 +1,1373 @@
+{
+  "title": "Explores Caves In Kentucky",
+  "date": "2026-07-03",
+  "location": "Mammoth Cave, KY",
+  "coverPhoto": "DSC_1342.JPG",
+  "photos": [
+    {
+      "filename": "DSC_1094.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T13:58:24.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1097.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T13:59:06.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1100.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T14:00:06.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1106.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T14:38:08.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1112.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 250,
+        "capturedAt": "2026-07-03T14:49:08.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1115.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 110,
+        "capturedAt": "2026-07-03T14:49:14.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1118.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 200,
+        "capturedAt": "2026-07-03T14:49:32.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1124.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 220,
+        "capturedAt": "2026-07-03T14:55:11.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1130.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T15:01:53.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1133.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T15:11:00.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1136.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 200,
+        "capturedAt": "2026-07-03T15:11:14.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1142.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/100s",
+        "iso": 640,
+        "capturedAt": "2026-07-03T15:11:35.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1145.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 220,
+        "capturedAt": "2026-07-03T15:12:08.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1148.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 3200,
+        "capturedAt": "2026-07-03T15:12:17.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1166.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/100s",
+        "iso": 51200,
+        "capturedAt": "2026-07-03T15:14:20.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1170.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/50s",
+        "iso": 16000,
+        "capturedAt": "2026-07-03T15:16:19.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1172.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 8000,
+        "capturedAt": "2026-07-03T15:16:42.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1178.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 10000,
+        "capturedAt": "2026-07-03T15:17:13.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1181.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 11400,
+        "capturedAt": "2026-07-03T15:18:20.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1184.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 51200,
+        "capturedAt": "2026-07-03T15:21:03.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1190.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/125s",
+        "iso": 18000,
+        "capturedAt": "2026-07-03T15:21:29.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1196.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 51200,
+        "capturedAt": "2026-07-03T15:33:54.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1205.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/100s",
+        "iso": 40000,
+        "capturedAt": "2026-07-03T15:35:40.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1214.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/100s",
+        "iso": 45600,
+        "capturedAt": "2026-07-03T15:38:58.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1220.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/13s",
+        "iso": 51200,
+        "capturedAt": "2026-07-03T15:39:14.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1226.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/100s",
+        "iso": 4500,
+        "capturedAt": "2026-07-03T15:50:41.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1232.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/100s",
+        "iso": 1400,
+        "capturedAt": "2026-07-03T15:51:04.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1238.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/125s",
+        "iso": 4500,
+        "capturedAt": "2026-07-03T15:54:13.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1241.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/100s",
+        "iso": 4500,
+        "capturedAt": "2026-07-03T15:54:36.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1248.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/40s",
+        "iso": 2800,
+        "capturedAt": "2026-07-03T15:58:38.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1253.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 36000,
+        "capturedAt": "2026-07-03T15:59:16.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1256.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 22800,
+        "capturedAt": "2026-07-03T15:59:28.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1262.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 2800,
+        "capturedAt": "2026-07-03T16:00:12.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1268.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 6400,
+        "capturedAt": "2026-07-03T16:01:03.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1271.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/30s",
+        "iso": 51200,
+        "capturedAt": "2026-07-03T16:01:25.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1274.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 4000,
+        "capturedAt": "2026-07-03T16:01:33.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1280.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 1600,
+        "capturedAt": "2026-07-03T16:01:57.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1292.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 5600,
+        "capturedAt": "2026-07-03T16:02:57.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1295.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/160s",
+        "iso": 500,
+        "capturedAt": "2026-07-03T16:03:10.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1306.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 22800,
+        "capturedAt": "2026-07-03T16:05:51.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1307.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/125s",
+        "iso": 720,
+        "capturedAt": "2026-07-03T16:07:25.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1313.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 1100,
+        "capturedAt": "2026-07-03T16:07:46.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1322.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/100s",
+        "iso": 400,
+        "capturedAt": "2026-07-03T16:09:36.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1331.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/80s",
+        "iso": 22800,
+        "capturedAt": "2026-07-03T16:27:12.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1334.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/125s",
+        "iso": 2200,
+        "capturedAt": "2026-07-03T16:27:44.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1340.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 14400,
+        "capturedAt": "2026-07-03T16:32:51.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1341.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 2800,
+        "capturedAt": "2026-07-03T16:33:18.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1342.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 25600,
+        "capturedAt": "2026-07-03T16:33:35.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1345.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 3600,
+        "capturedAt": "2026-07-03T16:34:01.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1349.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 3600,
+        "capturedAt": "2026-07-03T16:34:49.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1350.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 2800,
+        "capturedAt": "2026-07-03T16:35:00.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1351.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 3600,
+        "capturedAt": "2026-07-03T16:35:05.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1357.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 12800,
+        "capturedAt": "2026-07-03T16:36:00.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1358.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 2500,
+        "capturedAt": "2026-07-03T16:36:29.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1360.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 2800,
+        "capturedAt": "2026-07-03T16:36:56.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1361.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 1800,
+        "capturedAt": "2026-07-03T16:37:00.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1363.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 7200,
+        "capturedAt": "2026-07-03T16:41:37.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1365.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 1250,
+        "capturedAt": "2026-07-03T16:41:52.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1367.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 2200,
+        "capturedAt": "2026-07-03T16:52:37.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1371.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 160,
+        "capturedAt": "2026-07-03T16:53:44.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1375.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/100s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T16:54:06.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1376.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T16:55:07.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1377.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T16:55:21.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1378.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T16:55:46.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1380.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-07-03T16:55:57.000Z"
+      },
+      "location": {
+        "name": "Mammoth Cave, KY",
+        "latitude": 37.18364,
+        "longitude": -86.159943,
+        "source": "manual"
+      }
+    }
+  ]
+}

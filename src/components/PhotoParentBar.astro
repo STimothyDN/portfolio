@@ -1,0 +1,79 @@
+---
+/*
+ * The persistent "section frame" for a nested shoot page: the photography
+ * masthead reduced to a slim breadcrumb, pinned at the very top with the shoot
+ * nested beneath it. Clicking it returns to the section index. Because
+ * navigating within /photography is a plain fade (no liquid drain), rendering
+ * this bar in the same spot on every shoot makes the section feel like one app
+ * whose frame stays put while the shoot content swaps underneath.
+ */
+import Icon from './Icon.astro';
+---
+
+<div class="photo-parent-bar" data-photo-parent-bar transition:persist="photo-parent-bar">
+	<a class="pp-inner wrapper" href="/photography/" aria-label="Back to the Photography index">
+		<span class="pp-back" aria-hidden="true"><Icon icon="arrow-left" size="1em" /></span>
+		<span class="pp-title">TiMo From 3,</span>
+		<span class="pp-tagline">He shoots! He-</span>
+	</a>
+</div>
+
+<style>
+	.photo-parent-bar {
+		position: sticky;
+		top: 0;
+		z-index: 5;
+		background: var(--gray-999);
+		border-bottom: 1px solid var(--gray-800);
+	}
+
+	.pp-inner {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		padding-block: 0.6rem;
+		text-decoration: none;
+		color: var(--gray-200);
+	}
+
+	.pp-back {
+		align-self: center;
+		display: inline-flex;
+		color: var(--gray-400);
+		transition: color var(--theme-transition);
+	}
+
+	.pp-inner:hover .pp-back,
+	.pp-inner:focus-visible .pp-back {
+		color: var(--gray-0);
+	}
+
+	.pp-title {
+		font-family: var(--font-brand);
+		font-size: var(--text-md);
+		font-weight: 500;
+		color: var(--gray-100);
+	}
+
+	.pp-tagline {
+		font-size: var(--text-sm);
+		color: var(--gray-400);
+	}
+
+	.pp-tagline::before {
+		content: '·';
+		margin-inline-end: 0.5rem;
+		color: var(--gray-400);
+	}
+
+	.pp-inner:focus-visible {
+		outline: 2px solid var(--accent-regular);
+		outline-offset: -2px;
+	}
+
+	@media (max-width: 26em) {
+		.pp-tagline {
+			display: none;
+		}
+	}
+</style>

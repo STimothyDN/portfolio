@@ -78,7 +78,7 @@
 					</div>
 				</div>
 
-				<div class="counter">{{ currentIndex + 1 }} / {{ photos.length }}</div>
+				<div class="counter">{{ currentIndex + 1 }} / {{ list.length }}</div>
 			</div>
 		</Transition>
 	</Teleport>
@@ -89,17 +89,26 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { iconPaths } from './IconPaths';
 
 const props = defineProps({
-	photos: { type: Array, required: true },
+	// Single-shoot mode (static shoot pages): one photo list.
+	photos: { type: Array, default: () => [] },
+	// Multi-shoot mode (photography index): slug → photo list. One lightbox
+	// instance serves every inline shoot panel; open-lightbox events carry the
+	// slug that picks the active set.
+	photoSets: { type: Object, default: null },
+	// In single-shoot mode, ignore events tagged for another shoot.
+	shootSlug: { type: String, default: '' },
 });
 
 const isOpen = ref(false);
 const currentIndex = ref(0);
 const showInfo = ref(false);
 const closeButtonRef = ref(null);
+const activeSet = ref(null);
 let lastFocusedElement = null;
 let touchStartX = 0;
 
-const current = computed(() => props.photos[currentIndex.value]);
+const list = computed(() => activeSet.value ?? props.photos);
+const current = computed(() => list.value[currentIndex.value]);
 const hasInfo = computed(() => Boolean(current.value?.exif || current.value?.location));
 
 const formattedCapturedAt = computed(() => {
@@ -123,7 +132,7 @@ const formattedLocation = computed(() => {
 });
 
 function preload(index) {
-	const photo = props.photos[index];
+	const photo = list.value[index];
 	if (!photo) return;
 	const img = new Image();
 	img.src = photo.fullUrl;
@@ -135,8 +144,8 @@ function open(index) {
 	showInfo.value = false;
 	isOpen.value = true;
 	document.body.style.overflow = 'hidden';
-	preload(index + 1 >= props.photos.length ? 0 : index + 1);
-	preload(index - 1 < 0 ? props.photos.length - 1 : index - 1);
+	preload(index + 1 >= list.value.length ? 0 : index + 1);
+	preload(index - 1 < 0 ? list.value.length - 1 : index - 1);
 	nextTick(() => closeButtonRef.value?.focus());
 }
 
@@ -148,15 +157,15 @@ function close() {
 }
 
 function next() {
-	currentIndex.value = (currentIndex.value + 1) % props.photos.length;
+	currentIndex.value = (currentIndex.value + 1) % list.value.length;
 	showInfo.value = false;
-	preload(currentIndex.value + 1 >= props.photos.length ? 0 : currentIndex.value + 1);
+	preload(currentIndex.value + 1 >= list.value.length ? 0 : currentIndex.value + 1);
 }
 
 function prev() {
-	currentIndex.value = (currentIndex.value - 1 + props.photos.length) % props.photos.length;
+	currentIndex.value = (currentIndex.value - 1 + list.value.length) % list.value.length;
 	showInfo.value = false;
-	preload(currentIndex.value - 1 < 0 ? props.photos.length - 1 : currentIndex.value - 1);
+	preload(currentIndex.value - 1 < 0 ? list.value.length - 1 : currentIndex.value - 1);
 }
 
 function toggleInfo() {
@@ -182,13 +191,31 @@ function onTouchEnd(e) {
 	else prev();
 }
 
+function resolveAndOpen(detail) {
+	if (props.photoSets) {
+		const set = detail?.shootSlug ? props.photoSets[detail.shootSlug] : null;
+		if (!set) return false;
+		activeSet.value = set;
+	} else if (props.shootSlug && detail?.shootSlug && detail.shootSlug !== props.shootSlug) {
+		return false;
+	}
+	open(detail?.index ?? 0);
+	return true;
+}
+
 function onOpenLightbox(e) {
-	open(e.detail.index);
+	if (resolveAndOpen(e.detail)) window.__pendingLightbox = null;
 }
 
 onMounted(() => {
 	window.addEventListener('keydown', onKeydown);
 	window.addEventListener('open-lightbox', onOpenLightbox);
+	// A tile clicked before this island hydrated buffers its request
+	// (PhotoGrid.astro); honor it now so the click isn't silently lost.
+	const pending = window.__pendingLightbox;
+	if (pending && Date.now() - pending.t < 5000 && resolveAndOpen(pending)) {
+		window.__pendingLightbox = null;
+	}
 });
 
 onBeforeUnmount(() => {

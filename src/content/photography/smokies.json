@@ -1,0 +1,659 @@
+{
+  "title": "Visits The Smokies",
+  "date": "2026-07-05",
+  "location": "Cherokee, NC",
+  "coverPhoto": "DSC_1457.JPG",
+  "photos": [
+    {
+      "filename": "DSC_1439.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:26:18.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1444.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:28:02.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1450.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:33:54.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1452.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:34:04.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1454.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:34:22.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1455.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:43:08.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1457.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:43:23.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1460.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:44:17.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1462.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:45:28.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1464.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:50:49.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1469.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T21:58:40.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1473.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:00:35.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1475.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:01:07.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1476.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:09:46.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1480.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:10:39.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1482.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:15:07.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1486.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:32:42.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1487.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:33:17.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1488.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:33:48.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1489.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:33:54.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1492.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:56:02.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1493.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:56:07.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1494.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:56:32.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1496.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:57:21.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1498.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:58:35.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1503.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T22:59:38.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1504.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T23:00:01.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1507.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T23:00:46.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1510.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T23:02:00.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1513.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T23:06:13.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    },
+    {
+      "filename": "DSC_1514.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-05T23:06:27.000Z"
+      },
+      "location": {
+        "name": "Cherokee, NC",
+        "latitude": 35.472831,
+        "longitude": -83.319,
+        "source": "manual"
+      }
+    }
+  ]
+}

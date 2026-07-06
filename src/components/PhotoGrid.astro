@@ -11,7 +11,7 @@ interface Props {
 const { shootSlug, photos } = Astro.props;
 ---
 
-<div class="masonry">
+<div class="masonry" data-shoot-grid={shootSlug}>
 	{
 		photos.map((photo, i) => (
 			<button
@@ -40,7 +40,13 @@ const { shootSlug, photos } = Astro.props;
 		document.querySelectorAll<HTMLButtonElement>('[data-photo-grid-item]').forEach((el) => {
 			el.addEventListener('click', () => {
 				const index = Number(el.dataset.index);
-				window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { index } }));
+				// The slug routes the event to the right photo set when one lightbox
+				// serves several shoots (inline shoot panels on the index).
+				const shootSlug = el.closest<HTMLElement>('[data-shoot-grid]')?.dataset.shootGrid;
+				// Buffer the request too: if the lightbox island hasn't hydrated yet,
+				// it honors this on mount instead of silently dropping the click.
+				window.__pendingLightbox = { index, shootSlug, t: Date.now() };
+				window.dispatchEvent(new CustomEvent('open-lightbox', { detail: { index, shootSlug } }));
 			});
 		});
 	}

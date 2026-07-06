@@ -20,15 +20,79 @@ const prefersReducedMotion = () =>
 //   2. the `.is-stuck` toggle that morphs the title from masthead to compact
 //      header once it pins, and
 //   3. keyboard section-jumps between landing and stage.
+// Shoot page: the parent breadcrumb (PhotoParentBar) pins at top:0 and the
+// shoot header pins directly beneath it. We publish the bar's height so the
+// header's sticky `top` sits flush under it, and toggle the header's compact
+// morph once the section has scrolled up to the top (i.e. once the header has
+// pinned under the bar). The parent bar and header both stick natively — this
+// only drives the measurement var and the `.is-stuck` toggle.
+function initNestedShoot(ctx: {
+	root: HTMLElement;
+	stage: HTMLElement;
+	title: HTMLElement;
+	parentBar: HTMLElement;
+	body: HTMLElement;
+	scrollPos: () => number;
+	signal: AbortSignal;
+}) {
+	const { root, stage, title, parentBar, body, scrollPos, signal } = ctx;
+
+	let pinPoint = 0;
+	let stuck = title.classList.contains('is-stuck');
+
+	const measure = () => {
+		const barH = Math.round(parentBar.offsetHeight);
+		root.style.setProperty('--photo-parent-bar-h', `${barH}px`);
+		// The stage's top is stable regardless of the header's stuck state (only
+		// the nav and the fixed-height parent bar sit above it), so it gives a
+		// flicker-free pin point: the header pins once scrolled past stageTop-barH.
+		const stageTop = Math.round(stage.getBoundingClientRect().top + scrollPos());
+		pinPoint = Math.max(0, stageTop - barH);
+	};
+
+	// Hysteresis so the morph doesn't flicker right at the pin point.
+	const STICK_AT = 24;
+	const UNSTICK_AT = 4;
+	const onScroll = () => {
+		const y = scrollPos();
+		if (!stuck && y >= pinPoint + STICK_AT) {
+			stuck = true;
+			title.classList.add('is-stuck');
+		} else if (stuck && y <= pinPoint + UNSTICK_AT) {
+			stuck = false;
+			title.classList.remove('is-stuck');
+		}
+	};
+
+	window.addEventListener('scroll', onScroll, { passive: true, signal });
+	body.addEventListener('scroll', onScroll, { passive: true, signal });
+
+	let measureRaf = 0;
+	const queueMeasure = () => {
+		cancelAnimationFrame(measureRaf);
+		measureRaf = requestAnimationFrame(() => {
+			measure();
+			onScroll();
+		});
+	};
+	window.addEventListener('resize', queueMeasure, { signal });
+
+	measure();
+	onScroll();
+	document.fonts?.ready.then(() => {
+		if (!signal.aborted) queueMeasure();
+	});
+}
+
 function initPhotoSectionSnap() {
 	window.__photoSectionSnapController?.abort();
 
+	if (document.documentElement.dataset.section !== 'photography') return;
+
 	const root = document.querySelector<HTMLElement>('[data-photo-snap-root]');
-	const landing = document.querySelector<HTMLElement>('[data-photo-landing]');
 	const stage = document.querySelector<HTMLElement>('[data-photo-stage]');
 	const title = document.querySelector<HTMLElement>('[data-photo-title]');
-	if (!root || !landing || !stage || !title) return;
-	if (document.documentElement.dataset.section !== 'photography') return;
+	if (!root || !stage || !title) return;
 
 	const controller = new AbortController();
 	window.__photoSectionSnapController = controller;
@@ -40,6 +104,18 @@ function initPhotoSectionSnap() {
 	// non-scrolling one is a no-op.
 	const body = document.body;
 	const scrollPos = () => window.scrollY + body.scrollTop;
+
+	// A shoot page nests its header under a persistent parent breadcrumb instead
+	// of docking a masthead over a full-viewport landing. Detect that layout and
+	// run the simpler nested morph.
+	const parentBar = document.querySelector<HTMLElement>('[data-photo-parent-bar]');
+	if (parentBar) {
+		initNestedShoot({ root, stage, title, parentBar, body, scrollPos, signal });
+		return;
+	}
+
+	const landing = document.querySelector<HTMLElement>('[data-photo-landing]');
+	if (!landing) return;
 
 	// Scroll offset the title pins at; kept fresh by measure().
 	let stageTop = 0;

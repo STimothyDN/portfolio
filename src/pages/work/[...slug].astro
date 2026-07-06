@@ -45,7 +45,7 @@ const { Content } = await entry.render();
 			</header>
 			<main class="wrapper">
 				<div class="stack gap-10 content">
-						{entry.data.img && <a href={entry.data.link}><img src={entry.data.img} alt={entry.data.img_alt || ''} /></a>}
+						{entry.data.img && <a href={entry.data.link}><img src={entry.data.img} alt={entry.data.img_alt || ''} transition:name={`work-image-${entry.slug}`} /></a>}
 					<div class="content">
 						<Content />
 					</div>

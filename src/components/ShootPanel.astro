@@ -1,0 +1,217 @@
+---
+/*
+ * An inline, initially-hidden view of one shoot, embedded in the photography
+ * index. photo-shoot-expand.ts reveals it in place of the covers list when its
+ * cover is clicked, so opening a shoot feels like a section unfolding rather
+ * than a page load. The header starts masthead-sized and condenses/pins just
+ * below the photography title (two-tier sticky) as the photos scroll under it.
+ * The real /photography/[slug] pages still exist for deep links and no-JS.
+ */
+import type { CollectionEntry } from 'astro:content';
+
+import Icon from './Icon.astro';
+import PhotoGrid from './PhotoGrid.astro';
+
+interface Props {
+	shoot: CollectionEntry<'photography'>;
+}
+
+const { shoot } = Astro.props;
+const { data, id } = shoot;
+
+const formattedDate = data.date.toLocaleDateString('en-US', {
+	year: 'numeric',
+	month: 'long',
+	day: 'numeric',
+	timeZone: 'UTC',
+});
+---
+
+<section class="shoot-panel" data-shoot-panel={id} aria-labelledby={`shoot-title-${id}`} hidden>
+	<header class="panel-header" data-panel-header>
+		<p class="panel-back">
+			<a href="/photography/" data-panel-close><Icon icon="arrow-left" size="1em" /> All shoots</a>
+		</p>
+		<h2 class="panel-title" id={`shoot-title-${id}`} data-panel-title tabindex="-1">
+			{data.title}
+		</h2>
+		<div class="details">
+			<p class="meta">
+				{formattedDate}
+				{data.location && <> · {data.location}</>}
+				 · {data.photos.length} photos
+			</p>
+			{
+				data.description && (
+					<div class="description-reveal">
+						<div class="description-reveal-inner">
+							<p class="description">{data.description}</p>
+						</div>
+					</div>
+				)
+			}
+		</div>
+	</header>
+	<div class="panel-body">
+		<PhotoGrid shootSlug={id} photos={data.photos} />
+	</div>
+</section>
+
+<style>
+	.shoot-panel[hidden] {
+		display: none !important;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.shoot-panel.is-open {
+			animation: panel-in 400ms cubic-bezier(0.33, 1, 0.68, 1);
+		}
+
+		@keyframes panel-in {
+			from {
+				opacity: 0;
+				transform: translateY(1rem);
+			}
+		}
+	}
+
+	/*
+	 * Pins directly beneath the pinned photography masthead. The offset is the
+	 * masthead's condensed height, measured at runtime by photo-shoot-expand.ts;
+	 * the fallback is a no-JS approximation (panels only open with JS anyway).
+	 */
+	.panel-header {
+		position: sticky;
+		top: var(--photo-parent-stuck-h, 4.5rem);
+		z-index: 2;
+		background: var(--gray-999);
+		padding-block: clamp(1.25rem, 3vw, 2rem) clamp(1rem, 2.5vw, 1.75rem);
+		border-bottom: 1px solid transparent;
+	}
+
+	.panel-header.is-stuck {
+		padding-block: clamp(0.6rem, 1.5vw, 1rem);
+		border-bottom-color: var(--gray-800);
+	}
+
+	.panel-back {
+		font-size: var(--text-sm);
+	}
+
+	.panel-back a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding-block: 0.25rem;
+		color: var(--gray-300);
+		text-decoration: 1px solid underline transparent;
+		text-underline-offset: 0.25em;
+		transition: text-decoration-color var(--theme-transition);
+	}
+
+	.panel-back a:hover,
+	.panel-back a:focus {
+		text-decoration-color: currentColor;
+	}
+
+	.panel-title {
+		max-width: 13ch;
+		margin-top: 0.5rem;
+		line-height: 0.95;
+		color: var(--gray-0);
+		font-size: clamp(2.5rem, 7vw, 5rem);
+	}
+
+	.panel-title:focus {
+		outline: none;
+	}
+
+	.is-stuck .panel-title {
+		max-width: none;
+		font-size: var(--text-xl);
+		line-height: 1.1;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.details {
+		display: flex;
+		flex-direction: column;
+		max-width: 58ch;
+		margin-top: clamp(0.65rem, 1.5vw, 1rem);
+		padding-top: clamp(0.65rem, 1.5vw, 1rem);
+		gap: 0.65rem;
+		border-top: 1px solid var(--gray-800);
+	}
+
+	.is-stuck .details {
+		margin-top: 0.3rem;
+		padding-top: 0;
+		gap: 0;
+		border-top-color: transparent;
+	}
+
+	.meta {
+		font-size: var(--text-md);
+		color: var(--gray-300);
+	}
+
+	.description-reveal {
+		display: grid;
+		grid-template-rows: 1fr;
+		opacity: 1;
+	}
+
+	.description-reveal-inner {
+		overflow: hidden;
+		min-height: 0;
+	}
+
+	.is-stuck .description-reveal {
+		grid-template-rows: 0fr;
+		opacity: 0;
+		visibility: hidden;
+	}
+
+	.description {
+		font-size: var(--text-lg);
+		max-width: 54ch;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.panel-header {
+			transition:
+				padding 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				border-color 450ms ease;
+		}
+
+		.panel-title {
+			transition: font-size 450ms cubic-bezier(0.33, 1, 0.68, 1);
+		}
+
+		.details {
+			transition:
+				margin-top 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				padding-top 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				gap 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				border-color 450ms ease;
+		}
+
+		.description-reveal {
+			transition:
+				grid-template-rows 450ms cubic-bezier(0.33, 1, 0.68, 1),
+				opacity 450ms ease,
+				visibility 0s;
+		}
+
+		/* Keep the description visible until its collapse finishes. */
+		.is-stuck .description-reveal {
+			transition-delay: 0s, 0s, 450ms;
+		}
+	}
+
+	.panel-body {
+		padding-top: clamp(1.5rem, 4vw, 2.5rem);
+	}
+</style>
