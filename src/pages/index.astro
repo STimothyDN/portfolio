@@ -23,7 +23,7 @@ const projects = (await getCollection('work'))
 ---
 
 <BaseLayout>
-	<div class="stack gap-20 lg:gap-48">
+	<div class="stack gap-10 lg:gap-20">
 		<div class="wrapper stack gap-8 lg:gap-20">
 			<header class="hero">
 				<Hero
@@ -33,14 +33,14 @@ const projects = (await getCollection('work'))
 				>
 					<div class="roles">
 						<a href="/work"><Pill><Icon icon="code" size="1.33em" /> Developer</Pill></a>
-						<a href="https://soundcloud.com/timo_on_duty"><Pill><Icon icon="producer" size="1.33em" /> Producer</Pill></a>
+						<a href="https://soundcloud.com/timo_on_duty" target="_blank" rel="noopener"><Pill><Icon icon="producer" size="1.33em" /> Producer</Pill></a>
 						<a href="/photography/"><Pill><Icon icon="camera" size="1.33em" /> Photographer</Pill></a>
-						<a href="https://docs.google.com/document/d/1It_OJS21vwgpbcy6P4QIGzRIacEXh6JH8Os51Dc4qtc/edit?usp=sharing"><Pill><Icon icon="cook" size="1.33em" /> Home Cook</Pill></a>
+						<a href="https://docs.google.com/document/d/1It_OJS21vwgpbcy6P4QIGzRIacEXh6JH8Os51Dc4qtc/edit?usp=sharing" target="_blank" rel="noopener"><Pill><Icon icon="cook" size="1.33em" /> Home Cook</Pill></a>
 					</div>
 				</Hero>
 
 				<img
-					alt="Timothy Navarro"
+					alt="Headshot of Timothy Navarro smiling in a light blue collared shirt, in a bright columned hallway"
 					width="480"
 					height="620"
 					src="/assets/timothy.jpeg"
@@ -64,6 +64,10 @@ const projects = (await getCollection('work'))
 
 	.roles {
 		display: none;
+	}
+
+	.roles a {
+		text-decoration: none;
 	}
 
 	.hero img {

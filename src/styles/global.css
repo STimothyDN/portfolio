@@ -14,6 +14,9 @@
 	--gray-900: #f3f4f7;
 	--gray-999-basis: 0, 0%, 100%;
 	--gray-999_40: hsla(var(--gray-999-basis), 0.4);
+	/* Defined once: resolves against the theme's --gray-999-basis since every
+	 * theme block targets the same <html> element. */
+	--gray-999_65: hsla(var(--gray-999-basis), 0.65);
 	--gray-999: #ffffff;
 
 	--accent-light: #c561f6;
@@ -386,6 +389,13 @@ h5 {
 		--drain-dur-out: 1800ms; /* cross-transform back */
 		--drain-ease-in: cubic-bezier(0.45, 0, 0.55, 0.35); /* melt: cling, then ooze */
 		--drain-ease-out: cubic-bezier(0.33, 0, 0.2, 1); /* settle into place */
+	}
+
+	/* The snapshot overlay must not swallow clicks — during the (long) drain the
+	 * incoming page underneath is live, and the nav sits in the same place on
+	 * both pages, so let pointer events pass straight through. */
+	::view-transition {
+		pointer-events: none;
 	}
 
 	/* ---- ENTER photography: the dark page melts/drains away ---- */

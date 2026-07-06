@@ -29,7 +29,9 @@ import Icon from './Icon.astro';
 		width: 2rem;
 		height: 2rem;
 		font-size: 1rem;
-		color: var(--accent-overlay);
+		/* Inactive icon: --accent-overlay was low-alpha (near-invisible in the
+		 * photography light palette); gray-300 clears 3:1 in every theme. */
+		color: var(--gray-300);
 	}
 
 	.icon.light::before {

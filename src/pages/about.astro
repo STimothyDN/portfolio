@@ -75,6 +75,16 @@ import Hero from '../components/Hero.astro';
 		grid-column: 2 / 4;
 	}
 
+	/* Dark mode only: a card behind the text keeps it readable over the stars.
+	 * Lives on .content (a real grid item) — `section` is display: contents on
+	 * desktop, so it can't paint a background there. Light mode reads fine as-is. */
+	:global(.theme-dark) .content {
+		background-color: var(--gray-999_65);
+		border: 1px solid var(--gray-800);
+		border-radius: 0.75rem;
+		padding: 1.5rem;
+	}
+
 	.content :global(a) {
 		text-decoration: 1px solid underline transparent;
 		text-underline-offset: 0.25em;
