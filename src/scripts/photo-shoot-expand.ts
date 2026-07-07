@@ -1,3 +1,5 @@
+import { gsap, refreshMotion } from './motion';
+
 declare global {
 	interface Window {
 		__photoShootExpandController?: AbortController;
@@ -155,6 +157,20 @@ function initPhotoShootExpand() {
 
 		panel.querySelector<HTMLElement>('[data-panel-title]')?.focus({ preventScroll: true });
 		scrollToY(Math.max(stageTop(), pinPoint + 56), true);
+
+		// The reveal changed the document height under every ScrollTrigger.
+		refreshMotion();
+		// One-time editorial stagger on the freshly revealed grid.
+		if (!prefersReducedMotion()) {
+			const tiles = panel.querySelectorAll('[data-photo-grid-item]');
+			if (tiles.length) {
+				gsap.fromTo(
+					tiles,
+					{ opacity: 0 },
+					{ opacity: 1, duration: 0.6, ease: 'power2.out', stagger: { each: 0.045, from: 0 } }
+				);
+			}
+		}
 	};
 
 	const collapse = () => {
@@ -175,6 +191,7 @@ function initPhotoShootExpand() {
 		scrollToY(returnY, false);
 		returnFocus?.focus({ preventScroll: true });
 		returnFocus = null;
+		refreshMotion();
 	};
 
 	// Capture phase so this wins over Astro's ClientRouter link interception.

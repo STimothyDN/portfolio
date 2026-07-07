@@ -1,5 +1,24 @@
 ---
-import '../styles/global.css';
+import '../styles/app.css';
+
+// Self-hosted variable fonts (font-display: swap; downloads only when a
+// palette actually uses the face). Space theme: Bricolage Grotesque (display,
+// opsz axis) + Instrument Sans (body). Editorial: Fraunces (full axes —
+// opsz/SOFT/WONK drive the photography masthead) + Newsreader.
+import '@fontsource-variable/bricolage-grotesque/opsz.css';
+import '@fontsource-variable/instrument-sans';
+import '@fontsource-variable/instrument-sans/wght-italic.css';
+import '@fontsource-variable/fraunces/full.css';
+import '@fontsource-variable/fraunces/full-italic.css';
+import '@fontsource-variable/newsreader/opsz.css';
+import '@fontsource-variable/newsreader/opsz-italic.css';
+
+// Hashed URLs for preloading the above-the-fold faces per section.
+import bricolageUrl from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-opsz-normal.woff2?url';
+import instrumentUrl from '@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2?url';
+import frauncesItalicUrl from '@fontsource-variable/fraunces/files/fraunces-latin-full-italic.woff2?url';
+import newsreaderUrl from '@fontsource-variable/newsreader/files/newsreader-latin-opsz-normal.woff2?url';
+
 import { ClientRouter } from 'astro:transitions';
 
 interface Props {
@@ -11,6 +30,12 @@ const {
 	title = 'Timothy Navarro',
 	description = 'The personal portfolio of Timothy Navarro',
 } = Astro.props;
+
+// Same section computation as BaseLayout: the editorial faces are only
+// above-the-fold inside /photography.
+const path = Astro.url.pathname;
+const isPhotography = path === '/photography' || path.startsWith('/photography/');
+const preloadFonts = isPhotography ? [frauncesItalicUrl, newsreaderUrl] : [bricolageUrl, instrumentUrl];
 ---
 
 <meta charset="UTF-8" />
@@ -20,12 +45,7 @@ const {
 <title>{title}</title>
 
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link
-	href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,700;1,400&family=Rubik:wght@500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Tangerine:wght@400;700&display=swap"
-	rel="stylesheet"
-/>
+{preloadFonts.map((href) => <link rel="preload" as="font" type="font/woff2" href={href} crossorigin />)}
 
 <ClientRouter />
 

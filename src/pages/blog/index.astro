@@ -18,7 +18,7 @@ const posts = (await getCollection('blog'))
 				tagline="Thoughts, tutorials, and things I'm working on."
 				align="start"
 			/>
-			<section class="posts">
+			<section class="posts" data-animate-group data-stagger="0.1">
 				{posts.length === 0 && <p class="empty">No posts yet — check back soon!</p>}
 				{posts.map((post) => (
 					<article class="post-card">

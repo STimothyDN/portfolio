@@ -30,8 +30,10 @@ const projects = (await getCollection('work'))
 					title="Timothy Navarro."
 					tagline="I am a Full Stack Software Developer currently based in Research Triangle Park, North Carolina"
 					align="start"
+					size="display"
+					brandSwap={{ keep: 'Timo', swapOut: 'thy', swapIn: '3' }}
 				>
-					<div class="roles">
+					<div class="roles" data-animate-group data-stagger="0.07" data-animate-delay="0.6">
 						<a href="/work"><Pill><Icon icon="code" size="1.33em" /> Developer</Pill></a>
 						<a href="https://soundcloud.com/timo_on_duty" target="_blank" rel="noopener"><Pill><Icon icon="producer" size="1.33em" /> Producer</Pill></a>
 						<a href="/photography/"><Pill><Icon icon="camera" size="1.33em" /> Photographer</Pill></a>
@@ -39,12 +41,14 @@ const projects = (await getCollection('work'))
 					</div>
 				</Hero>
 
-				<img
-					alt="Headshot of Timothy Navarro smiling in a light blue collared shirt, in a bright columned hallway"
-					width="480"
-					height="620"
-					src="/assets/timothy.jpeg"
-				/>
+				<div class="portrait" data-animate="clip" data-parallax="0.07">
+					<img
+						alt="Headshot of Timothy Navarro smiling in a light blue collared shirt, in a bright columned hallway"
+						width="480"
+						height="620"
+						src="/assets/timothy.jpeg"
+					/>
+				</div>
 			</header>
 
 			<Skills />
@@ -70,12 +74,28 @@ const projects = (await getCollection('work'))
 		text-decoration: none;
 	}
 
-	.hero img {
+	.portrait img {
 		aspect-ratio: 5 / 4;
 		object-fit: cover;
 		object-position: top;
 		border-radius: 1.5rem;
 		box-shadow: var(--shadow-md);
+	}
+
+	/* Slow idle float on the headshot — decorative only */
+	@media (prefers-reduced-motion: no-preference) {
+		.portrait img {
+			animation: portrait-float 7s ease-in-out infinite alternate;
+		}
+
+		@keyframes portrait-float {
+			from {
+				transform: translateY(-4px);
+			}
+			to {
+				transform: translateY(6px);
+			}
+		}
 	}
 
 	@media (min-width: 50em) {
@@ -93,7 +113,7 @@ const projects = (await getCollection('work'))
 			gap: 0.5rem;
 		}
 
-		.hero img {
+		.portrait img {
 			aspect-ratio: 3 / 4;
 			border-radius: 4.5rem;
 			object-fit: cover;

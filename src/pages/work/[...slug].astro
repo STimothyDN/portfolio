@@ -35,18 +35,27 @@ const { Content } = await entry.render();
 					<a class="back-link" href="/work/"><Icon icon="arrow-left" /> Work</a>
 					<Hero title={entry.data.title} align="start">
 						<div class="details">
-							<div class="tags">
+							<div class="tags" data-animate-group data-stagger="0.06" data-animate-delay="0.35">
 								{entry.data.tags.map((t) => <Pill>{t}</Pill>)}
 							</div>
-							<p class="description">{entry.data.description}</p>
+							<p class="description" data-animate="fade-up" data-animate-delay="0.45">{entry.data.description}</p>
 						</div>
 					</Hero>
 				</div>
 			</header>
 			<main class="wrapper">
 				<div class="stack gap-10 content">
-						{entry.data.img && <a href={entry.data.link}><img src={entry.data.img} alt={entry.data.img_alt || ''} transition:name={`work-image-${entry.slug}`} /></a>}
-					<div class="content">
+						{entry.data.img && (
+							<a href={entry.data.link}>
+								{/* Parallax lives on the wrapper — transforming the
+								    transition:name element itself would corrupt the
+								    view-transition morph geometry. */}
+								<div class="featured" data-parallax="0.05">
+									<img src={entry.data.img} alt={entry.data.img_alt || ''} transition:name={`work-image-${entry.slug}`} />
+								</div>
+							</a>
+						)}
+					<div class="content" data-animate-body>
 						<Content />
 					</div>
 				</div>

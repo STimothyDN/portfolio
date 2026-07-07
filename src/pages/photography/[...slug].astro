@@ -140,7 +140,10 @@ const lightboxPhotos = toLightboxPhotos(id, data.photos);
 
 	.meta {
 		font-size: var(--text-md);
-		color: var(--gray-400);
+		letter-spacing: 0.06em;
+		font-variant-caps: all-small-caps;
+		/* --gray-400 fails 4.5:1 on the photography-light palette; --gray-300 clears it. */
+		color: var(--gray-300);
 	}
 
 	.description-reveal {

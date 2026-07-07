@@ -13,7 +13,8 @@ const number = String(index + 1).padStart(2, '0');
 const year = data.publishDate.getFullYear();
 ---
 
-<article class="row">
+<article class="row" data-slug={slug}>
+	<span class="hairline" aria-hidden="true"></span>
 	<span class="index" aria-hidden="true">{number}</span>
 	<div class="text">
 		<h2 class="title"><a href={`/work/${slug}`}>{data.title}</a></h2>
@@ -44,7 +45,17 @@ const year = data.publishDate.getFullYear();
 		flex-direction: column;
 		gap: 1.25rem;
 		padding-block: 2rem;
-		border-top: 1px solid var(--gray-800);
+	}
+
+	/* Top rule as a real element (not border) so motion.ts can scaleX-reveal it. */
+	.hairline {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 1px;
+		background: var(--gray-800);
+		transform-origin: left center;
 	}
 
 	.index {
@@ -169,6 +180,33 @@ const year = data.publishDate.getFullYear();
 
 		.thumb {
 			aspect-ratio: 3 / 2;
+		}
+	}
+
+	/* Cursor-follow mode (work-hover.ts): the static thumb column collapses and
+	 * a floating preview tracks the pointer. The media query must match the JS
+	 * gate exactly — coarse pointers and reduced-motion users keep this column,
+	 * and (scripting: enabled) keeps thumbs for no-JS visitors since the
+	 * follower can't run there. Keyboard focus always brings the static thumb
+	 * back (the follower never responds to focus). */
+	@media (min-width: 50em) and (pointer: fine) and (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+		/* Collapse the reserved thumb column so the text spans the row; the
+		 * floating follower carries the preview instead. */
+		.row {
+			grid-template-columns: 3.5rem 1fr;
+		}
+
+		.thumb {
+			display: none;
+		}
+
+		/* Keyboard focus restores the static thumb in its own column. */
+		.row:has(a:focus-visible) {
+			grid-template-columns: 3.5rem 1fr 18rem;
+		}
+
+		.row:has(a:focus-visible) .thumb {
+			display: block;
 		}
 	}
 </style>

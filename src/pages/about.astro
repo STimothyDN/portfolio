@@ -12,17 +12,19 @@ import Hero from '../components/Hero.astro';
 				title="About"
 				tagline="Thanks for stopping by. Read below to learn more about myself and my background."
 			>
-				<img
-					width="1553"
-					height="873"
-					src="/assets/at-work.jpg"
-					alt="Timothy Navarro at work"
-				/>
+				<div class="about-photo" data-animate="clip" data-parallax="0.05">
+					<img
+						width="1553"
+						height="873"
+						src="/assets/at-work.jpg"
+						alt="Timothy Navarro at work"
+					/>
+				</div>
 			</Hero>
 
 			<section>
-				<h2 class="section-title">Background</h2>
-				<div class="content">
+				<h2 class="section-title" data-animate="fade-up">Background</h2>
+				<div class="content" data-animate-body>
 					<p>
 						I am currently a Full Stack Software Developer at the Center for Data Science and AI at RTI International. I graduated with a Computer Science B.S. and Economics B.A. at the University of North Carolina Chapel Hill. 
 					</p>

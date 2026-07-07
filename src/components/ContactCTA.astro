@@ -4,11 +4,13 @@ import Icon from './Icon.astro';
 ---
 
 <aside>
-	<h2>Interested in working together?</h2>
-	<CallToAction href="mailto:timothyrjs@gmail.com">
-		Send Me an Email
-		<Icon icon="paper-plane-tilt" size="1.2em" />
-	</CallToAction>
+	<h2 data-animate="fade-up">Interested in working together?</h2>
+	<div data-animate="fade-up" data-animate-delay="0.15">
+		<CallToAction href="mailto:timothyrjs@gmail.com">
+			Send Me an Email
+			<Icon icon="paper-plane-tilt" size="1.2em" />
+		</CallToAction>
+	</div>
 </aside>
 
 <style>

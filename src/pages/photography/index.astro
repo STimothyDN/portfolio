@@ -62,7 +62,7 @@ const globePins: GlobePin[] = [...pinMap.values()];
 			<main class="shoot-stage" data-photo-stage>
 				<div class="stage-header" data-photo-title>
 					<div class="wrapper">
-						<h1>TiMo From 3,</h1>
+						<h1>Timo From 3,</h1>
 						<p class="tagline">He shoots! He-</p>
 					</div>
 				</div>
@@ -90,7 +90,7 @@ const globePins: GlobePin[] = [...pinMap.values()];
 	 * Soft section snapping happens on the page scroller (not a nested overflow
 	 * box, which fought the page scroll on mobile). `proximity` only eases
 	 * toward a section when the scroll rests near it — never mid-gesture.
-	 * Note: global.css gives html and body `height: 100%; overflow-x: hidden`,
+	 * Note: base.css gives html and body `height: 100%; overflow-x: hidden`,
 	 * which makes <body> the element that actually scrolls — so the snap type
 	 * lives there (html included in case that ever changes).
 	 */
@@ -194,6 +194,7 @@ const globePins: GlobePin[] = [...pinMap.values()];
 		padding-top: clamp(0.75rem, 2vw, 1.25rem);
 		border-top: 1px solid var(--gray-800);
 		font-size: var(--text-lg);
+		font-style: italic;
 		color: var(--gray-200);
 	}
 

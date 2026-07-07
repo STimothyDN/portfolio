@@ -3,7 +3,7 @@
  *
  * Instead of a separate overlay, this leans entirely on the native View Transitions
  * API that Astro's ClientRouter runs. On a navigation that crosses the photography
- * boundary we tag the *incoming* <html data-drain="in|out">; global.css then animates
+ * boundary we tag the *incoming* <html data-drain="in|out">; transitions.css then animates
  * the real outgoing/incoming page snapshots (::view-transition-old/new(root)) draining
  * behind a wavy mask + turbulence displacement, revealing the other page directly
  * underneath — no opaque middle frame.

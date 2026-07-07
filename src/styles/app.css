@@ -1,0 +1,32 @@
+/* ============================================================
+ * Global stylesheet entry (imported once by MainHead.astro).
+ *
+ * Layering: Tailwind's theme + utilities are layered; tokens.css and
+ * transitions.css are intentionally UNLAYERED — the four-palette custom
+ * properties must win over the theme layer, and the liquid-drain
+ * ::view-transition rules must never be reordered under a cascade layer
+ * (layered rules lose to unlayered ones, which would silently break
+ * one direction of the section transition).
+ *
+ * No Tailwind preflight: the site ships its own reset in base.css, and
+ * preflight would silently restyle typography across all four palettes.
+ * ============================================================ */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import './tokens.css';
+@import './base.css' layer(base);
+@import './transitions.css';
+
+/* Layout primitives as Tailwind utilities so they compose with variants */
+@utility wrapper {
+	width: 100%;
+	max-width: 83rem;
+	margin-inline: auto;
+	padding-inline: 1.5rem;
+}
+
+@utility stack {
+	display: flex;
+	flex-direction: column;
+}

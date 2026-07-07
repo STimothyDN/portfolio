@@ -15,7 +15,7 @@ interface Props {
 const { title, description } = Astro.props;
 
 // Which "world" is this page in? The photography section gets the editorial
-// theme (see global.css `html[data-section="photography"]`). Computed server-side
+// theme (see tokens.css `html[data-section="photography"]`). Computed server-side
 // so the correct theme is applied on direct load / no-JS, and travels with each
 // route's HTML across ClientRouter swaps.
 const path = Astro.url.pathname;
@@ -45,7 +45,7 @@ const section =
 
 		<!--
 			Turbulence displacement filter for the "liquid drain" section transition. It's
-			referenced by ::view-transition-old/new(root) in global.css to warp the draining
+			referenced by ::view-transition-old/new(root) in transitions.css to warp the draining
 			page like fluid. Lives here so it exists in the live document during the swap.
 		-->
 		<svg class="liquid-defs" width="0" height="0" aria-hidden="true" focusable="false">
@@ -64,95 +64,31 @@ const section =
 		<script>
 			import '../scripts/photo-section-snap';
 			import '../scripts/section-transition';
-			import '../scripts/soft-stars';
-		</script>
-
-		<script is:inline>
-			// Add “loaded” class once the document has completely loaded.
-			addEventListener('load', () => document.documentElement.classList.add('loaded'));
+			import '../scripts/sky';
+			import '../scripts/motion';
 		</script>
 
 		<style>
-			/* --- Existing Background Variables & Styles --- */
-			:root {
-				--_placeholder-bg: linear-gradient(transparent, transparent);
-				--bg-image-main: url('/assets/backgrounds/bg-main-light-800w.jpg');
-				--bg-image-main-curves: url('/assets/backgrounds/bg-main-light.svg');
-				--bg-image-subtle-1: var(--_placeholder-bg);
-				--bg-image-subtle-2: var(--_placeholder-bg);
-				--bg-image-footer: var(--_placeholder-bg);
-				--bg-svg-blend-mode: overlay;
-				--bg-blend-mode: darken;
-				--bg-image-aspect-ratio: 2.25;
-				--bg-scale: 1.68;
-				--bg-aspect-ratio: calc(var(--bg-image-aspect-ratio) / var(--bg-scale));
-				--bg-gradient-size: calc(var(--bg-scale) * 100%);
-			}
-
-			:root.theme-dark {
-				--bg-image-main: url('/assets/backgrounds/bg-main-dark-800w.jpg');
-				--bg-image-main-curves: url('/assets/backgrounds/bg-main-dark.svg');
-				--bg-svg-blend-mode: darken;
-				--bg-blend-mode: lighten;
-			}
-
-			:root.loaded {
-				--bg-image-subtle-1: url('/assets/backgrounds/bg-subtle-1-light-800w.jpg');
-				--bg-image-subtle-2: url('/assets/backgrounds/bg-subtle-2-light-800w.jpg');
-				--bg-image-footer: url('/assets/backgrounds/bg-footer-light-800w.jpg');
-			}
-			:root.loaded.theme-dark {
-				--bg-image-subtle-1: url('/assets/backgrounds/bg-subtle-1-dark-800w.jpg');
-				--bg-image-subtle-2: url('/assets/backgrounds/bg-subtle-2-dark-800w.jpg');
-				--bg-image-footer: url('/assets/backgrounds/bg-footer-dark-800w.jpg');
-			}
-
-			@media (min-width: 50em) {
-				:root {
-					--bg-scale: 1;
-					--bg-image-main: url('/assets/backgrounds/bg-main-light-1440w.jpg');
-				}
-				:root.theme-dark {
-					--bg-image-main: url('/assets/backgrounds/bg-main-dark-1440w.jpg');
-				}
-
-				:root.loaded {
-					--bg-image-subtle-1: url('/assets/backgrounds/bg-subtle-1-light-1440w.jpg');
-					--bg-image-subtle-2: url('/assets/backgrounds/bg-subtle-2-light-1440w.jpg');
-					--bg-image-footer: url('/assets/backgrounds/bg-footer-light-1440w.jpg');
-				}
-				:root.loaded.theme-dark {
-					--bg-image-subtle-1: url('/assets/backgrounds/bg-subtle-1-dark-1440w.jpg');
-					--bg-image-subtle-2: url('/assets/backgrounds/bg-subtle-2-dark-1440w.jpg');
-					--bg-image-footer: url('/assets/backgrounds/bg-footer-dark-1440w.jpg');
-				}
-			}
-
-			/* --- .backgrounds Container Styles --- */
+			/* --- Atmosphere --- */
+			/* The sky is now fully procedural: a per-palette OKLCH gradient mesh
+			   (--bg-mesh in tokens.css) under the film-grain noise tile, with the
+			   canvas painting stars/clouds above. No more JPEG background stack. */
 			.backgrounds {
 				min-height: 100%;
 				isolation: isolate;
 				position: relative;
 				background:
 					/*noise*/ url('/assets/backgrounds/noise.png') top center/220px repeat,
-					/*footer*/ var(--bg-image-footer) bottom center/var(--bg-gradient-size) no-repeat,
-					/*header1*/ var(--bg-image-main-curves) top center/var(--bg-gradient-size) no-repeat,
-					/*header2*/ var(--bg-image-main) top center/var(--bg-gradient-size) no-repeat,
+					/*mesh*/ var(--bg-mesh, none),
 					/*base*/ var(--gray-999);
-				background-blend-mode: overlay, var(--bg-blend-mode), var(--bg-svg-blend-mode), normal, normal;
+				/* --bg-mesh expands to four gradient layers; blend-mode lists repeat
+				   cyclically, so pad with explicit normals to keep overlay on the
+				   noise tile only. */
+				background-blend-mode: overlay, normal, normal, normal, normal;
 			}
 
-			/* --- Editorial theme: neutralize the space imagery --- */
-			/* `:root[...]` (0,2,0) + source order beats `:root.theme-dark` (0,2,0). */
-			:root[data-section='photography'] {
-				--bg-image-main: none;
-				--bg-image-main-curves: none;
-				--bg-image-subtle-1: none;
-				--bg-image-subtle-2: none;
-				--bg-image-footer: none;
-				--bg-blend-mode: normal;
-				--bg-svg-blend-mode: normal;
-			}
+			/* Editorial theme: clean paper (--bg-mesh is none there, but keep the
+			   hard override so the noise tile also disappears). */
 			html[data-section='photography'] .backgrounds {
 				background: var(--gray-999);
 				background-blend-mode: normal;

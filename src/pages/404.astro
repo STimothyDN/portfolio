@@ -4,6 +4,78 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Not Found" description="404 Error — this page was not found">
-	<Hero title="Page Not Found" tagline="Not found" />
-
+	<div class="wrapper lost stack gap-8">
+		<p class="code" aria-hidden="true">
+			<span class="glyph">4</span><span class="glyph">0</span><span class="glyph">4</span>
+		</p>
+		<Hero title="Page Not Found" tagline="Not found" />
+	</div>
 </BaseLayout>
+
+<style>
+	.lost {
+		padding-block: 4rem 8rem;
+		text-align: center;
+	}
+
+	.code {
+		font-family: var(--font-brand);
+		font-size: var(--text-display);
+		font-weight: 700;
+		line-height: 1;
+		color: var(--gray-0);
+		display: flex;
+		justify-content: center;
+		gap: 0.05em;
+	}
+
+	.glyph {
+		display: inline-block;
+		will-change: transform;
+	}
+</style>
+
+<script>
+	import { gsap } from '../scripts/motion';
+	import { spawnMeteor } from '../scripts/sky';
+
+	// The 404 glyphs shy away from the cursor — decorative, fine pointers only.
+	function setup() {
+		const code = document.querySelector<HTMLElement>('.lost .code');
+		if (!code) return;
+		// A lost page deserves a shooting star (dark mode only; no-ops elsewhere).
+		setTimeout(spawnMeteor, 600);
+		if (!window.matchMedia('(pointer: fine) and (prefers-reduced-motion: no-preference)').matches) return;
+
+		const glyphs = Array.from(code.querySelectorAll<HTMLElement>('.glyph')).map((el) => ({
+			el,
+			xTo: gsap.quickTo(el, 'x', { duration: 0.6, ease: 'power3' }),
+			yTo: gsap.quickTo(el, 'y', { duration: 0.6, ease: 'power3' }),
+		}));
+
+		// Document-level listener: released on the next ClientRouter swap.
+		const ac = new AbortController();
+		document.addEventListener('astro:before-swap', () => ac.abort(), { once: true });
+		document.addEventListener('pointermove', (e) => {
+			for (const g of glyphs) {
+				const r = g.el.getBoundingClientRect();
+				const cx = r.x + r.width / 2;
+				const cy = r.y + r.height / 2;
+				const dx = cx - e.clientX;
+				const dy = cy - e.clientY;
+				const dist = Math.hypot(dx, dy);
+				const radius = 220;
+				if (dist < radius && dist > 0) {
+					const push = (1 - dist / radius) * 48;
+					g.xTo((dx / dist) * push);
+					g.yTo((dy / dist) * push);
+				} else {
+					g.xTo(0);
+					g.yTo(0);
+				}
+			}
+		}, { signal: ac.signal });
+	}
+
+	document.addEventListener('astro:page-load', setup);
+</script>

@@ -98,7 +98,7 @@ function initPhotoSectionSnap() {
 	window.__photoSectionSnapController = controller;
 	const { signal } = controller;
 
-	// global.css gives html and body `height: 100%; overflow-x: hidden`, which
+	// base.css gives html and body `height: 100%; overflow-x: hidden`, which
 	// makes <body> the element that actually scrolls (window.scrollY stays 0).
 	// Read/write both so this keeps working if that ever changes — the
 	// non-scrolling one is a no-op.

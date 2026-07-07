@@ -3,15 +3,54 @@ interface Props {
 	title: string;
 	tagline?: string;
 	align?: 'start' | 'center';
+	/** Masthead scale: 'display' for the home hero, 'default' elsewhere. */
+	size?: 'default' | 'display';
+	/**
+	 * Turns the hero's first word into an interactive brand swap: hovering drops
+	 * `swapIn` from the sky to knock `swapOut` off, revealing `keep + swapIn`.
+	 * Only applied when the first word equals `keep + swapOut`.
+	 * e.g. { keep: 'Timo', swapOut: 'thy', swapIn: '3' } → "Timothy" ⇄ "Timo3".
+	 */
+	brandSwap?: { keep: string; swapOut: string; swapIn: string };
 }
 
-const { align = 'center', tagline, title } = Astro.props;
+const { align = 'center', tagline, title, size = 'default', brandSwap } = Astro.props;
+
+// Word-level mask reveal: each word gets a clipping wrapper (data-line) whose
+// inner span slides up via motion.ts. A trailing period becomes the accent
+// full stop. Inline-block wrappers keep natural wrapping and no-JS rendering.
+const words = title.split(/\s+/).map((word, i, arr) => {
+	const isLast = i === arr.length - 1;
+	const hasDot = isLast && word.endsWith('.');
+	return { text: hasDot ? word.slice(0, -1) : word, dot: hasDot };
+});
+
+const brandMatches = (i: number, text: string) =>
+	i === 0 && !!brandSwap && text === brandSwap.keep + brandSwap.swapOut;
 ---
 
-<header class:list={['hero stack gap-4', align]}>
+<header class:list={['hero stack gap-4', align, size]}>
 	<div class="stack gap-2">
-		<h1 class="title">{title}</h1>
-		{tagline && <p class="tagline">{tagline}</p>}
+		<h1 class="title" data-animate="mask-lines">
+			{words.map(({ text, dot }, i) => (
+				<>
+					<span class:list={['word', { 'brand-word': brandMatches(i, text) }]} data-line>
+						{
+							brandMatches(i, text) ? (
+								// No whitespace between the pieces so the accessible name
+								// reads "…thy" (keep + swapOut), never "Timo thy". The
+								// swap-in glyph is decorative (aria-hidden).
+								<span>{brandSwap!.keep}<span class="brand-swap"><span class="brand-out">{brandSwap!.swapOut}</span><span class="brand-in" aria-hidden="true">{brandSwap!.swapIn}</span></span></span>
+							) : (
+								<span>{text}{dot && <span class="dot">.</span>}</span>
+							)
+						}
+					</span>
+					{i < words.length - 1 && <span class="space"> </span>}
+				</>
+			))}
+		</h1>
+		{tagline && <p class="tagline" data-animate="fade-up" data-animate-delay="0.45">{tagline}</p>}
 	</div>
 	<slot />
 </header>
@@ -33,6 +72,110 @@ const { align = 'center', tagline, title } = Astro.props;
 		color: var(--gray-0);
 	}
 
+	.display .title {
+		font-size: clamp(2.75rem, 1.5rem + 6.5vw, 6.5rem);
+		line-height: 0.98;
+	}
+
+	/* Mask wrappers: clip vertically, breathe past descenders so glyphs like
+	 * "y" aren't shaved during the reveal. */
+	.word {
+		display: inline-block;
+		overflow: clip;
+		overflow-clip-margin: 0.08em;
+		vertical-align: bottom;
+	}
+
+	.word > span {
+		display: inline-block;
+	}
+
+	/* Accent full stop — gradient ink against every palette */
+	.dot {
+		background: var(--gradient-accent);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+
+	/* ---- Interactive brand swap (home hero: "Timothy" ⇄ "Timo3") ---- */
+	/* The swap zone reserves the wider "…thy" so nothing reflows; the dropped-in
+	 * glyph overlays it. motion.ts flips this word's wrapper to overflow:visible
+	 * once the entrance mask finishes so the glyphs can fall past the text box;
+	 * the scripting:none fallback covers no-JS. */
+	.brand-word {
+		cursor: default;
+	}
+
+	@media (scripting: none) {
+		.brand-word {
+			overflow: visible;
+		}
+	}
+
+	.brand-swap {
+		position: relative;
+		display: inline-block;
+	}
+
+	.brand-out {
+		display: inline-block;
+		transform-origin: left bottom;
+	}
+
+	.brand-in {
+		position: absolute;
+		left: 0;
+		top: 0;
+		transform-origin: center bottom;
+		background: var(--gradient-accent);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.brand-out,
+		.brand-in {
+			transition:
+				transform 0.55s,
+				opacity 0.4s;
+		}
+
+		/* Rest state (also the return target): "thy" in place, "3" up in the sky.
+		 * On hover-off "thy" leaves immediately (rises from the bottom) and the
+		 * "3" is knocked up after a beat — the delays live on this state. */
+		.brand-out {
+			transform: translateY(0) rotate(0deg);
+			opacity: 1;
+			transition-timing-function: cubic-bezier(0.34, 1.42, 0.64, 1);
+			transition-delay: 0s;
+		}
+
+		.brand-in {
+			transform: translateY(-1.7em) rotate(-42deg);
+			opacity: 0;
+			transition-timing-function: cubic-bezier(0.5, 0, 0.9, 0.35);
+			transition-delay: 0.16s;
+		}
+
+		/* Hover: "3" falls from the sky (immediate, bounce on landing) and knocks
+		 * "thy" off (a beat later, accelerating away). */
+		.brand-word:hover .brand-in {
+			transform: translateY(0) rotate(0deg);
+			opacity: 1;
+			transition-timing-function: cubic-bezier(0.34, 1.55, 0.64, 1);
+			transition-delay: 0s;
+		}
+
+		.brand-word:hover .brand-out {
+			transform: translateY(1.35em) rotate(18deg);
+			opacity: 0;
+			transition-timing-function: cubic-bezier(0.5, 0, 0.9, 0.35);
+			transition-delay: 0.16s;
+		}
+	}
+
 	@media (min-width: 50em) {
 		.hero {
 			font-size: var(--text-xl);
@@ -49,6 +192,10 @@ const { align = 'center', tagline, title } = Astro.props;
 
 		.title {
 			font-size: var(--text-5xl);
+		}
+
+		.display .title {
+			font-size: clamp(2.75rem, 1.5rem + 6.5vw, 6.5rem);
 		}
 	}
 </style>

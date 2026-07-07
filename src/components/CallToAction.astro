@@ -32,6 +32,30 @@ const { href } = Astro.props;
 		}
 	}
 
+	/* Gradient shine that sweeps across on hover/focus. */
+	@media (prefers-reduced-motion: no-preference) {
+		a::before {
+			content: '';
+			position: absolute;
+			inset: 0;
+			pointer-events: none;
+			background: linear-gradient(
+				105deg,
+				transparent 35%,
+				color-mix(in srgb, #ffffff 35%, transparent) 50%,
+				transparent 65%
+			);
+			background-size: 250% 100%;
+			background-position: 130% 0;
+			transition: background-position 700ms ease;
+		}
+
+		a:hover::before,
+		a:focus::before {
+			background-position: -30% 0;
+		}
+	}
+
 	/* Overlay for hover effects. */
 	a::after {
 		content: '';
@@ -44,7 +68,7 @@ const { href } = Astro.props;
 
 	a:focus::after,
 	a:hover::after {
-		background-color: hsla(var(--gray-999-basis), 0.3);
+		background-color: color-mix(in srgb, var(--gray-999) 30%, transparent);
 	}
 
 	@media (min-width: 50em) {

@@ -24,7 +24,7 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 	<div class="menu-header">
 		<a href="/" class="site-title">
 			<Icon icon="terminal-window" color="var(--accent-regular)" size="1.6em" gradient />
-			TiMo3
+			Timo3
 		</a>
 		<menu-button>
 			<template>
@@ -38,24 +38,23 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 	<div id="menu-content">
 		<ul class="nav-items">
 			{
-				textLinks.map(({ label, href }) => (
-					<li>
-						<a
-							aria-current={Astro.url.pathname === href}
-							class:list={[
-								'link',
-								{
-									active:
-										Astro.url.pathname === href ||
-										(href !== '/' && Astro.url.pathname.startsWith(href)),
-								},
-							]}
-							href={href}
-						>
-							{label}
-						</a>
-					</li>
-				))
+				textLinks.map(({ label, href }) => {
+					const active =
+						Astro.url.pathname === href ||
+						(href !== '/' && Astro.url.pathname.startsWith(href));
+					return (
+						<li>
+							<a
+								aria-current={Astro.url.pathname === href}
+								class:list={['link', { active }]}
+								href={href}
+								transition:name={active ? 'nav-active-pill' : undefined}
+							>
+								{label}
+							</a>
+						</li>
+					);
+				})
 			}
 		</ul>
 		<div class="menu-footer">
@@ -264,7 +263,9 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 			border-radius: 999rem;
 			border: 0;
 			padding: 0.5rem 0.5625rem;
-			background: radial-gradient(var(--gray-900), var(--gray-800) 150%);
+			background: var(--gray-999_65);
+			-webkit-backdrop-filter: blur(12px);
+			backdrop-filter: blur(12px);
 			box-shadow: var(--shadow-md);
 		}
 
@@ -280,13 +281,22 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 		.link {
 			padding: 0.5rem 1rem;
 			border-radius: 999rem;
-			transition: color var(--theme-transition), background-color var(--theme-transition);
+			transition:
+				color var(--theme-transition),
+				background-color var(--theme-transition),
+				transform var(--theme-transition);
 		}
 
 		.link:hover,
 		.link:focus {
 			color: var(--gray-100);
 			background-color: var(--accent-subtle-overlay);
+		}
+
+		@media (prefers-reduced-motion: no-preference) {
+			.link:hover {
+				transform: translateY(-1px);
+			}
 		}
 
 		.link.active {

@@ -1,0 +1,296 @@
+/* ============================================================
+ * Design tokens — four palettes on <html>:
+ *   :root                                  → light space (clouds)
+ *   :root.theme-dark                       → dark space (stars)
+ *   :root[data-section='photography']      → light editorial
+ *   :root.theme-dark[data-section='...']   → dark editorial
+ * Every component reads the same token names; the palette blocks
+ * swap the values. Colors are OKLCH (exact conversions of the
+ * previous hex ramps — perceptually navigable, visually identical).
+ * ============================================================ */
+
+:root {
+	/* Grays — space indigo ramp, dark → light */
+	--gray-0: oklch(15% 0.013 270);
+	--gray-50: oklch(21.4% 0.025 267);
+	--gray-100: oklch(31.1% 0.038 267);
+	--gray-200: oklch(39.9% 0.051 271);
+	--gray-300: oklch(48.4% 0.065 270);
+	--gray-400: oklch(56.5% 0.074 269);
+	--gray-500: oklch(65.7% 0.057 271);
+	--gray-600: oklch(74.7% 0.042 271);
+	--gray-700: oklch(83.9% 0.025 268);
+	--gray-800: oklch(92.5% 0.011 270);
+	--gray-900: oklch(96.7% 0.004 271);
+	--gray-999: #ffffff;
+
+	/* Alpha surfaces — defined once: color-mix resolves against the palette's
+	 * --gray-999 since every theme block targets the same <html> element. */
+	--gray-999_40: color-mix(in srgb, var(--gray-999) 60%, transparent);
+	--gray-999_65: color-mix(in srgb, var(--gray-999) 35%, transparent);
+
+	--accent-light: oklch(67.4% 0.224 313);
+	--accent-regular: oklch(44.1% 0.211 310);
+	--accent-dark: oklch(22.7% 0.133 284);
+	--accent-overlay: hsla(280, 89%, 67%, 0.33);
+	--accent-subtle-overlay: var(--accent-overlay);
+	--accent-text-over: var(--gray-999);
+
+	--link-color: var(--accent-regular);
+
+	/* Gradients — interpolated in OKLCH to avoid desaturated dead zones */
+	--gradient-stop-1: var(--accent-light);
+	--gradient-stop-2: var(--accent-regular);
+	--gradient-stop-3: var(--accent-dark);
+	--gradient-subtle: linear-gradient(150deg in oklch, var(--gray-900) 19%, var(--gray-999) 150%);
+	--gradient-accent: linear-gradient(
+		150deg in oklch,
+		var(--gradient-stop-1),
+		var(--gradient-stop-2),
+		var(--gradient-stop-3)
+	);
+	--gradient-accent-orange: linear-gradient(
+		150deg in oklch,
+		#ca7879,
+		var(--accent-regular),
+		var(--accent-dark)
+	);
+	--gradient-stroke: linear-gradient(180deg in oklch, var(--gray-900), var(--gray-700));
+
+	/* Shadows — layered ambient + contact */
+	--shadow-sm: 0px 1px 2px rgba(9, 11, 17, 0.03), 0px 2px 4px rgba(9, 11, 17, 0.03),
+		0px 4px 8px rgba(9, 11, 17, 0.03);
+	--shadow-md: 0px 2px 4px rgba(9, 11, 17, 0.04), 0px 8px 16px rgba(9, 11, 17, 0.06),
+		0px 24px 48px -12px rgba(9, 11, 17, 0.1);
+	--shadow-lg: 0px 4px 8px rgba(9, 11, 17, 0.05), 0px 16px 32px rgba(9, 11, 17, 0.08),
+		0px 48px 96px -16px rgba(9, 11, 17, 0.16);
+
+	/* Fonts */
+	--font-system: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+		Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+	--font-body: 'Instrument Sans Variable', var(--font-system);
+	--font-brand: 'Bricolage Grotesque Variable', var(--font-system);
+
+	/* Transitions */
+	--theme-transition: 0.2s ease-in-out;
+
+	--star-color: 0, 0, 0;
+
+	/* Atmosphere mesh — cloud-day sky: lavender haze up top, soft sun glow
+	 * top-left, warm horizon at the foot of the page. Replaces the old static
+	 * JPEG background stack (BaseLayout layers this under noise.png). */
+	--bg-mesh: linear-gradient(180deg, oklch(88% 0.045 285 / 0.7) 0%, transparent 48%),
+		radial-gradient(85rem 55rem at 14% -12%, oklch(96% 0.05 95 / 0.75), transparent 60%),
+		radial-gradient(75rem 50rem at 86% -6%, oklch(86% 0.07 310 / 0.5), transparent 62%),
+		radial-gradient(80rem 45rem at 50% 112%, oklch(93% 0.03 265 / 0.55), transparent 65%);
+}
+
+:root.theme-dark {
+	--gray-0: #ffffff;
+	--gray-50: oklch(96.7% 0.004 271);
+	--gray-100: oklch(92.5% 0.011 270);
+	--gray-200: oklch(83.9% 0.025 268);
+	--gray-300: oklch(74.7% 0.042 271);
+	--gray-400: oklch(65.7% 0.057 271);
+	--gray-500: oklch(56.5% 0.074 269);
+	--gray-600: oklch(48.4% 0.065 270);
+	--gray-700: oklch(39.9% 0.051 271);
+	--gray-800: oklch(31.1% 0.038 267);
+	--gray-900: oklch(21.4% 0.025 267);
+	--gray-999: oklch(15% 0.013 270);
+
+	--accent-light: oklch(22.7% 0.133 284);
+	--accent-regular: oklch(44.1% 0.211 310);
+	--accent-dark: oklch(67.4% 0.224 313);
+	--accent-overlay: hsla(280, 89%, 67%, 0.33);
+	--accent-subtle-overlay: hsla(281, 81%, 36%, 0.33);
+	--accent-text-over: var(--gray-0);
+
+	--link-color: var(--accent-dark);
+
+	--gradient-stop-1: oklch(42.2% 0.237 284);
+	--gradient-subtle: linear-gradient(150deg in oklch, var(--gray-900) 19%, var(--gray-999) 81%);
+	--gradient-accent-orange: linear-gradient(
+		150deg in oklch,
+		#ca7879,
+		var(--accent-regular),
+		var(--accent-light)
+	);
+	--gradient-stroke: linear-gradient(180deg in oklch, var(--gray-600), var(--gray-800));
+
+	/* Dark shadows: deep ambient drop + 1px inset "border-light" hairline */
+	--shadow-sm: inset 0 1px 0 color-mix(in srgb, #ffffff 6%, transparent),
+		0px 2px 4px rgba(0, 0, 0, 0.35), 0px 4px 8px rgba(0, 0, 0, 0.25);
+	--shadow-md: inset 0 1px 0 color-mix(in srgb, #ffffff 7%, transparent),
+		0px 8px 16px rgba(0, 0, 0, 0.4), 0px 24px 48px -12px rgba(0, 0, 0, 0.5);
+	--shadow-lg: inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent),
+		0px 16px 32px rgba(0, 0, 0, 0.45), 0px 48px 96px -16px rgba(0, 0, 0, 0.55);
+
+	--star-color: 255, 255, 255;
+
+	/* Atmosphere mesh — deep-space nebula: indigo mass top-left, violet bloom
+	 * right, near-black base with a faint aurora glow at the horizon. */
+	--bg-mesh: radial-gradient(90rem 60rem at 12% -10%, oklch(30% 0.09 284 / 0.55), transparent 60%),
+		radial-gradient(70rem 50rem at 88% 8%, oklch(34% 0.12 310 / 0.4), transparent 62%),
+		radial-gradient(55rem 40rem at 65% 30%, oklch(26% 0.1 325 / 0.3), transparent 65%),
+		radial-gradient(80rem 50rem at 50% 115%, oklch(24% 0.08 265 / 0.5), transparent 62%);
+}
+
+/*
+ * Editorial theme — scoped to the photography section only.
+ * Set server-side as `data-section="photography"` on <html> (see BaseLayout.astro),
+ * so it renders correctly on direct load / no-JS. Every component reads these
+ * tokens, so this restyles the whole section with no per-component edits.
+ */
+:root[data-section='photography'] {
+	/* Grays — warm near-black inks on a clean white page */
+	--gray-0: oklch(17.4% 0.002 50);
+	--gray-50: oklch(22% 0.004 49);
+	--gray-100: oklch(25.9% 0.005 40); /* headings (h1–h5) */
+	--gray-200: oklch(33.6% 0.007 49); /* body text */
+	--gray-300: oklch(51.1% 0.011 62);
+	--gray-400: oklch(64.4% 0.013 68); /* meta text */
+	--gray-500: oklch(71.6% 0.013 68);
+	--gray-600: oklch(81.1% 0.014 71);
+	--gray-700: oklch(88.5% 0.013 75);
+	--gray-800: oklch(93.5% 0.009 85); /* hairline borders */
+	--gray-900: oklch(97.1% 0.006 85); /* warm off-white surfaces */
+	--gray-999: oklch(99.1% 0.003 85); /* page background */
+
+	/* Accent — editorial ink + a warm champagne/taupe, no purple */
+	--accent-light: #c9b89a;
+	--accent-regular: #1a1a1a;
+	--accent-dark: #000000;
+	--accent-overlay: rgba(17, 16, 16, 0.06);
+	--accent-subtle-overlay: rgba(17, 16, 16, 0.05);
+	--accent-text-over: #fdfcfa;
+
+	--link-color: #1a1a1a;
+
+	/* Gradients — flat/soft editorial equivalents */
+	--gradient-stop-1: #ded8d0;
+	--gradient-stop-2: #c9b89a;
+	--gradient-stop-3: #8a7d64;
+	--gradient-subtle: linear-gradient(150deg in oklch, var(--gray-900) 0%, var(--gray-999) 100%);
+	--gradient-accent: linear-gradient(150deg in oklch, #ded8d0, #c9b89a, #8a7d64);
+	--gradient-accent-orange: linear-gradient(150deg in oklch, #d8c3a1, #c9b89a, #8a7d64);
+	--gradient-stroke: linear-gradient(180deg in oklch, var(--gray-800), var(--gray-700));
+
+	/* Shadows — softer for a light background */
+	--shadow-sm: 0px 1px 2px rgba(17, 16, 16, 0.02), 0px 2px 4px rgba(17, 16, 16, 0.02),
+		0px 4px 8px rgba(17, 16, 16, 0.03);
+	--shadow-md: 0px 2px 4px rgba(17, 16, 16, 0.03), 0px 8px 16px rgba(17, 16, 16, 0.05),
+		0px 24px 48px -12px rgba(17, 16, 16, 0.08);
+	--shadow-lg: 0px 4px 8px rgba(17, 16, 16, 0.04), 0px 16px 32px rgba(17, 16, 16, 0.06),
+		0px 48px 96px -16px rgba(17, 16, 16, 0.12);
+
+	/* Fonts — modern editorial serif pairing */
+	--font-brand: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+	--font-body: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+
+	/* Stars invisible on white (canvas also faded via opacity) */
+	--star-color: 253, 252, 250;
+
+	/* Clean paper — no atmosphere in the editorial world */
+	--bg-mesh: none;
+}
+
+:root.theme-dark[data-section='photography'] {
+	/* Grays — inverted editorial palette: clean whites on near-black paper */
+	--gray-0: oklch(99.1% 0.003 85);
+	--gray-50: oklch(97.1% 0.006 85);
+	--gray-100: oklch(93.5% 0.009 85); /* headings (h1–h5) */
+	--gray-200: oklch(88.5% 0.013 75); /* body text */
+	--gray-300: oklch(81.1% 0.014 71);
+	--gray-400: oklch(71.6% 0.013 68); /* meta text */
+	--gray-500: oklch(64.4% 0.013 68);
+	--gray-600: oklch(51.1% 0.011 62);
+	--gray-700: oklch(33.6% 0.007 49);
+	--gray-800: oklch(25.9% 0.005 40); /* hairline borders */
+	--gray-900: oklch(17.4% 0.002 50); /* dark surfaces */
+	--gray-999: #000000; /* page background */
+
+	/* Accent — inverse of the editorial ink treatment */
+	--accent-light: #8a7d64;
+	--accent-regular: #fdfcfa;
+	--accent-dark: #ffffff;
+	--accent-overlay: rgba(253, 252, 250, 0.14);
+	--accent-subtle-overlay: rgba(253, 252, 250, 0.08);
+	--accent-text-over: #111010;
+
+	--link-color: #fdfcfa;
+
+	--gradient-stop-1: #8a7d64;
+	--gradient-stop-2: #c9b89a;
+	--gradient-stop-3: #fdfcfa;
+	--gradient-subtle: linear-gradient(150deg in oklch, var(--gray-900) 0%, var(--gray-999) 100%);
+	--gradient-accent: linear-gradient(150deg in oklch, #8a7d64, #c9b89a, #fdfcfa);
+	--gradient-accent-orange: linear-gradient(150deg in oklch, #8a7d64, #c9b89a, #fdfcfa);
+	--gradient-stroke: linear-gradient(180deg in oklch, var(--gray-700), var(--gray-800));
+
+	/* Shadows — black depth + warm inset hairline on dark paper */
+	--shadow-sm: inset 0 1px 0 color-mix(in srgb, #fdfcfa 6%, transparent),
+		0px 2px 4px rgba(0, 0, 0, 0.35), 0px 4px 8px rgba(0, 0, 0, 0.25);
+	--shadow-md: inset 0 1px 0 color-mix(in srgb, #fdfcfa 7%, transparent),
+		0px 8px 16px rgba(0, 0, 0, 0.4), 0px 24px 48px -12px rgba(0, 0, 0, 0.5);
+	--shadow-lg: inset 0 1px 0 color-mix(in srgb, #fdfcfa 8%, transparent),
+		0px 16px 32px rgba(0, 0, 0, 0.45), 0px 48px 96px -16px rgba(0, 0, 0, 0.55);
+
+	--star-color: 0, 0, 0;
+
+	/* Clean paper — no atmosphere in the editorial world */
+	--bg-mesh: none;
+}
+
+/* ============================================================
+ * Tailwind theme bridge.
+ * Palette-independent tokens (type scale, breakpoint) live here as
+ * real values — Tailwind emits them on :root, so `var(--text-xl)`
+ * in component styles and the `text-xl` utility share one source.
+ * ============================================================ */
+@theme {
+	/* Preserve the site's historical 50em breakpoint for lg: variants */
+	--breakpoint-lg: 50rem;
+
+	/* Fluid type scale */
+	--text-sm: 0.875rem;
+	--text-base: 1rem;
+	--text-md: 1.125rem;
+	--text-lg: clamp(1.125rem, 1rem + 0.5vw, 1.25rem);
+	--text-xl: clamp(1.35rem, 1.15rem + 1vw, 1.625rem);
+	--text-2xl: clamp(1.6rem, 1.3rem + 1.6vw, 2.125rem);
+	--text-3xl: clamp(1.9rem, 1.4rem + 2.4vw, 2.625rem);
+	--text-4xl: clamp(2.25rem, 1.5rem + 3.6vw, 3.75rem);
+	--text-5xl: clamp(2.75rem, 1.75rem + 5.2vw, 5.5rem);
+	--text-display: clamp(3rem, 1.5rem + 8vw, 8rem);
+}
+
+/* Palette-dependent tokens: `inline` so utilities emit var() references
+ * that flip live across all four palettes (plain @theme would bake the
+ * light-space values into the generated utilities). */
+@theme inline {
+	--color-gray-0: var(--gray-0);
+	--color-gray-50: var(--gray-50);
+	--color-gray-100: var(--gray-100);
+	--color-gray-200: var(--gray-200);
+	--color-gray-300: var(--gray-300);
+	--color-gray-400: var(--gray-400);
+	--color-gray-500: var(--gray-500);
+	--color-gray-600: var(--gray-600);
+	--color-gray-700: var(--gray-700);
+	--color-gray-800: var(--gray-800);
+	--color-gray-900: var(--gray-900);
+	--color-gray-999: var(--gray-999);
+	--color-accent: var(--accent-regular);
+	--color-accent-light: var(--accent-light);
+	--color-accent-dark: var(--accent-dark);
+	--color-accent-text-over: var(--accent-text-over);
+	--color-link: var(--link-color);
+
+	--font-body: var(--font-body);
+	--font-brand: var(--font-brand);
+
+	--shadow-sm: var(--shadow-sm);
+	--shadow-md: var(--shadow-md);
+	--shadow-lg: var(--shadow-lg);
+}

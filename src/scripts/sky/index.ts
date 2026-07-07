@@ -1,6 +1,24 @@
+/**
+ * Ambient sky canvas — evolution of the original soft-stars renderer.
+ *
+ * Dark (space): three-depth twinkling starfield with pointer + scroll
+ * parallax, a slow-drifting aurora band (composited with `screen`), and
+ * occasional meteors. Light (clouds): depth-layered drifting clouds with the
+ * same gentle pointer parallax, plus the top-left sun glow.
+ *
+ * Behavior contracts preserved from the original:
+ * - pauses & fades in the photography section (opacity handled in CSS)
+ * - `prefers-reduced-motion` → single static frame, no drift/parallax
+ * - re-binds across ClientRouter swaps (canvas is intentionally NOT persisted
+ *   so it drains away with the page during the section transition)
+ * - star color read from the `--star-color` RGB-triple token
+ * - DPR capped at 2, night frames capped at 30fps / day at 18fps
+ */
+
 type Star = {
 	x: number;
 	y: number;
+	depth: number;
 	spriteIndex: number;
 	baseAlpha: number;
 	alphaRange: number;
@@ -23,12 +41,13 @@ type Meteor = {
 type Cloud = {
 	x: number;
 	y: number;
-	sprite: CloudSprite;
+	depth: number;
+	sprite: SpriteCanvas;
 	speed: number;
 	phase: number;
 };
 
-type CloudSprite = {
+type SpriteCanvas = {
 	canvas: HTMLCanvasElement;
 	width: number;
 	height: number;
@@ -41,7 +60,7 @@ type StarSprite = {
 
 declare global {
 	interface Window {
-		__softStarfield?: boolean;
+		__sky?: Sky;
 	}
 }
 
@@ -59,6 +78,10 @@ const STAR_SIZES = [0.95, 1.4, 2.15, 3.25, 4.15];
 const CLOUD_DENSITY = 1 / (420 * 320);
 const MIN_CLOUDS = 4;
 const MAX_CLOUDS = 11;
+/** Max pointer-parallax shift (px) for the nearest layer. */
+const POINTER_PARALLAX = 16;
+/** Scroll-parallax rate for the nearest layer (px shifted per px scrolled). */
+const SCROLL_PARALLAX = 0.08;
 
 const clamp = (value: number, min: number, max: number) =>
 	Math.min(Math.max(value, min), max);
@@ -75,14 +98,15 @@ const currentStarColor = () =>
 const starsAreHidden = () => document.documentElement.dataset.section === 'photography';
 const isNightTheme = () => document.documentElement.classList.contains('theme-dark');
 
-class SoftStarfield {
+class Sky {
 	private canvas: HTMLCanvasElement | null = null;
 	private ctx: CanvasRenderingContext2D | null = null;
 	private stars: Star[] = [];
 	private meteors: Meteor[] = [];
 	private clouds: Cloud[] = [];
 	private starSprites: StarSprite[] = [];
-	private sunlightSprite: CloudSprite | null = null;
+	private sunlightSprite: SpriteCanvas | null = null;
+	private auroraSprite: SpriteCanvas | null = null;
 	private rafId = 0;
 	private resizeRafId = 0;
 	private width = 0;
@@ -90,6 +114,11 @@ class SoftStarfield {
 	private dpr = 1;
 	private lastFrame = 0;
 	private starColor = currentStarColor();
+	// Pointer parallax: target follows the pointer, current lerps toward it.
+	private pointerTargetX = 0;
+	private pointerTargetY = 0;
+	private pointerX = 0;
+	private pointerY = 0;
 	private readonly reducedMotion = prefersReducedMotion();
 	private readonly themeObserver = new MutationObserver(() => {
 		this.starColor = currentStarColor();
@@ -101,8 +130,24 @@ class SoftStarfield {
 		window.addEventListener('resize', this.queueResize, { passive: true });
 		document.addEventListener('visibilitychange', this.syncVisibility);
 		document.addEventListener('astro:after-swap', this.bind);
+		if (!this.reducedMotion) {
+			window.addEventListener(
+				'pointermove',
+				(e) => {
+					this.pointerTargetX = e.clientX / Math.max(1, this.width) - 0.5;
+					this.pointerTargetY = e.clientY / Math.max(1, this.height) - 0.5;
+				},
+				{ passive: true }
+			);
+		}
 		this.observeRoot();
 		this.bind();
+	}
+
+	/** Public hook (e.g. the 404 page fires one on load). */
+	spawnMeteorNow() {
+		if (!this.ctx || !isNightTheme() || starsAreHidden() || this.reducedMotion) return;
+		this.spawnMeteor();
 	}
 
 	private bind = () => {
@@ -191,6 +236,7 @@ class SoftStarfield {
 		this.ctx.setTransform(nextDpr, 0, 0, nextDpr, 0, 0);
 		this.createStarSprites();
 		this.createSunlightSprite();
+		this.createAuroraSprite();
 		this.reconcileStars(forceRebuild);
 		this.reconcileClouds(forceRebuild || sizeChanged);
 	}
@@ -222,6 +268,7 @@ class SoftStarfield {
 		return {
 			x: Math.random(),
 			y: Math.random(),
+			depth,
 			spriteIndex: clamp(Math.floor(depth * STAR_SIZES.length), 0, STAR_SIZES.length - 1),
 			baseAlpha: clamp(randomBetween(0.025, 0.11) + depthGlow * 0.9, 0.02, 0.98),
 			alphaRange: randomBetween(0.04, 0.13) + depth * 0.34,
@@ -262,6 +309,66 @@ class SoftStarfield {
 
 			return { canvas, size: logicalSize };
 		});
+	}
+
+	/**
+	 * Aurora band: two large pre-blurred violet/indigo blobs rendered once to
+	 * an offscreen canvas, drawn with `screen` compositing and a very slow
+	 * sinusoidal drift. Hues match the accent ramp (310/284).
+	 */
+	private createAuroraSprite() {
+		const canvas = document.createElement('canvas');
+		const ctx = canvas.getContext('2d')!;
+		const w = Math.max(1, this.width);
+		const h = Math.max(1, Math.round(this.height * 0.8));
+		const spriteDpr = Math.min(this.dpr, 1.5);
+
+		canvas.width = Math.ceil(w * spriteDpr);
+		canvas.height = Math.ceil(h * spriteDpr);
+		ctx.scale(spriteDpr, spriteDpr);
+
+		const blobs = [
+			{ x: 0.22, y: 0.18, rx: 0.42, ry: 0.3, color: '124, 58, 237', alpha: 0.09 },
+			{ x: 0.72, y: 0.34, rx: 0.4, ry: 0.26, color: '76, 17, 198', alpha: 0.1 },
+			{ x: 0.5, y: 0.08, rx: 0.3, ry: 0.2, color: '197, 97, 246', alpha: 0.05 },
+		];
+
+		for (const blob of blobs) {
+			const cx = w * blob.x;
+			const cy = h * blob.y;
+			const r = Math.max(w * blob.rx, h * blob.ry);
+			const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+			gradient.addColorStop(0, `rgba(${blob.color}, ${blob.alpha})`);
+			gradient.addColorStop(0.6, `rgba(${blob.color}, ${blob.alpha * 0.4})`);
+			gradient.addColorStop(1, `rgba(${blob.color}, 0)`);
+			ctx.fillStyle = gradient;
+			ctx.save();
+			ctx.translate(cx, cy);
+			ctx.scale(1, (h * blob.ry) / r || 1);
+			ctx.translate(-cx, -cy);
+			ctx.beginPath();
+			ctx.arc(cx, cy, r, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.restore();
+		}
+
+		this.auroraSprite = { canvas, width: w, height: h };
+	}
+
+	private drawAurora(elapsedSeconds: number) {
+		if (!this.ctx || !this.auroraSprite) return;
+		const driftX = Math.sin(elapsedSeconds * 0.05) * this.width * 0.05;
+		const driftY = Math.cos(elapsedSeconds * 0.037) * this.height * 0.02;
+		this.ctx.save();
+		this.ctx.globalCompositeOperation = 'screen';
+		this.ctx.drawImage(
+			this.auroraSprite.canvas,
+			driftX - this.width * 0.03,
+			driftY - this.height * 0.04,
+			this.auroraSprite.width * 1.1,
+			this.auroraSprite.height,
+		);
+		this.ctx.restore();
 	}
 
 	private randomPerimeterPoint() {
@@ -317,12 +424,18 @@ class SoftStarfield {
 	private render(deltaSeconds: number, elapsedSeconds: number) {
 		if (!this.ctx) return;
 
+		// Ease the pointer offset toward its target for a weighty, lagged feel.
+		const lerp = Math.min(1, deltaSeconds * 3.5);
+		this.pointerX += (this.pointerTargetX - this.pointerX) * lerp;
+		this.pointerY += (this.pointerTargetY - this.pointerY) * lerp;
+
 		this.clear();
 		if (!isNightTheme()) {
 			this.drawDaySky(deltaSeconds, elapsedSeconds);
 			return;
 		}
 
+		this.drawAurora(elapsedSeconds);
 		this.drawStars(elapsedSeconds);
 
 		if (Math.random() < METEORS_PER_SECOND * deltaSeconds) {
@@ -340,6 +453,7 @@ class SoftStarfield {
 			this.drawDaySky(0, performance.now() / 1000);
 			return;
 		}
+		this.drawAurora(0);
 		this.drawStars(performance.now() / 1000);
 	}
 
@@ -349,6 +463,9 @@ class SoftStarfield {
 
 	private drawStars(elapsedSeconds: number) {
 		if (!this.ctx) return;
+
+		// Body is the scroll container (see base.css); read once per frame.
+		const scrollTop = this.reducedMotion ? 0 : document.body.scrollTop;
 
 		this.ctx.save();
 
@@ -360,8 +477,15 @@ class SoftStarfield {
 			);
 			const sprite = this.starSprites[star.spriteIndex];
 			if (!sprite) continue;
-			const x = star.x * this.width - sprite.size / 2;
-			const y = star.y * this.height - sprite.size / 2;
+
+			// Depth-weighted parallax: nearer (larger) stars shift further.
+			const px = this.pointerX * 2 * POINTER_PARALLAX * star.depth;
+			const py = this.pointerY * 2 * POINTER_PARALLAX * star.depth;
+			const scrollShift = scrollTop * SCROLL_PARALLAX * star.depth;
+			// Wrap vertically so scrolled-off stars re-enter from the other edge.
+			const yBase = (((star.y * this.height - scrollShift) % this.height) + this.height) % this.height;
+			const x = star.x * this.width + px - sprite.size / 2;
+			const y = yBase + py - sprite.size / 2;
 
 			this.ctx.globalAlpha = alpha;
 			this.ctx.drawImage(sprite.canvas, x, y, sprite.size, sprite.size);
@@ -391,9 +515,11 @@ class SoftStarfield {
 	}
 
 	private createCloud(spreadAcrossViewport = false): Cloud {
-		const width = randomBetween(160, 390) * clamp(this.width / 1180, 0.78, 1.28);
+		// Two depth layers: far clouds are smaller, slower, fainter.
+		const depth = Math.random() < 0.45 ? randomBetween(0.35, 0.6) : randomBetween(0.75, 1);
+		const width = randomBetween(160, 390) * clamp(this.width / 1180, 0.78, 1.28) * depth;
 		const height = width * randomBetween(0.28, 0.44);
-		const sprite = this.createCloudSprite(width, height, randomBetween(0.18, 0.34));
+		const sprite = this.createCloudSprite(width, height, randomBetween(0.18, 0.34) * clamp(depth + 0.25, 0.5, 1));
 		const topSkyLimit = Math.min(this.height * 0.36, 330);
 		const upperSkyY = randomBetween(this.height * 0.035, topSkyLimit);
 		const lowerSkyY = randomBetween(topSkyLimit, Math.min(this.height * 0.58, topSkyLimit + 170));
@@ -403,13 +529,14 @@ class SoftStarfield {
 				? randomBetween(-width * 1.2, this.width + width * 1.2)
 				: this.width + randomBetween(24, this.width * 0.34 + width),
 			y: Math.random() < 0.82 ? upperSkyY : lowerSkyY,
+			depth,
 			sprite,
-			speed: randomBetween(4, 15) * clamp(this.width / 1180, 0.75, 1.2),
+			speed: randomBetween(4, 15) * clamp(this.width / 1180, 0.75, 1.2) * depth,
 			phase: randomBetween(0, Math.PI * 2),
 		};
 	}
 
-	private createCloudSprite(width: number, height: number, alpha: number): CloudSprite {
+	private createCloudSprite(width: number, height: number, alpha: number): SpriteCanvas {
 		const padding = 28;
 		const logicalWidth = width + padding * 2;
 		const logicalHeight = height + padding * 2;
@@ -481,7 +608,9 @@ class SoftStarfield {
 		for (const cloud of this.clouds) {
 			cloud.x -= cloud.speed * deltaSeconds;
 			const drift = Math.sin(elapsedSeconds * 0.16 + cloud.phase) * 5;
-			this.drawCloud(cloud, drift);
+			const px = this.pointerX * 2 * POINTER_PARALLAX * 0.6 * cloud.depth;
+			const py = this.pointerY * 2 * POINTER_PARALLAX * 0.35 * cloud.depth;
+			this.drawCloud(cloud, drift + py, px);
 
 			if (cloud.x + cloud.sprite.width < -OUTER_PADDING) {
 				Object.assign(cloud, this.createCloud(false));
@@ -522,13 +651,13 @@ class SoftStarfield {
 		this.ctx.drawImage(this.sunlightSprite!.canvas, 0, 0, this.width, this.height);
 	}
 
-	private drawCloud(cloud: Cloud, drift: number) {
+	private drawCloud(cloud: Cloud, offsetY: number, offsetX = 0) {
 		if (!this.ctx) return;
 
 		this.ctx.drawImage(
 			cloud.sprite.canvas,
-			cloud.x,
-			cloud.y + drift,
+			cloud.x + offsetX,
+			cloud.y + offsetY,
 			cloud.sprite.width,
 			cloud.sprite.height,
 		);
@@ -584,7 +713,11 @@ class SoftStarfield {
 	}
 }
 
-if (!window.__softStarfield) {
-	window.__softStarfield = true;
-	new SoftStarfield();
+/** Fire a meteor on demand (dark mode only; used by the 404 page). */
+export function spawnMeteor() {
+	window.__sky?.spawnMeteorNow();
+}
+
+if (!window.__sky) {
+	window.__sky = new Sky();
 }
