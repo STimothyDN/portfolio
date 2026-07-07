@@ -39,6 +39,20 @@ function initNestedShoot(ctx: {
 
 	let pinPoint = 0;
 	let stuck = title.classList.contains('is-stuck');
+	let morphLocked = false;
+	let morphTimer = 0;
+
+	const setStuck = (next: boolean) => {
+		if (stuck === next) return;
+		stuck = next;
+		title.classList.toggle('is-stuck', stuck);
+		morphLocked = true;
+		window.clearTimeout(morphTimer);
+		morphTimer = window.setTimeout(() => {
+			morphLocked = false;
+			onScroll();
+		}, 520);
+	};
 
 	const measure = () => {
 		const barH = Math.round(parentBar.offsetHeight);
@@ -50,22 +64,23 @@ function initNestedShoot(ctx: {
 		pinPoint = Math.max(0, stageTop - barH);
 	};
 
-	// Hysteresis so the morph doesn't flicker right at the pin point.
-	const STICK_AT = 24;
-	const UNSTICK_AT = 4;
+	// Hysteresis plus a short morph lock keep the expanding header from moving
+	// the scroll position back across its own threshold during upward scroll.
+	const STICK_AT = 96;
+	const UNSTICK_AT = 16;
 	const onScroll = () => {
+		if (morphLocked) return;
 		const y = scrollPos();
 		if (!stuck && y >= pinPoint + STICK_AT) {
-			stuck = true;
-			title.classList.add('is-stuck');
-		} else if (stuck && y <= pinPoint + UNSTICK_AT) {
-			stuck = false;
-			title.classList.remove('is-stuck');
+			setStuck(true);
+		} else if (stuck && y <= Math.max(0, pinPoint + UNSTICK_AT)) {
+			setStuck(false);
 		}
 	};
 
 	window.addEventListener('scroll', onScroll, { passive: true, signal });
 	body.addEventListener('scroll', onScroll, { passive: true, signal });
+	signal.addEventListener('abort', () => window.clearTimeout(morphTimer), { once: true });
 
 	let measureRaf = 0;
 	const queueMeasure = () => {
@@ -120,6 +135,20 @@ function initPhotoSectionSnap() {
 	// Scroll offset the title pins at; kept fresh by measure().
 	let stageTop = 0;
 	let stuck = title.classList.contains('is-stuck');
+	let morphLocked = false;
+	let morphTimer = 0;
+
+	const setStuck = (next: boolean) => {
+		if (stuck === next) return;
+		stuck = next;
+		title.classList.toggle('is-stuck', stuck);
+		morphLocked = true;
+		window.clearTimeout(morphTimer);
+		morphTimer = window.setTimeout(() => {
+			morphLocked = false;
+			onScroll();
+		}, 520);
+	};
 
 	const measure = () => {
 		// Chrome above the landing (nav + its margin) — sizes the landing so the
@@ -141,18 +170,21 @@ function initPhotoSectionSnap() {
 		stageTop = Math.round(stage.getBoundingClientRect().top + scrollPos());
 	};
 
-	// Hysteresis keeps the morph from flickering when the scroll rests right on
-	// the snap point (where the title has pinned but not yet travelled past).
-	const STICK_AT = 48;
-	const UNSTICK_AT = 8;
+	// Hysteresis plus a short morph lock keep native scroll-snap settling from
+	// repeatedly crossing the header's own height-changing threshold.
+	const STICK_AT = 56;
+	const UNSTICK_AT = -16;
 	const onScroll = () => {
+		if (root.dataset.shootOpen) {
+			setStuck(true);
+			return;
+		}
+		if (morphLocked) return;
 		const y = scrollPos();
 		if (!stuck && y >= stageTop + STICK_AT) {
-			stuck = true;
-			title.classList.add('is-stuck');
-		} else if (stuck && y <= stageTop + UNSTICK_AT) {
-			stuck = false;
-			title.classList.remove('is-stuck');
+			setStuck(true);
+		} else if (stuck && y <= Math.max(0, stageTop + UNSTICK_AT)) {
+			setStuck(false);
 		}
 	};
 
@@ -190,6 +222,7 @@ function initPhotoSectionSnap() {
 	document.addEventListener('keydown', handleKeydown, { capture: true, signal });
 	window.addEventListener('scroll', onScroll, { passive: true, signal });
 	body.addEventListener('scroll', onScroll, { passive: true, signal });
+	signal.addEventListener('abort', () => window.clearTimeout(morphTimer), { once: true });
 
 	let measureRaf = 0;
 	const queueMeasure = () => {

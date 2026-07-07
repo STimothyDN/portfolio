@@ -81,7 +81,7 @@ function entrance(el: HTMLElement, preset: string, photo: boolean) {
 			// Editorial index row: the top hairline draws in while the content
 			// lifts up with a small internal stagger (see WorkIndexRow.astro).
 			const hairline = el.querySelector<HTMLElement>('.hairline');
-			const bits = el.querySelectorAll<HTMLElement>('.index, .title, .description, .meta');
+			const bits = el.querySelectorAll<HTMLElement>('.title, .thumb');
 			const tl = gsap.timeline({
 				delay,
 				scrollTrigger: { trigger: el, ...ENTER, once: true },

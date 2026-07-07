@@ -28,21 +28,9 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 });
 ---
 
-<article class="plate" data-animate="fade">
-	<div class="frame">
-		<img
-			src={src}
-			srcset={srcset}
-			sizes="(min-width: 50em) min(60rem, 80vw), calc(100vw - 3rem)"
-			alt={alt}
-			style={aspect ? `aspect-ratio: ${aspect};` : undefined}
-			loading={eager ? 'eager' : 'lazy'}
-			fetchpriority={eager ? 'high' : undefined}
-			decoding="async"
-		/>
-	</div>
+<article class="shoot-row" data-animate="fade">
+	<span class="rule" aria-hidden="true"></span>
 	<div class="label">
-		<span class="rule" aria-hidden="true"></span>
 		<h2 class="title"><a href={`/photography/${id}`} data-shoot-open={id}>{data.title}</a></h2>
 		<p class="meta">
 			<time datetime={data.date.toISOString().slice(0, 10)}>{formattedDate}</time>
@@ -50,14 +38,32 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 		</p>
 		{data.description && <p class="description">{data.description}</p>}
 	</div>
+	<div class="frame">
+		<img
+			src={src}
+			srcset={srcset}
+			sizes="(min-width: 50em) 24rem, calc(100vw - 3rem)"
+			alt={alt}
+			style={aspect ? `aspect-ratio: ${aspect};` : undefined}
+			loading={eager ? 'eager' : 'lazy'}
+			fetchpriority={eager ? 'high' : undefined}
+			decoding="async"
+		/>
+	</div>
 </article>
 
 <style>
-	.plate {
+	.shoot-row {
 		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+		padding-block: 2rem;
 	}
 
 	.frame {
+		position: relative;
+		aspect-ratio: 3 / 2;
 		overflow: hidden;
 		background: var(--gray-900);
 		border: 1px solid var(--gray-800);
@@ -66,20 +72,17 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 	.frame img {
 		display: block;
 		width: 100%;
-		height: auto;
-		max-height: 75svh;
+		height: 100%;
 		object-fit: cover;
-	}
-
-	.label {
-		margin-top: 1rem;
 	}
 
 	/* Top rule as a real element so motion.ts can draw it in (scaleX). */
 	.rule {
-		display: block;
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
 		height: 1px;
-		margin-bottom: 0.85rem;
 		background: var(--gray-800);
 		transform-origin: left center;
 	}
@@ -90,6 +93,7 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 	}
 
 	.title a {
+		display: inline-block;
 		color: var(--gray-0);
 		text-decoration: 1px solid underline transparent;
 		text-underline-offset: 0.2em;
@@ -121,12 +125,12 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 		color: var(--gray-300);
 	}
 
-	.plate:hover .title a,
-	.plate:has(a:focus-visible) .title a {
+	.shoot-row:hover .title a,
+	.shoot-row:has(a:focus-visible) .title a {
 		text-decoration-color: currentColor;
 	}
 
-	.plate:has(a:focus-visible) {
+	.shoot-row:has(a:focus-visible) {
 		outline: 2px solid var(--accent-regular);
 		outline-offset: 6px;
 	}
@@ -141,9 +145,37 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 			transition: transform 600ms cubic-bezier(0.33, 1, 0.68, 1);
 		}
 
-		.plate:hover .frame img,
-		.plate:has(a:focus-visible) .frame img {
+		.shoot-row:hover .frame img,
+		.shoot-row:has(a:focus-visible) .frame img {
 			transform: scale(1.02);
+		}
+	}
+
+	@media (min-width: 50em) {
+		.shoot-row {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem);
+			gap: 2rem;
+			align-items: center;
+			padding-block: 2.75rem;
+		}
+	}
+
+	@media (min-width: 50em) and (pointer: fine) and (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+		.shoot-row {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.frame {
+			display: none;
+		}
+
+		.shoot-row:has(a:focus-visible) {
+			grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem);
+		}
+
+		.shoot-row:has(a:focus-visible) .frame {
+			display: block;
 		}
 	}
 </style>

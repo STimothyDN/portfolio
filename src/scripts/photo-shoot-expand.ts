@@ -89,10 +89,10 @@ function initPhotoShootExpand() {
 				([entry]) => {
 					if (panel.hidden) return;
 					const pinned =
-						!entry.isIntersecting && entry.boundingClientRect.top <= mastheadStuckH + 2;
+						!entry.isIntersecting && entry.boundingClientRect.top <= mastheadStuckH + 1;
 					header.classList.toggle('is-stuck', pinned);
 				},
-				{ rootMargin: `-${mastheadStuckH + 2}px 0px 0px 0px` }
+				{ rootMargin: `-${mastheadStuckH + 1}px 0px 0px 0px` }
 			);
 			io.observe(sentinel);
 			observers.push(io);
@@ -125,6 +125,9 @@ function initPhotoShootExpand() {
 		// Also disables the stage's snap-align (see index.astro) so proximity
 		// snapping can't drag the view back up to the full-size masthead.
 		root.dataset.shootOpen = id;
+		// The open state reveals the masthead back link, changing the condensed
+		// masthead height. Re-measure before positioning the nested panel header.
+		measure();
 
 		// Land in the fully nested state: masthead condensed, shoot header pinned
 		// and condensed right beneath it, photos underneath — i.e. just past the
@@ -183,6 +186,7 @@ function initPhotoShootExpand() {
 		list.hidden = false;
 		openId = null;
 		delete root.dataset.shootOpen;
+		measure();
 
 		// Swap this history entry back to the index (keeping the ClientRouter
 		// fields) rather than pushing — back still leaves the section cleanly.

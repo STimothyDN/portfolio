@@ -14,6 +14,8 @@ interface Window {
 	__themeObserver?: boolean;
 	/** Guards the section-transition lifecycle listeners against double registration. */
 	__sectionTransition?: boolean;
+	/** Guards the anim-ready after-swap listener against re-registration. */
+	__animReadySwap?: boolean;
 	/** Tile click made before the lightbox island hydrated; consumed on mount. */
 	__pendingLightbox?: { index: number; shootSlug?: string; t: number } | null;
 }

@@ -3,29 +3,17 @@ import type { CollectionEntry } from 'astro:content';
 
 interface Props {
 	project: CollectionEntry<'work'>;
-	index: number;
 	eager?: boolean;
 }
 
-const { project, index, eager = false } = Astro.props;
+const { project, eager = false } = Astro.props;
 const { data, slug } = project;
-const number = String(index + 1).padStart(2, '0');
 const year = data.publishDate.getFullYear();
 ---
 
 <article class="row" data-slug={slug}>
 	<span class="hairline" aria-hidden="true"></span>
-	<span class="index" aria-hidden="true">{number}</span>
-	<div class="text">
-		<h2 class="title"><a href={`/work/${slug}`}>{data.title}</a></h2>
-		<p class="description">{data.description}</p>
-		<p class="meta">
-			<span class="year">{year}</span>
-			<span class="tags" role="list">
-				{data.tags.map((t) => <span role="listitem">{t}</span>)}
-			</span>
-		</p>
-	</div>
+	<h2 class="title"><a href={`/work/${slug}`} transition:name={`work-title-${slug}`}>{data.title}</a></h2>
 	<div class="thumb">
 		<img
 			src={data.img}
@@ -35,6 +23,13 @@ const year = data.publishDate.getFullYear();
 			decoding="async"
 			transition:name={`work-image-${slug}`}
 		/>
+		<div class="thumb-overlay">
+			<p class="preview-year" data-preview-vt={`work-year-${slug}`}>{year}</p>
+			<div class="preview-tags" role="list">
+				{data.tags.map((t, i) => <span role="listitem" data-preview-vt={`work-tag-${slug}-${i}`}>{t}</span>)}
+			</div>
+			<p class="preview-description" data-preview-vt={`work-description-${slug}`}>{data.description}</p>
+		</div>
 	</div>
 </article>
 
@@ -58,25 +53,13 @@ const year = data.publishDate.getFullYear();
 		transform-origin: left center;
 	}
 
-	.index {
-		font-family: var(--font-brand);
-		font-size: var(--text-sm);
-		font-variant-numeric: tabular-nums;
-		color: var(--gray-400);
-	}
-
-	.text {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
 	.title {
 		font-size: clamp(var(--text-2xl), 4.5vw, var(--text-4xl));
 		line-height: 1.1;
 	}
 
 	.title a {
+		display: inline-block;
 		color: var(--gray-0);
 		text-decoration: none;
 		transition: color var(--theme-transition);
@@ -90,35 +73,14 @@ const year = data.publishDate.getFullYear();
 		inset: 0;
 	}
 
-	.description {
-		max-width: 60ch;
-		color: var(--gray-300);
-	}
-
-	.meta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.35rem 0.75rem;
-		font-size: var(--text-sm);
-		color: var(--gray-400);
-	}
-
-	.tags {
-		display: contents;
-	}
-
-	/* The year always leads the meta line, so every tag gets a leading dot. */
-	.tags span::before {
-		content: '·';
-		margin-inline-end: 0.75rem;
-	}
-
 	.thumb {
+		position: relative;
 		aspect-ratio: 16 / 10;
 		overflow: hidden;
 		border: 1px solid var(--gray-800);
-		border-radius: 0.75rem;
+		border-radius: 0.5rem;
 		box-shadow: var(--shadow-sm);
+		background: var(--gray-999);
 	}
 
 	.thumb img {
@@ -128,6 +90,63 @@ const year = data.publishDate.getFullYear();
 		object-fit: cover;
 		filter: saturate(0.55) contrast(0.95);
 		opacity: 0.85;
+	}
+
+	.thumb::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(180deg, rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.78));
+		pointer-events: none;
+	}
+
+	.thumb-overlay {
+		position: absolute;
+		inset: auto 0 0;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: clamp(1rem, 4vw, 1.5rem);
+		color: white;
+		text-shadow: 0 1px 1.5rem rgb(0 0 0 / 0.45);
+	}
+
+	.preview-year {
+		font-family: var(--font-brand);
+		font-size: var(--text-sm);
+		font-variant-numeric: tabular-nums;
+		color: rgb(255 255 255 / 0.72);
+	}
+
+	.preview-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+
+	.preview-tags span {
+		display: inline-flex;
+		align-items: center;
+		min-height: 1.85rem;
+		padding: 0.3rem 0.65rem;
+		border: 1px solid rgb(255 255 255 / 0.32);
+		border-radius: 999rem;
+		background: rgb(0 0 0 / 0.28);
+		font-size: var(--text-sm);
+		line-height: 1.2;
+		backdrop-filter: blur(10px);
+	}
+
+	.preview-description {
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		max-width: 52ch;
+		font-size: var(--text-md);
+		line-height: 1.45;
+		color: rgb(255 255 255 / 0.9);
 	}
 
 	.row:hover .thumb img,
@@ -172,7 +191,7 @@ const year = data.publishDate.getFullYear();
 	@media (min-width: 50em) {
 		.row {
 			display: grid;
-			grid-template-columns: 3.5rem 1fr 18rem;
+			grid-template-columns: minmax(0, 1fr) 18rem;
 			gap: 2rem;
 			align-items: center;
 			padding-block: 3rem;
@@ -193,7 +212,7 @@ const year = data.publishDate.getFullYear();
 		/* Collapse the reserved thumb column so the text spans the row; the
 		 * floating follower carries the preview instead. */
 		.row {
-			grid-template-columns: 3.5rem 1fr;
+			grid-template-columns: minmax(0, 1fr);
 		}
 
 		.thumb {
@@ -202,7 +221,7 @@ const year = data.publishDate.getFullYear();
 
 		/* Keyboard focus restores the static thumb in its own column. */
 		.row:has(a:focus-visible) {
-			grid-template-columns: 3.5rem 1fr 18rem;
+			grid-template-columns: minmax(0, 1fr) 18rem;
 		}
 
 		.row:has(a:focus-visible) .thumb {

@@ -61,7 +61,8 @@ const preloadFonts = isPhotography ? [frauncesItalicUrl, newsreaderUrl] : [brico
 		return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 	};
 	const applyTheme = () => {
-		const isDark = getThemePreference() === 'dark';
+		const isPhoto = window.location.pathname.startsWith('/photography');
+		const isDark = !isPhoto && getThemePreference() === 'dark';
 		document.documentElement.classList[isDark ? 'add' : 'remove']('theme-dark');
 	};
 	applyTheme();

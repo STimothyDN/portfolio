@@ -9,6 +9,12 @@
       "autoPort": true
     },
     {
+      "name": "portfolio-dev-alt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "4399"],
+      "port": 4399
+    },
+    {
       "name": "portfolio-preview",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "preview", "--", "--port", "4322"],

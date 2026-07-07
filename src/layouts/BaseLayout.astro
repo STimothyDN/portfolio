@@ -43,6 +43,30 @@ const section =
 			</div>
 		</div>
 
+		<!-- Section Transition Overlays -->
+		<div class="flash-transition" aria-hidden="true" data-astro-transition-persist="flash-overlay">
+			<div class="flash-transition__base"></div>
+			<div class="flash-transition__tint"></div>
+			<div class="flash-transition__bloom"></div>
+			<div class="flash-transition__grain"></div>
+		</div>
+
+		<div class="dslr-shutdown__blackout" aria-hidden="true" data-astro-transition-persist="dslr-blackout"></div>
+		<div class="dslr-shutdown" aria-hidden="true" data-astro-transition-persist="dslr-modal">
+			<div class="dslr-shutdown__panel">
+				<div class="dslr-shutdown__bracket dslr-shutdown__bracket--tl"></div>
+				<div class="dslr-shutdown__bracket dslr-shutdown__bracket--tr"></div>
+				<div class="dslr-shutdown__bracket dslr-shutdown__bracket--bl"></div>
+				<div class="dslr-shutdown__bracket dslr-shutdown__bracket--br"></div>
+				
+				<div class="dslr-shutdown__icon">🔴</div>
+				<div class="dslr-shutdown__text">Powering Off</div>
+				<div class="dslr-shutdown__bar">
+					<div class="dslr-shutdown__bar-fill"></div>
+				</div>
+			</div>
+		</div>
+
 		<!--
 			Turbulence displacement filter for the "liquid drain" section transition. It's
 			referenced by ::view-transition-old/new(root) in transitions.css to warp the draining

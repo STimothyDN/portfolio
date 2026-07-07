@@ -15,19 +15,21 @@
 import { gsap } from './motion';
 
 const GATE = '(min-width: 50rem) and (pointer: fine) and (prefers-reduced-motion: no-preference)';
+const FLOAT_Y_OFFSET = 28;
 
 function setup() {
 	const index = document.querySelector<HTMLElement>('.work-index');
 	const float = document.querySelector<HTMLElement>('.work-float');
 	const floatImg = float?.querySelector('img');
-	if (!index || !float || !floatImg) return;
+	const floatOverlay = float?.querySelector<HTMLElement>('.work-float-overlay');
+	if (!index || !float || !floatImg || !floatOverlay) return;
 	if (!window.matchMedia(GATE).matches) return;
 
 	// The hidden thumb column keeps lazy images unloaded; warm them so the
 	// follower never pops in empty.
 	index.querySelectorAll<HTMLImageElement>('.thumb img').forEach((img) => (img.loading = 'eager'));
 
-	gsap.set(float, { xPercent: -50, yPercent: -55, scale: 0.9, opacity: 0 });
+	gsap.set(float, { xPercent: -50, yPercent: 0, scale: 0.9, opacity: 0, transformOrigin: '50% 0%' });
 	const xTo = gsap.quickTo(float, 'x', { duration: 0.45, ease: 'power3' });
 	const yTo = gsap.quickTo(float, 'y', { duration: 0.45, ease: 'power3' });
 	const rTo = gsap.quickTo(float, 'rotation', { duration: 0.5, ease: 'power2' });
@@ -36,7 +38,7 @@ function setup() {
 
 	index.addEventListener('pointermove', (e) => {
 		xTo(e.clientX);
-		yTo(e.clientY);
+		yTo(e.clientY + FLOAT_Y_OFFSET);
 		if (lastX !== null) {
 			rTo(gsap.utils.clamp(-7, 7, (e.clientX - lastX) * 0.4));
 			settle?.kill();
@@ -51,12 +53,16 @@ function setup() {
 		if (activeThumb) activeThumb.style.viewTransitionName = '';
 		activeThumb = null;
 		float.style.viewTransitionName = 'none';
+		floatOverlay.querySelectorAll<HTMLElement>('[data-preview-vt]').forEach((el) => {
+			el.style.viewTransitionName = 'none';
+		});
 	};
 
 	index.querySelectorAll<HTMLElement>('.row').forEach((row) => {
 		const thumb = row.querySelector<HTMLImageElement>('.thumb img');
+		const overlay = row.querySelector<HTMLElement>('.thumb-overlay');
 		const slug = row.dataset.slug;
-		if (!thumb || !slug) return;
+		if (!thumb || !overlay || !slug) return;
 
 		row.addEventListener('pointerenter', (e) => {
 			if (e.pointerType !== 'mouse') return;
@@ -64,6 +70,10 @@ function setup() {
 			activeThumb = thumb;
 			floatImg.src = thumb.currentSrc || thumb.src;
 			floatImg.alt = '';
+			floatOverlay.replaceChildren(...Array.from(overlay.children, (child) => child.cloneNode(true)));
+			floatOverlay.querySelectorAll<HTMLElement>('[data-preview-vt]').forEach((el) => {
+				el.style.viewTransitionName = el.dataset.previewVt ?? 'none';
+			});
 			thumb.style.viewTransitionName = 'none';
 			float.style.viewTransitionName = `work-image-${slug}`;
 			gsap.to(float, { opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out' });

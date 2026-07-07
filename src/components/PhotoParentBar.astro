@@ -11,11 +11,13 @@ import Icon from './Icon.astro';
 ---
 
 <div class="photo-parent-bar" data-photo-parent-bar transition:persist="photo-parent-bar">
-	<a class="pp-inner wrapper" href="/photography/" aria-label="Back to the Photography index">
-		<span class="pp-back" aria-hidden="true"><Icon icon="arrow-left" size="1em" /></span>
-		<span class="pp-title">Timo From 3,</span>
-		<span class="pp-tagline">He shoots! He-</span>
-	</a>
+	<div class="pp-inner wrapper">
+		<a class="pp-back-link" href="/photography/"><Icon icon="arrow-left" size="1em" /> All shoots</a>
+		<p class="pp-kicker">
+			<span class="pp-title">Timo From 3,</span>
+			<span class="pp-tagline">He shoots! He-</span>
+		</p>
+	</div>
 </div>
 
 <style>
@@ -25,34 +27,48 @@ import Icon from './Icon.astro';
 		z-index: 5;
 		background: var(--gray-999);
 		border-bottom: 1px solid var(--gray-800);
+		overflow-anchor: none;
 	}
 
 	.pp-inner {
 		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
-		padding-block: 0.6rem;
-		text-decoration: none;
-		color: var(--gray-200);
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.35rem;
+		padding-block: 0.65rem 0.75rem;
 	}
 
-	.pp-back {
-		align-self: center;
+	.pp-back-link {
 		display: inline-flex;
-		color: var(--gray-400);
-		transition: color var(--theme-transition);
+		align-items: center;
+		gap: 0.4rem;
+		color: var(--gray-300);
+		font-size: var(--text-sm);
+		text-decoration: 1px solid underline transparent;
+		text-underline-offset: 0.25em;
+		transition:
+			color var(--theme-transition),
+			text-decoration-color var(--theme-transition);
 	}
 
-	.pp-inner:hover .pp-back,
-	.pp-inner:focus-visible .pp-back {
+	.pp-back-link:hover,
+	.pp-back-link:focus-visible {
 		color: var(--gray-0);
+		text-decoration-color: currentColor;
+	}
+
+	.pp-kicker {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 0.35rem 0.5rem;
 	}
 
 	.pp-title {
 		font-family: var(--font-brand);
-		font-size: var(--text-md);
+		font-size: var(--text-sm);
 		font-weight: 500;
-		color: var(--gray-100);
+		color: var(--gray-300);
 	}
 
 	.pp-tagline {
@@ -66,14 +82,8 @@ import Icon from './Icon.astro';
 		color: var(--gray-400);
 	}
 
-	.pp-inner:focus-visible {
+	.pp-back-link:focus-visible {
 		outline: 2px solid var(--accent-regular);
-		outline-offset: -2px;
-	}
-
-	@media (max-width: 26em) {
-		.pp-tagline {
-			display: none;
-		}
+		outline-offset: 3px;
 	}
 </style>

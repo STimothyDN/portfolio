@@ -156,7 +156,7 @@ h2 {
 	html.anim-ready [data-animate='work-row'] .hairline {
 		transform: scaleX(0);
 	}
-	html.anim-ready [data-animate='work-row'] :is(.index, .title, .description, .meta) {
+	html.anim-ready [data-animate='work-row'] :is(.title, .thumb) {
 		opacity: 0;
 	}
 

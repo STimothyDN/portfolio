@@ -5,6 +5,8 @@ interface Props {
 	align?: 'start' | 'center';
 	/** Masthead scale: 'display' for the home hero, 'default' elsewhere. */
 	size?: 'default' | 'display';
+	animateTitle?: boolean;
+	titleTransitionName?: string;
 	/**
 	 * Turns the hero's first word into an interactive brand swap: hovering drops
 	 * `swapIn` from the sky to knock `swapOut` off, revealing `keep + swapIn`.
@@ -14,7 +16,15 @@ interface Props {
 	brandSwap?: { keep: string; swapOut: string; swapIn: string };
 }
 
-const { align = 'center', tagline, title, size = 'default', brandSwap } = Astro.props;
+const {
+	align = 'center',
+	tagline,
+	title,
+	size = 'default',
+	brandSwap,
+	animateTitle = true,
+	titleTransitionName,
+} = Astro.props;
 
 // Word-level mask reveal: each word gets a clipping wrapper (data-line) whose
 // inner span slides up via motion.ts. A trailing period becomes the accent
@@ -31,7 +41,7 @@ const brandMatches = (i: number, text: string) =>
 
 <header class:list={['hero stack gap-4', align, size]}>
 	<div class="stack gap-2">
-		<h1 class="title" data-animate="mask-lines">
+		<h1 class="title" data-animate={animateTitle ? 'mask-lines' : undefined} transition:name={titleTransitionName}>
 			{words.map(({ text, dot }, i) => (
 				<>
 					<span class:list={['word', { 'brand-word': brandMatches(i, text) }]} data-line>

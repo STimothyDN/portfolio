@@ -25,6 +25,7 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await entry.render();
+const year = entry.data.publishDate.getFullYear();
 ---
 
 <BaseLayout title={entry.data.title} description={entry.data.description}>
@@ -33,12 +34,20 @@ const { Content } = await entry.render();
 			<header>
 				<div class="wrapper stack gap-2">
 					<a class="back-link" href="/work/"><Icon icon="arrow-left" /> Work</a>
-					<Hero title={entry.data.title} align="start">
+					<Hero
+						title={entry.data.title}
+						align="start"
+						animateTitle={false}
+						titleTransitionName={`work-title-${entry.slug}`}
+					>
 						<div class="details">
-							<div class="tags" data-animate-group data-stagger="0.06" data-animate-delay="0.35">
-								{entry.data.tags.map((t) => <Pill>{t}</Pill>)}
+							<div class="meta-stack">
+								<p class="year" transition:name={`work-year-${entry.slug}`}>{year}</p>
+								<div class="tags">
+									{entry.data.tags.map((t, i) => <div class="tag-transition" transition:name={`work-tag-${entry.slug}-${i}`}><Pill>{t}</Pill></div>)}
+								</div>
 							</div>
-							<p class="description" data-animate="fade-up" data-animate-delay="0.45">{entry.data.description}</p>
+							<p class="description" transition:name={`work-description-${entry.slug}`}>{entry.data.description}</p>
 						</div>
 					</Hero>
 				</div>
@@ -78,15 +87,32 @@ const { Content } = await entry.render();
 	.details {
 		display: flex;
 		flex-direction: column;
-		padding: 0.5rem;
 		gap: 1.5rem;
 		justify-content: space-between;
-		align-items: center;
+		align-items: flex-start;
+	}
+
+	.meta-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.year {
+		font-family: var(--font-brand);
+		font-size: var(--text-sm);
+		font-variant-numeric: tabular-nums;
+		color: var(--gray-400);
 	}
 
 	.tags {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 0.5rem;
+	}
+
+	.tag-transition {
+		display: inline-flex;
 	}
 
 	.description {
@@ -151,6 +177,7 @@ const { Content } = await entry.render();
 		.details {
 			flex-direction: row;
 			gap: 2.5rem;
+			align-items: flex-start;
 		}
 
 		.content :global(blockquote) {
