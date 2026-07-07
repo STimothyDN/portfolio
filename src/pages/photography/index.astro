@@ -77,6 +77,19 @@ const globePins: GlobePin[] = [...pinMap.values()];
 							))
 						}
 					</ul>
+					<aside class="shoot-preview" data-shoot-preview aria-hidden="true">
+						<div class="preview-frame">
+							<div class="preview-parallax">
+								<img class="preview-buf" alt="" width="720" height="480" decoding="async" />
+								<img class="preview-buf" alt="" width="720" height="480" decoding="async" />
+							</div>
+						</div>
+						<p class="preview-meta">
+							<span data-preview-index>01</span>
+							<span class="preview-rule"></span>
+							<span data-preview-total>{String(shoots.length).padStart(2, '0')}</span>
+						</p>
+					</aside>
 					{shoots.map((shoot) => <ShootPanel shoot={shoot} />)}
 					<PhotoLightbox client:load photoSets={photoSets} />
 				</div>
@@ -84,9 +97,6 @@ const globePins: GlobePin[] = [...pinMap.values()];
 		</div>
 		<ContactCTA />
 	</div>
-	<figure class="shoot-float" aria-hidden="true">
-		<img alt="" width="720" height="480" />
-	</figure>
 </BaseLayout>
 
 <style>
@@ -210,9 +220,15 @@ const globePins: GlobePin[] = [...pinMap.values()];
 	h1 {
 		max-width: 13ch;
 		line-height: 0.88;
-		letter-spacing: 0;
 		color: var(--gray-0);
 		font-size: clamp(3.5rem, 10vw, 8rem);
+		/* Same cut as the shoot titles in the index list (upright Fraunces),
+		 * overriding the italic SOFT/WONK masthead treatment from base.css —
+		 * this block is unlayered, so it wins over @layer base. */
+		font-style: normal;
+		font-weight: 600;
+		font-variation-settings: 'opsz' 40;
+		letter-spacing: -0.01em;
 	}
 
 	.is-stuck h1 {
@@ -286,27 +302,11 @@ const globePins: GlobePin[] = [...pinMap.values()];
 		display: none;
 	}
 
-	.shoot-float {
+	/* Pinned preview stage — hidden by default; the fine-pointer media block
+	 * below turns the stage body into a two-column layout with this pane
+	 * sticky in the right rail. photo-hover.ts drives the image swaps. */
+	.shoot-preview {
 		display: none;
-		position: fixed;
-		top: 0;
-		left: 0;
-		z-index: 6;
-		margin: 0;
-		width: min(38rem, 46vw);
-		aspect-ratio: 3 / 2;
-		overflow: hidden;
-		border: 1px solid var(--gray-800);
-		background: var(--gray-999);
-		box-shadow: var(--shadow-lg);
-		pointer-events: none;
-		opacity: 0;
-	}
-
-	.shoot-float img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
 	}
 
 	@media (min-width: 50em) {
@@ -319,9 +319,75 @@ const globePins: GlobePin[] = [...pinMap.values()];
 		}
 	}
 
-	@media (min-width: 50em) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-		.shoot-float {
+	@media (min-width: 50em) and (pointer: fine) and (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+		/* Typographic list left, pinned stage right. Rows (and their stretched
+		 * link hit areas) now stop at the column edge instead of spanning the
+		 * page, so moving the cursor around the page no longer grazes them.
+		 * Reverts to a plain block while a shoot panel is open. */
+		.photography-page:not([data-shoot-open]) .stage-body {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) clamp(20rem, 30vw, 26rem);
+			gap: clamp(2.5rem, 5vw, 5rem);
+			align-items: start;
+		}
+
+		.photography-page:not([data-shoot-open]) .shoot-index {
+			grid-column: 1;
+			grid-row: 1;
+			max-width: none;
+			margin: 0;
+		}
+
+		.photography-page:not([data-shoot-open]) .shoot-preview {
 			display: block;
+			grid-column: 2;
+			grid-row: 1;
+			/* Clears the condensed sticky masthead (verified ~6.5rem tall). */
+			position: sticky;
+			top: clamp(7.5rem, 12vh, 9rem);
+		}
+
+		.preview-frame {
+			position: relative;
+			aspect-ratio: 3 / 2;
+			overflow: hidden;
+			border: 1px solid var(--gray-800);
+			background: var(--gray-900);
+			box-shadow: var(--shadow-lg);
+		}
+
+		.preview-parallax {
+			position: absolute;
+			inset: 0;
+			will-change: transform;
+		}
+
+		.preview-buf {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			opacity: 0;
+			transform: scale(1.06);
+			will-change: transform, clip-path;
+		}
+
+		.preview-meta {
+			display: flex;
+			align-items: center;
+			gap: 0.85rem;
+			margin-top: 0.85rem;
+			font-size: var(--text-sm);
+			letter-spacing: 0.08em;
+			font-variant-caps: all-small-caps;
+			color: var(--gray-300);
+		}
+
+		.preview-rule {
+			flex: 1;
+			height: 1px;
+			background: var(--gray-800);
 		}
 	}
 </style>

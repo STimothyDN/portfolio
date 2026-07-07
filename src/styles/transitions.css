@@ -65,6 +65,59 @@
 	opacity: 0;
 }
 
+/* --cam-w sizes the dropped-in camera and anchors the burst to its bulb */
+.flash-transition {
+	--cam-w: clamp(170px, 26vw, 250px);
+}
+
+/* The stylized film camera that drops in from the top of the screen and
+ * fires its flash (flashClose). Ink-dark shapes with a faint light outline
+ * so the silhouette reads over both the light and dark space palettes. */
+.flash-transition__camera {
+	position: absolute;
+	left: calc(50% - var(--cam-w) / 2);
+	top: 34%;
+	width: var(--cam-w);
+	opacity: 0;
+	transform: translateY(-90vh) rotate(-6deg);
+	will-change: transform;
+	filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.35));
+}
+
+.flash-transition__camera svg {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+/* Pre-flash glow on the bulb window — JS pops it just before the burst */
+.flash-transition__bulb-glow {
+	opacity: 0;
+}
+
+/* The blast: a ball of white light that erupts from the flash bulb and
+ * swallows the screen. Sits over the bulb's spot in the artwork (26.5% /
+ * 14% of the camera box → 0.235/0.105 of --cam-w from the camera anchor);
+ * JS scales it up until the white core covers the viewport. */
+.flash-transition__burst {
+	position: absolute;
+	left: calc(50% - var(--cam-w) * 0.235);
+	top: calc(34% + var(--cam-w) * 0.105);
+	width: 40px;
+	height: 40px;
+	margin: -20px 0 0 -20px;
+	border-radius: 50%;
+	background: radial-gradient(
+		circle,
+		#ffffff 0% 55%,
+		rgba(255, 250, 235, 0.95) 72%,
+		rgba(255, 240, 208, 0.55) 86%,
+		transparent 100%
+	);
+	transform: scale(0);
+	will-change: transform;
+}
+
 /* Film develop effect is achieved through overlay layer opacities in JS
  * (section-transition.ts). No CSS filter on .backgrounds — that conflicts
  * with the Three.js WebGL canvas in PhotographyGlobe. */
@@ -92,7 +145,7 @@
 .dslr-shutdown__panel {
 	position: relative;
 	min-width: 280px;
-	max-width: 340px;
+	max-width: 380px;
 	padding: 2rem 2.5rem;
 	background: rgba(8, 8, 8, 0.88);
 	border: 1px solid rgba(255, 255, 255, 0.12);
@@ -167,6 +220,22 @@
 	user-select: none;
 }
 
+/* Steady explanatory sub-line — stays readable while the status line and
+ * icon blink above it. */
+.dslr-shutdown__subtext {
+	position: relative;
+	z-index: 3;
+	margin-top: 0.65rem;
+	font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+	font-size: 0.62rem;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.55);
+	line-height: 1.6;
+	user-select: none;
+}
+
 .dslr-shutdown__icon {
 	display: block;
 	margin: 0 auto 0.75rem;
@@ -193,6 +262,94 @@
 	background: rgba(255, 80, 60, 0.8);
 	border-radius: 2px;
 	transform-origin: left;
+}
+
+/* ------------------------------------------------------------------
+ * 3b. CRT SCREEN FILTER  (whole page becomes a retro camera LCD the
+ *     instant the shutdown kicks off — scanlines, RGB grille, tube
+ *     vignette, phosphor flicker and a traveling scan sweep)
+ * ------------------------------------------------------------------ */
+
+.dslr-shutdown__crt {
+	position: fixed;
+	inset: 0;
+	/* Same z as the modal but later in the DOM, so the screen treatment
+	 * paints over everything — the modal is "on" the CRT too. */
+	z-index: 2147483647;
+	pointer-events: none;
+	overflow: hidden;
+	opacity: 0;
+	/* Retro grading of the page itself: drained color, crushed levels.
+	 * backdrop-filter (not filter) so the WebGL globe canvas underneath is
+	 * sampled, not re-composited — see the .backgrounds note above. */
+	backdrop-filter: grayscale(0.35) sepia(0.16) contrast(1.12) brightness(0.92);
+	-webkit-backdrop-filter: grayscale(0.35) sepia(0.16) contrast(1.12) brightness(0.92);
+	background:
+		/* horizontal scanlines */
+		repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px),
+		/* vertical RGB aperture grille */
+		repeating-linear-gradient(
+			90deg,
+			rgba(255, 60, 60, 0.045) 0 1px,
+			rgba(60, 255, 120, 0.03) 1px 2px,
+			rgba(80, 120, 255, 0.045) 2px 3px
+		),
+		/* curved-tube vignette */
+		radial-gradient(ellipse 120% 90% at 50% 50%, transparent 58%, rgba(0, 0, 0, 0.42) 100%);
+}
+
+.dslr-shutdown__crt[data-active='true'] {
+	opacity: 1;
+}
+
+/* Phosphor flicker — a faint cool veil that stutters like a failing tube */
+.dslr-shutdown__crt::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: rgba(205, 228, 255, 0.06);
+	opacity: 0;
+}
+
+/* Scan sweep — a soft bright band rolling down the screen */
+.dslr-shutdown__crt::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: -22%;
+	height: 18%;
+	background: linear-gradient(
+		180deg,
+		transparent,
+		rgba(255, 255, 255, 0.05) 40%,
+		rgba(255, 255, 255, 0.09) 52%,
+		transparent
+	);
+}
+
+.dslr-shutdown__crt[data-active='true']::before {
+	animation: dslr-crt-flicker 640ms steps(1) infinite;
+}
+
+.dslr-shutdown__crt[data-active='true']::after {
+	/* travels its own height ×~6.8 = from above the top edge to past the bottom */
+	animation: dslr-crt-sweep 1.7s linear infinite;
+}
+
+@keyframes dslr-crt-flicker {
+	0% { opacity: 0.5; }
+	18% { opacity: 0.08; }
+	32% { opacity: 0.4; }
+	54% { opacity: 0; }
+	71% { opacity: 0.28; }
+	86% { opacity: 0.1; }
+	100% { opacity: 0.5; }
+}
+
+@keyframes dslr-crt-sweep {
+	from { transform: translateY(0); }
+	to { transform: translateY(680%); }
 }
 
 /* ------------------------------------------------------------------
@@ -233,6 +390,7 @@
 @media (prefers-reduced-motion: reduce) {
 	.flash-transition,
 	.dslr-shutdown,
+	.dslr-shutdown__crt,
 	.dslr-shutdown__blackout {
 		display: none;
 	}

@@ -51,18 +51,20 @@ const preloadFonts = isPhotography ? [frauncesItalicUrl, newsreaderUrl] : [brico
 
 <script is:inline>
 	// This code is inlined in the head to make dark mode instant & blocking.
-	// One theme for the whole site: saved toggle choice first, then OS preference.
-	// (The photography section restyles via its own token palette for each mode —
-	// it must not fork the light/dark state itself.)
-	const getThemePreference = () => {
-		if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
-			return localStorage.getItem('theme');
-		}
-		return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-	};
+	// Two independent theme scopes: the photography section keeps its own
+	// light/dark choice under a separate storage key, so toggling in one
+	// section never carries into the other. With nothing saved, the main
+	// site defaults to dark and photography defaults to light.
+	const themeKey = (isPhoto) => (isPhoto ? 'theme-photography' : 'theme');
 	const applyTheme = () => {
 		const isPhoto = window.location.pathname.startsWith('/photography');
-		const isDark = !isPhoto && getThemePreference() === 'dark';
+		let saved = null;
+		try {
+			saved = localStorage.getItem(themeKey(isPhoto));
+		} catch {
+			/* storage unavailable — fall through to section defaults */
+		}
+		const isDark = saved ? saved === 'dark' : !isPhoto;
 		document.documentElement.classList[isDark ? 'add' : 'remove']('theme-dark');
 	};
 	applyTheme();

@@ -162,20 +162,15 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 	}
 
 	@media (min-width: 50em) and (pointer: fine) and (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+		/* The pinned preview stage (photography/index.astro + photo-hover.ts)
+		 * shows the cover for hover AND keyboard focus, so the inline frame
+		 * stays hidden here; it still loads eagerly as the stage's image source. */
 		.shoot-row {
 			grid-template-columns: minmax(0, 1fr);
 		}
 
 		.frame {
 			display: none;
-		}
-
-		.shoot-row:has(a:focus-visible) {
-			grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem);
-		}
-
-		.shoot-row:has(a:focus-visible) .frame {
-			display: block;
 		}
 	}
 </style>

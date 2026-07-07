@@ -100,11 +100,14 @@ import Icon from './Icon.astro';
 
 			// Toggle the theme when a user clicks the button. This is the only place
 			// the preference is persisted — an explicit choice, not a page-load state.
+			// The photography section has its own storage key (see MainHead.astro),
+			// so a toggle there never leaks into the rest of the site or vice versa.
 			button.addEventListener('click', () => {
 				const dark = !this.isDark();
 				setTheme(dark);
+				const isPhoto = window.location.pathname.startsWith('/photography');
 				try {
-					localStorage.setItem('theme', dark ? 'dark' : 'light');
+					localStorage.setItem(isPhoto ? 'theme-photography' : 'theme', dark ? 'dark' : 'light');
 				} catch {
 					/* storage unavailable (private mode etc.) — theme still applies */
 				}
