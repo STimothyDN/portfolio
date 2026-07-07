@@ -104,8 +104,15 @@ function entrance(el: HTMLElement, preset: string, photo: boolean) {
 			const movers = lines
 				.map((line) => line.firstElementChild as HTMLElement | null)
 				.filter((m): m is HTMLElement => !!m);
-			if (!movers.length) break;
+			if (!movers.length) {
+				// No movers to animate — make sure the anti-flash opacity is cleared.
+				gsap.set(el, { opacity: 1 });
+				break;
+			}
+			// Park the movers below the clip FIRST, then reveal the container
+			// (base.css hides it pre-JS to avoid a flash). Same frame → no flash.
 			gsap.set(movers, { yPercent: 112 });
+			gsap.set(el, { opacity: 1 });
 			gsap.to(movers, {
 				yPercent: 0,
 				duration: 1.1,

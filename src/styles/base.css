@@ -125,3 +125,43 @@ h2 {
 	white-space: nowrap;
 	border-width: 0;
 }
+
+/* ============================================================
+ * Entrance pre-hide.
+ * `html.anim-ready` is set before first paint by the inline script in
+ * MainHead.astro — only when JS is running and motion is allowed. These rules
+ * mirror the initial states motion.ts applies per preset, so the load-in
+ * animation starts from an empty page instead of flashing the fully-rendered
+ * HTML for a frame. No-JS / reduced-motion visitors never get the class, so
+ * they always see fully-visible content. gsap's inline styles override these
+ * the instant it runs, and stay at the revealed values afterward.
+ * ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+	html.anim-ready :is([data-animate='fade-up'], [data-animate='fade'], [data-animate='scale'], [data-animate='clip']) {
+		opacity: 0;
+	}
+
+	html.anim-ready [data-animate='clip'] {
+		clip-path: inset(12% 12% 12% 12%);
+	}
+
+	/* mask-lines: hide the whole heading (not the movers via transform — a
+	 * stalled transform could leave text shifted *and* visible). motion.ts
+	 * parks the movers below the clip, then reveals this container. */
+	html.anim-ready [data-animate='mask-lines'] {
+		opacity: 0;
+	}
+
+	/* work-row: hairline draws in (scaleX), content lifts (opacity). */
+	html.anim-ready [data-animate='work-row'] .hairline {
+		transform: scaleX(0);
+	}
+	html.anim-ready [data-animate='work-row'] :is(.index, .title, .description, .meta) {
+		opacity: 0;
+	}
+
+	html.anim-ready [data-animate-group] > *,
+	html.anim-ready [data-animate-body] > * {
+		opacity: 0;
+	}
+}

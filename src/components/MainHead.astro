@@ -79,3 +79,20 @@ const preloadFonts = isPhotography ? [frauncesItalicUrl, newsreaderUrl] : [brico
 		document.addEventListener('astro:after-swap', applyTheme);
 	}
 </script>
+
+<script is:inline>
+	// Mark the page "animation-ready" BEFORE first paint so the CSS in base.css
+	// hides entrance-animated elements up front — otherwise the fully-rendered
+	// static HTML flashes for a frame before motion.ts sets its initial states.
+	// Only added when JS runs and motion is allowed, so no-JS and reduced-motion
+	// visitors always see fully-visible content. motion.ts then reveals it.
+	const applyAnimReady = () => {
+		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		document.documentElement.classList.toggle('anim-ready', !reduce);
+	};
+	applyAnimReady();
+	if (!window.__animReadySwap) {
+		window.__animReadySwap = true;
+		document.addEventListener('astro:after-swap', applyAnimReady);
+	}
+</script>
