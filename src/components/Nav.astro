@@ -45,7 +45,7 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 					return (
 						<li>
 							<a
-								aria-current={Astro.url.pathname === href}
+								aria-current={Astro.url.pathname === href ? 'page' : undefined}
 								class:list={['link', { active }]}
 								href={href}
 								transition:name={active ? 'nav-active-pill' : undefined}

@@ -1,0 +1,2302 @@
+{
+  "title": "Hikes The Highlands",
+  "date": "2026-07-11",
+  "location": "Grayson Highlands State Park, VA",
+  "photos": [
+    {
+      "filename": "DSC_1518.JPG",
+      "caption": "A quiet path through the mountain mist.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T13:24:50.000Z"
+      }
+    },
+    {
+      "filename": "DSC_1519.JPG",
+      "caption": "A quiet path disappears into the mist of Grayson Highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T13:24:55.000Z"
+      }
+    },
+    {
+      "filename": "DSC_1521.JPG",
+      "caption": "Mist veils the silent pines of the high country.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T13:25:09.000Z"
+      }
+    },
+    {
+      "filename": "DSC_1524.JPG",
+      "caption": "Mist veils the silent pines of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T13:25:56.000Z"
+      },
+      "location": {
+        "latitude": 36.63355833333333,
+        "longitude": -81.50903,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1527.JPG",
+      "caption": "Morning mist settles over the highland meadows.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T13:27:18.000Z"
+      },
+      "location": {
+        "latitude": 36.63355833333333,
+        "longitude": -81.50903,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1529.JPG",
+      "caption": "Mist veils the quiet peaks of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T13:36:33.000Z"
+      },
+      "location": {
+        "latitude": 36.634056666666666,
+        "longitude": -81.508985,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1531.JPG",
+      "caption": "Where the pavement ends and the highlands begin.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T16:36:22.000Z"
+      }
+    },
+    {
+      "filename": "DSC_1533.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T16:36:33.000Z"
+      }
+    },
+    {
+      "filename": "DSC_1535.JPG",
+      "caption": "Wildflowers blooming amidst the highland grasses.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T18:33:54.000Z"
+      },
+      "location": {
+        "latitude": 36.63534833333333,
+        "longitude": -81.50814,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1537.JPG",
+      "caption": "Verdant ridges stretching beneath a heavy, silent sky.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T18:45:49.000Z"
+      },
+      "location": {
+        "latitude": 36.63534833333333,
+        "longitude": -81.50814,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1538.JPG",
+      "caption": "Rolling green hills beneath an expansive, overcast highland sky.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T18:49:40.000Z"
+      },
+      "location": {
+        "latitude": 36.63534833333333,
+        "longitude": -81.50814,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1541.JPG",
+      "caption": "A rugged path winds through wild brush toward the distant pines.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:01:52.000Z"
+      },
+      "location": {
+        "latitude": 36.63534833333333,
+        "longitude": -81.50814,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1542.JPG",
+      "caption": "A loyal companion finds joy among the lush greenery of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:02:07.000Z"
+      },
+      "location": {
+        "latitude": 36.63534833333333,
+        "longitude": -81.50814,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1547.JPG",
+      "caption": "Finding joy in every step along the highland trails.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:04:27.000Z"
+      },
+      "location": {
+        "latitude": 36.64432,
+        "longitude": -81.51644166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1550.JPG",
+      "caption": "Verdant hills roll toward a heavy, silent horizon.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:06:18.000Z"
+      },
+      "location": {
+        "latitude": 36.64432,
+        "longitude": -81.51644166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1553.JPG",
+      "caption": "Verdant hills beneath a heavy blanket of clouds.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:07:12.000Z"
+      },
+      "location": {
+        "latitude": 36.64554166666667,
+        "longitude": -81.51623,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1555.JPG",
+      "caption": "Verdant ridges stretching toward a hazy, clouded horizon.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:07:23.000Z"
+      },
+      "location": {
+        "latitude": 36.64554166666667,
+        "longitude": -81.51623,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1558.JPG",
+      "caption": "Rolling green hills under an expansive, clouded sky.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:10:02.000Z"
+      },
+      "location": {
+        "latitude": 36.64554166666667,
+        "longitude": -81.51623,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1559.JPG",
+      "caption": "Finding peace among the towering pines and rugged stone.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:12:37.000Z"
+      },
+      "location": {
+        "latitude": 36.64554166666667,
+        "longitude": -81.51623,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1560.JPG",
+      "caption": "A moment of stillness among the towering pines of the highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:12:38.000Z"
+      },
+      "location": {
+        "latitude": 36.64554166666667,
+        "longitude": -81.51623,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1567.JPG",
+      "caption": "Two small figures dwarfed by the vast expanse of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:15:07.000Z"
+      },
+      "location": {
+        "latitude": 36.64554166666667,
+        "longitude": -81.51623,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1568.JPG",
+      "caption": "Verdant ridges rise against a heavy, silent sky.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:15:21.000Z"
+      },
+      "location": {
+        "latitude": 36.64554166666667,
+        "longitude": -81.51623,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1576.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:18:31.000Z"
+      },
+      "location": {
+        "latitude": 36.64759,
+        "longitude": -81.515335,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1577.JPG",
+      "caption": "Storm clouds gathering over the high ridges.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:18:37.000Z"
+      },
+      "location": {
+        "latitude": 36.64759,
+        "longitude": -81.515335,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1579.JPG",
+      "caption": "Heavy clouds hang low over the rolling expanse of the Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:18:43.000Z"
+      },
+      "location": {
+        "latitude": 36.64759,
+        "longitude": -81.515335,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1580.JPG",
+      "caption": "Mist veils the rugged peaks of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:18:50.000Z"
+      },
+      "location": {
+        "latitude": 36.64759,
+        "longitude": -81.515335,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1584.JPG",
+      "caption": "Solitude amidst the rolling mists of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:19:10.000Z"
+      },
+      "location": {
+        "latitude": 36.64759,
+        "longitude": -81.515335,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1586.JPG",
+      "caption": "Finding stillness among the mist-veiled peaks of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:19:15.000Z"
+      },
+      "location": {
+        "latitude": 36.64759,
+        "longitude": -81.515335,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1587.JPG",
+      "caption": "Stillness atop the misty peaks of the Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:19:17.000Z"
+      },
+      "location": {
+        "latitude": 36.64875833333333,
+        "longitude": -81.51565666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1589.JPG",
+      "caption": "Rugged stone and wild greenery rise across the highland ridge.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:20:23.000Z"
+      },
+      "location": {
+        "latitude": 36.64875833333333,
+        "longitude": -81.51565666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1590.JPG",
+      "caption": "Mist veils the quiet expanse of the highland meadow.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:20:26.000Z"
+      },
+      "location": {
+        "latitude": 36.64875833333333,
+        "longitude": -81.51565666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1595.JPG",
+      "caption": "New growth reaching toward the highland peaks.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:20:46.000Z"
+      },
+      "location": {
+        "latitude": 36.64875833333333,
+        "longitude": -81.51565666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1596.JPG",
+      "caption": "Finding joy in every step across the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:21:00.000Z"
+      },
+      "location": {
+        "latitude": 36.64888,
+        "longitude": -81.51563833333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1598.JPG",
+      "caption": "Finding your way through the heart of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:22:29.000Z"
+      },
+      "location": {
+        "latitude": 36.64888,
+        "longitude": -81.51563833333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1599.JPG",
+      "caption": "A stone-strewn path leads toward the high ridges of the highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:22:36.000Z"
+      },
+      "location": {
+        "latitude": 36.64888,
+        "longitude": -81.51563833333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1602.JPG",
+      "caption": "A silent marker standing watch in the highland mist.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:23:00.000Z"
+      },
+      "location": {
+        "latitude": 36.64888,
+        "longitude": -81.51563833333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1604.JPG",
+      "caption": "A weathered sign stands as a silent sentinel in the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:25:16.000Z"
+      },
+      "location": {
+        "latitude": 36.64888,
+        "longitude": -81.51563833333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1608.JPG",
+      "caption": "A loyal companion for every mile of the highland trail.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:25:45.000Z"
+      },
+      "location": {
+        "latitude": 36.64888,
+        "longitude": -81.51563833333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1609.JPG",
+      "caption": "A loyal companion finds joy on the rugged highland trail.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:29:09.000Z"
+      },
+      "location": {
+        "latitude": 36.65023,
+        "longitude": -81.51603666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1610.JPG",
+      "caption": "Ancient stone rises through the lush greenery of the highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:31:38.000Z"
+      },
+      "location": {
+        "latitude": 36.65023,
+        "longitude": -81.51603666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1611.JPG",
+      "caption": "Layers of verdant hills rolling toward a hazy horizon.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:35:11.000Z"
+      },
+      "location": {
+        "latitude": 36.651716666666665,
+        "longitude": -81.51693,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1613.JPG",
+      "caption": "Verdant hills roll into the distance across Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:35:18.000Z"
+      },
+      "location": {
+        "latitude": 36.651716666666665,
+        "longitude": -81.51693,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1614.JPG",
+      "caption": "Mist veils the rolling peaks of the Virginia highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:35:21.000Z"
+      },
+      "location": {
+        "latitude": 36.651716666666665,
+        "longitude": -81.51693,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1616.JPG",
+      "caption": "A moment of connection with the ancient rock.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:36:20.000Z"
+      },
+      "location": {
+        "latitude": 36.651716666666665,
+        "longitude": -81.51693,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1617.JPG",
+      "caption": "A moment of connection beneath the weathered stones of Grayson Highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:36:28.000Z"
+      },
+      "location": {
+        "latitude": 36.651716666666665,
+        "longitude": -81.51693,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1618.JPG",
+      "caption": "Finding stillness beneath the weathered stones of Grayson Highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:36:29.000Z"
+      },
+      "location": {
+        "latitude": 36.651716666666665,
+        "longitude": -81.51693,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1620.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:36:53.000Z"
+      },
+      "location": {
+        "latitude": 36.651716666666665,
+        "longitude": -81.51693,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1621.JPG",
+      "caption": "Life finds a foothold among the rugged stones of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:36:58.000Z"
+      },
+      "location": {
+        "latitude": 36.65246166666667,
+        "longitude": -81.51662333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1623.JPG",
+      "caption": "Finding peace in the heart of the highland woods.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/125s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:37:14.000Z"
+      },
+      "location": {
+        "latitude": 36.65246166666667,
+        "longitude": -81.51662333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1624.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:37:18.000Z"
+      },
+      "location": {
+        "latitude": 36.65246166666667,
+        "longitude": -81.51662333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1631.JPG",
+      "caption": "A glimpse of vibrant life through a rugged stone portal.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 1000,
+        "capturedAt": "2026-07-11T19:38:52.000Z"
+      },
+      "location": {
+        "latitude": 36.65246166666667,
+        "longitude": -81.51662333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1636.JPG",
+      "caption": "Mist veils the rugged peaks of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:43:31.000Z"
+      },
+      "location": {
+        "latitude": 36.65307,
+        "longitude": -81.51694333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1638.JPG",
+      "caption": "Mist veils the silent ridges of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:45:03.000Z"
+      },
+      "location": {
+        "latitude": 36.65307,
+        "longitude": -81.51694333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1642.JPG",
+      "caption": "Mist veils the rolling ridges of the Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:47:13.000Z"
+      },
+      "location": {
+        "latitude": 36.65307,
+        "longitude": -81.51694333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1644.JPG",
+      "caption": "Finding stillness in the heart of the highland mist.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:47:24.000Z"
+      },
+      "location": {
+        "latitude": 36.65307,
+        "longitude": -81.51694333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1645.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:47:29.000Z"
+      },
+      "location": {
+        "latitude": 36.65307,
+        "longitude": -81.51694333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1647.JPG",
+      "caption": "Morning mist settles over the silent highland pines.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:47:36.000Z"
+      },
+      "location": {
+        "latitude": 36.65307,
+        "longitude": -81.51694333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1648.JPG",
+      "caption": "The quiet expanse of the highlands under a muted sky.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:48:43.000Z"
+      },
+      "location": {
+        "latitude": 36.65409,
+        "longitude": -81.519215,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1649.JPG",
+      "caption": "Mist veils the silent evergreens of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:48:47.000Z"
+      },
+      "location": {
+        "latitude": 36.65409,
+        "longitude": -81.519215,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1651.JPG",
+      "caption": "Weathered rock stands silent beneath the heavy skies of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:54:14.000Z"
+      },
+      "location": {
+        "latitude": 36.65409,
+        "longitude": -81.519215,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1652.JPG",
+      "caption": "A weathered sign marks the threshold of Grayson Highlands State Park.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/125s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T19:59:58.000Z"
+      },
+      "location": {
+        "latitude": 36.65409,
+        "longitude": -81.519215,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1653.JPG",
+      "caption": "A golden cap nestled in the wild grass of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:00:12.000Z"
+      },
+      "location": {
+        "latitude": 36.65409,
+        "longitude": -81.519215,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1654.JPG",
+      "caption": "Vibrant orange mushrooms nestled in the velvet moss of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/100s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:00:22.000Z"
+      },
+      "location": {
+        "latitude": 36.65409,
+        "longitude": -81.519215,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1657.JPG",
+      "caption": "Weathered signposts mark the path through the rugged heart of Grayson Highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:03:18.000Z"
+      },
+      "location": {
+        "latitude": 36.65409,
+        "longitude": -81.519215,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1658.JPG",
+      "caption": "Weathered wood marks the path toward the southern highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:03:27.000Z"
+      },
+      "location": {
+        "latitude": 36.65409,
+        "longitude": -81.519215,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1661.JPG",
+      "caption": "A rugged trail winds through the wild brush of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:21:16.000Z"
+      },
+      "location": {
+        "latitude": 36.65804,
+        "longitude": -81.52229666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1664.JPG",
+      "caption": "A solitary white pony stands amidst the quiet of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:25:24.000Z"
+      },
+      "location": {
+        "latitude": 36.663133333333334,
+        "longitude": -81.51695,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1666.JPG",
+      "caption": "A solitary white horse stands against the vast expanse of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:26:32.000Z"
+      },
+      "location": {
+        "latitude": 36.663133333333334,
+        "longitude": -81.51695,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1668.JPG",
+      "caption": "A moment of stillness in the highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:28:05.000Z"
+      },
+      "location": {
+        "latitude": 36.663133333333334,
+        "longitude": -81.51695,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1672.JPG",
+      "caption": "Stillness settled over the vast, rolling peaks of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:28:42.000Z"
+      },
+      "location": {
+        "latitude": 36.663133333333334,
+        "longitude": -81.51695,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1674.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:28:55.000Z"
+      },
+      "location": {
+        "latitude": 36.663133333333334,
+        "longitude": -81.51695,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1675.JPG",
+      "caption": "Wild grace roaming the rolling hills of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:29:10.000Z"
+      },
+      "location": {
+        "latitude": 36.663133333333334,
+        "longitude": -81.51695,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1676.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:29:11.000Z"
+      },
+      "location": {
+        "latitude": 36.663133333333334,
+        "longitude": -81.51695,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1680.JPG",
+      "caption": "A quiet presence amidst the rolling highland peaks.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:30:26.000Z"
+      },
+      "location": {
+        "latitude": 36.66355,
+        "longitude": -81.5167,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1683.JPG",
+      "caption": "Grazing in the quiet expanse of the high country.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:32:40.000Z"
+      },
+      "location": {
+        "latitude": 36.66355,
+        "longitude": -81.5167,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1687.JPG",
+      "caption": "Moss-veiled branches weave through the ancient heart of the highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:35:57.000Z"
+      },
+      "location": {
+        "latitude": 36.664253333333335,
+        "longitude": -81.51610333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1689.JPG",
+      "caption": "A quiet trail winds through the verdant heart of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:39:44.000Z"
+      },
+      "location": {
+        "latitude": 36.664253333333335,
+        "longitude": -81.51610333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1690.JPG",
+      "caption": "A moment of stillness in the heart of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:41:31.000Z"
+      },
+      "location": {
+        "latitude": 36.664253333333335,
+        "longitude": -81.51610333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1692.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:43:35.000Z"
+      },
+      "location": {
+        "latitude": 36.66686833333333,
+        "longitude": -81.51224166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1694.JPG",
+      "caption": "A solitary sentinel standing watch over the quiet highland expanse.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:43:44.000Z"
+      },
+      "location": {
+        "latitude": 36.66686833333333,
+        "longitude": -81.51224166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1699.JPG",
+      "caption": "Cattle graze in the vast, rolling expanse of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:51:28.000Z"
+      },
+      "location": {
+        "latitude": 36.66686833333333,
+        "longitude": -81.51224166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1702.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:54:01.000Z"
+      },
+      "location": {
+        "latitude": 36.67061333333333,
+        "longitude": -81.50872833333334,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1704.JPG",
+      "caption": "A peaceful pause in the highland pasture.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:55:16.000Z"
+      },
+      "location": {
+        "latitude": 36.67061333333333,
+        "longitude": -81.50872833333334,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1707.JPG",
+      "caption": "A shared journey through the quiet beauty of Grayson Highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:58:11.000Z"
+      },
+      "location": {
+        "latitude": 36.67061333333333,
+        "longitude": -81.50872833333334,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1708.JPG",
+      "caption": "A moment of shared silence on a highland path.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:58:19.000Z"
+      },
+      "location": {
+        "latitude": 36.67061333333333,
+        "longitude": -81.50872833333334,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1709.JPG",
+      "caption": "Grazing in the rugged silence of Grayson Highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:58:36.000Z"
+      },
+      "location": {
+        "latitude": 36.67061333333333,
+        "longitude": -81.50872833333334,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1710.JPG",
+      "caption": "Wild horses grazing along a rugged trail in the highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:59:04.000Z"
+      },
+      "location": {
+        "latitude": 36.67061333333333,
+        "longitude": -81.50872833333334,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1711.JPG",
+      "caption": "Grazing in the heart of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T20:59:08.000Z"
+      },
+      "location": {
+        "latitude": 36.67061333333333,
+        "longitude": -81.50872833333334,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1714.JPG",
+      "caption": "A solitary horse grazes beneath the misty peaks of the highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:04:58.000Z"
+      },
+      "location": {
+        "latitude": 36.67118166666666,
+        "longitude": -81.50768333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1717.JPG",
+      "caption": "A moment of stillness in the highland mist.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:05:00.000Z"
+      },
+      "location": {
+        "latitude": 36.67118166666666,
+        "longitude": -81.50768333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1719.JPG",
+      "caption": "A fallen trunk rests amidst the lush greenery of Grayson Highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:09:26.000Z"
+      },
+      "location": {
+        "latitude": 36.67118166666666,
+        "longitude": -81.50768333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1720.JPG",
+      "caption": "Muted ridges rise beneath an expansive, overcast sky.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:20:22.000Z"
+      },
+      "location": {
+        "latitude": 36.67368333333333,
+        "longitude": -81.50594333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1721.JPG",
+      "caption": "Steady steps and loyal company on a highland trail.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:21:06.000Z"
+      },
+      "location": {
+        "latitude": 36.67368333333333,
+        "longitude": -81.50594333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1722.JPG",
+      "caption": "A shared moment of joy on the highland trail.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:23:02.000Z"
+      },
+      "location": {
+        "latitude": 36.67368333333333,
+        "longitude": -81.50594333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1723.JPG",
+      "caption": "Laughter shared in the heart of Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:23:07.000Z"
+      },
+      "location": {
+        "latitude": 36.67368333333333,
+        "longitude": -81.50594333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1724.JPG",
+      "caption": "Breathless moments shared on the highland trail.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:23:32.000Z"
+      },
+      "location": {
+        "latitude": 36.67368333333333,
+        "longitude": -81.50594333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1726.JPG",
+      "caption": "A joyful spirit roaming the highland trails.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:24:00.000Z"
+      },
+      "location": {
+        "latitude": 36.67368333333333,
+        "longitude": -81.50594333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1729.JPG",
+      "caption": "Rolling green hills stretch toward the horizon under an expansive, clouded sky.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:44:50.000Z"
+      },
+      "location": {
+        "latitude": 36.67523833333333,
+        "longitude": -81.49789,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1731.JPG",
+      "caption": "A solitary shelter nestled within the rolling green expanse.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/6.3",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:53:25.000Z"
+      },
+      "location": {
+        "latitude": 36.67523833333333,
+        "longitude": -81.49789,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1734.JPG",
+      "caption": "Weathered signs point toward the heart of the highland ridges.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/6.3",
+        "shutterSpeed": "1/320s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:55:03.000Z"
+      },
+      "location": {
+        "latitude": 36.67523833333333,
+        "longitude": -81.49789,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1736.JPG",
+      "caption": "A weathered sign marks the threshold of the wild.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/6.3",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:55:16.000Z"
+      },
+      "location": {
+        "latitude": 36.67523833333333,
+        "longitude": -81.49789,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1737.JPG",
+      "caption": "Wildflowers bloom against a weathered stone wall in the heart of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/6.3",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:55:59.000Z"
+      },
+      "location": {
+        "latitude": 36.67523833333333,
+        "longitude": -81.49789,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1739.JPG",
+      "caption": "Wildflowers blooming against a weathered wooden fence.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T21:56:13.000Z"
+      },
+      "location": {
+        "latitude": 36.67523833333333,
+        "longitude": -81.49789,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1741.JPG",
+      "caption": "The path beckons toward the heart of the highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/13",
+        "shutterSpeed": "1/60s",
+        "iso": 250,
+        "capturedAt": "2026-07-11T21:57:17.000Z"
+      },
+      "location": {
+        "latitude": 36.67523833333333,
+        "longitude": -81.49789,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1745.JPG",
+      "caption": "Water weaves through stone and grass in the highland wild.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/16",
+        "shutterSpeed": "1/60s",
+        "iso": 400,
+        "capturedAt": "2026-07-11T22:04:53.000Z"
+      },
+      "location": {
+        "latitude": 36.669394999999994,
+        "longitude": -81.48707166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1748.JPG",
+      "caption": "A weathered stone relic rests in the dappled light of the forest.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T22:07:06.000Z"
+      },
+      "location": {
+        "latitude": 36.669394999999994,
+        "longitude": -81.48707166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1750.JPG",
+      "caption": "A delicate bloom finds light amidst the mountain shadows.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T22:15:07.000Z"
+      },
+      "location": {
+        "latitude": 36.665365,
+        "longitude": -81.48708833333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1755.JPG",
+      "caption": "A solitary journey into the verdant heart of the highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T22:29:41.000Z"
+      },
+      "location": {
+        "latitude": 36.66039,
+        "longitude": -81.48913166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1757.JPG",
+      "caption": "A solitary journey into the heart of the lush highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T22:29:44.000Z"
+      },
+      "location": {
+        "latitude": 36.66039,
+        "longitude": -81.48913166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1758.JPG",
+      "caption": "A hidden stream weaves through mossy stones in the Grayson Highlands.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 640,
+        "capturedAt": "2026-07-11T22:33:37.000Z"
+      },
+      "location": {
+        "latitude": 36.655251666666665,
+        "longitude": -81.49357666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1765.JPG",
+      "caption": "Crossing over into the lush silence of the highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 160,
+        "capturedAt": "2026-07-11T22:37:30.000Z"
+      },
+      "location": {
+        "latitude": 36.655251666666665,
+        "longitude": -81.49357666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1771.JPG",
+      "caption": "Where the untamed spirit of Wilburn Ridge begins.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T22:45:25.000Z"
+      },
+      "location": {
+        "latitude": 36.655251666666665,
+        "longitude": -81.49357666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1773.JPG",
+      "caption": "Emerald needles find life in the rugged high country.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 2500,
+        "capturedAt": "2026-07-11T22:48:23.000Z"
+      },
+      "location": {
+        "latitude": 36.655251666666665,
+        "longitude": -81.49357666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1774.JPG",
+      "caption": "The trail beckons southward into the wild green of Grayson Highlands.",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T23:26:19.000Z"
+      },
+      "location": {
+        "latitude": 36.655251666666665,
+        "longitude": -81.49357666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1776.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T23:27:38.000Z"
+      },
+      "location": {
+        "latitude": 36.655251666666665,
+        "longitude": -81.49357666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_1779.JPG",
+      "caption": "Wild huckleberries ripening along the mountain trails.",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-07-11T23:30:19.000Z"
+      },
+      "location": {
+        "latitude": 36.655251666666665,
+        "longitude": -81.49357666666667,
+        "source": "exif"
+      }
+    }
+  ]
+}

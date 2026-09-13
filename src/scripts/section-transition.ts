@@ -2,22 +2,14 @@ const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: r
 const isPhoto = (url: URL) => url.pathname === '/photography' || url.pathname.startsWith('/photography/');
 const crossesBoundary = (from: URL, to: URL) => isPhoto(from) !== isPhoto(to);
 
-// ── MOTION LAZY LOADING ──
-const motionReady = import('motion').catch(() => null);
-let _animate: ((el: Element, keyframes: any, options?: any) => any) | null = null;
-async function getAnimate() {
-	if (!_animate) {
-		const m = await motionReady;
-		if (m && m.animate) {
-			_animate = m.animate;
-		} else if (m && m.default && m.default.animate) {
-			_animate = m.default.animate;
-		} else {
-			_animate = () => ({ finished: Promise.resolve() });
-		}
-	}
-	return _animate;
-}
+// Motion is only needed once a boundary is crossed, but the fetch starts now so
+// the chunk is warm before the first transition. If it fails to load, every
+// animation degrades to an instant no-op instead of breaking navigation.
+type Animate = (el: Element, keyframes: any, options?: any) => { finished: Promise<unknown> };
+const animateReady: Promise<Animate> = import('motion')
+	.then((m) => m.animate as Animate)
+	.catch(() => () => ({ finished: Promise.resolve() }));
+const getAnimate = () => animateReady;
 
 const waitFor = (anim: any) => anim.finished;
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -56,19 +48,18 @@ const FLASH_LAYERS = `
 	<div class="flash-transition__burst"></div>
 `;
 
-function flashOverlayMarkup() {
-	return `
-		<div class="flash-transition" aria-hidden="true" data-astro-transition-persist="flash-overlay">${FLASH_LAYERS}</div>
-	`;
-}
-
 function flashParts(doc: Document = document) {
 	let overlay = doc.querySelector<HTMLElement>('.flash-transition');
 	if (!overlay) {
-		doc.body.insertAdjacentHTML('afterbegin', flashOverlayMarkup());
+		doc.body.insertAdjacentHTML(
+			'afterbegin',
+			`<div class="flash-transition" aria-hidden="true" data-astro-transition-persist="flash-overlay"></div>`
+		);
 		overlay = doc.querySelector<HTMLElement>('.flash-transition');
 	}
 	if (!overlay) return null;
+	// BaseLayout ships this overlay as an empty persistence anchor — populate it
+	// (or re-populate a stale one) before animating.
 	if (!overlay.querySelector('.flash-transition__base') || !overlay.querySelector('.flash-transition__camera'))
 		overlay.innerHTML = FLASH_LAYERS;
 
@@ -258,7 +249,9 @@ function ensureDslrOverlay(doc: Document = document, mode: 'hidden' | 'visible' 
 	let blackout = doc.querySelector<HTMLElement>('.dslr-shutdown__blackout');
 	let crt = doc.querySelector<HTMLElement>('.dslr-shutdown__crt');
 
-	if (!modal || !blackout || !crt) {
+	// BaseLayout ships these as empty persistence anchors; rebuild the set
+	// whenever one is missing or the modal has no panel content yet.
+	if (!modal || !blackout || !crt || !modal.querySelector('.dslr-shutdown__panel')) {
 		modal?.remove();
 		blackout?.remove();
 		crt?.remove();

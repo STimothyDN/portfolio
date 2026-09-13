@@ -16,9 +16,9 @@
  *   no-preference'); under reduced motion nothing is ever hidden.
  * - The per-page gsap.context is reverted on astro:before-swap BEFORE the
  *   View Transition snapshot is taken — otherwise mid-tween inline styles
- *   freeze into the liquid-drain snapshot.
+ *   freeze into the outgoing page's snapshot.
  * - No ScrollTrigger pinning anywhere: pin spacers corrupt the root
- *   view-transition snapshot during the drain.
+ *   view-transition snapshot during the swap.
  * - The photography section gets the restrained editorial set: fade-only,
  *   longer durations, no parallax.
  */

@@ -31,6 +31,24 @@ BUNNY_STORAGE_ACCESS_KEY=<storage-zone-password>
 `.env` is gitignored. `PUBLIC_BUNNY_CDN_URL` must **also** be set in your host's env
 vars (Vercel dashboard) so production builds can generate image URLs.
 
+#### Optional: local captioning with LM Studio
+
+Both `upload-shoot` and `generate-caption` can auto-write a succinct `caption` for each
+photo using a **locally deployed [LM Studio](https://lmstudio.ai/) server** running the
+`google/gemma-4-12b` vision model. Start LM Studio, load that model, and make sure its
+local server is running (default `http://127.0.0.1:1234`) before running the scripts.
+
+Captioning is **optional** — if the server isn't reachable, `upload-shoot` still uploads
+(leaving captions blank) and you can fill them in later. Overrides (all optional):
+
+```
+LM_STUDIO_BASE_URL=http://127.0.0.1:1234   # where LM Studio's server is listening
+LM_STUDIO_MODEL=google/gemma-4-12b         # the vision model to use
+```
+
+> Photos are captioned from a **768px CDN copy**, never the multi-megapixel original, so
+> `PUBLIC_BUNNY_CDN_URL` must be set for captioning to work.
+
 ### 2. Upload the photos and scaffold the file
 
 Put a shoot's photos in a local folder, then run:
@@ -51,17 +69,35 @@ This will:
 2. Extract each photo's dimensions, EXIF (camera, lens, focal length, aperture,
    shutter speed, ISO, capture date), and GPS coordinates when the file includes them.
 3. Upload each file to Bunny Storage at `photography/<shoot-slug>/<filename>`.
-4. Write `src/content/photography/<shoot-slug>.json` with everything filled in
-   **except captions**, which are left blank for you.
+4. Generate a succinct `caption` for each photo via LM Studio, **if** the local server is
+   running (see [Optional: local captioning](#optional-local-captioning-with-lm-studio)).
+   If it isn't, captions are left blank — fill them in with `generate-caption` later.
+5. Write `src/content/photography/<shoot-slug>.json` with everything filled in.
 
 > **Slug convention:** use `<date>-<kebab-title>`, e.g. `2026-06-15-golden-gate-park`.
 > The slug becomes the URL (`/photography/<slug>/`) **and** the Bunny storage folder,
 > so keep them identical.
 
-### 3. Fill in captions and commit
+### 3. Review captions and commit
 
-Open the generated `<shoot-slug>.json`, type a `caption` for whichever photos you want
-(leave the rest as `""`), then commit and push. The site rebuilds and the shoot goes live.
+If LM Studio was running during upload, captions are already filled in — **review and
+tweak** them in the generated `<shoot-slug>.json`. Otherwise, either run
+`npm run generate-caption` (below) or type a `caption` for whichever photos you want by
+hand (leave the rest as `""`). Then commit and push. The site rebuilds and the shoot goes live.
+
+### Generating captions for photos that don't have one
+
+To backfill captions across **every** shoot — for any photo whose `caption` is still `""` —
+run (with LM Studio running):
+
+```bash
+npm run generate-caption
+```
+
+This scans every JSON in this folder, downloads each captionless photo from the CDN,
+generates a caption with the model, and rewrites the shoot's JSON. Photos that already have
+a caption are skipped, so it's safe to re-run. Each JSON is saved after every caption, so an
+interrupted run keeps its progress. Review the results before committing.
 
 ### Adding more photos to an existing shoot
 
@@ -150,9 +186,9 @@ Manual locations are preserved when you re-run the upload with `--force`.
 }
 ```
 
-You can safely hand-edit any field. The only ones the script fills for you are
-`filename`, `width`, `height`, `exif`, and GPS-backed `location` — `caption`,
-`description`, `coverPhoto`, and manual `location` labels are yours.
+You can safely hand-edit any field. The scripts fill in `filename`, `width`, `height`,
+`exif`, GPS-backed `location`, and — when LM Studio is running — `caption` (which you
+should still review). `description`, `coverPhoto`, and manual `location` labels are yours.
 
 ---
 

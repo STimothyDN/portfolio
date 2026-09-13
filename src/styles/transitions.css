@@ -123,7 +123,7 @@
  * with the Three.js WebGL canvas in PhotographyGlobe. */
 
 /* ------------------------------------------------------------------
- * 3. DSLR SHUTDOWN MODAL  (leaving photography)
+ * 2. DSLR SHUTDOWN MODAL  (leaving photography)
  * ------------------------------------------------------------------ */
 
 .dslr-shutdown {
@@ -265,7 +265,7 @@
 }
 
 /* ------------------------------------------------------------------
- * 3b. CRT SCREEN FILTER  (whole page becomes a retro camera LCD the
+ * 2b. CRT SCREEN FILTER  (whole page becomes a retro camera LCD the
  *     instant the shutdown kicks off — scanlines, RGB grille, tube
  *     vignette, phosphor flicker and a traveling scan sweep)
  * ------------------------------------------------------------------ */
@@ -353,7 +353,7 @@
 }
 
 /* ------------------------------------------------------------------
- * 4. BLACKOUT OVERLAY  (page fades to black behind DSLR modal)
+ * 3. BLACKOUT OVERLAY  (page fades to black behind DSLR modal)
  * ------------------------------------------------------------------ */
 
 .dslr-shutdown__blackout {
@@ -366,7 +366,7 @@
 }
 
 /* ------------------------------------------------------------------
- * 5. SPACE POPULATE  (new dark page fills in from darkness)
+ * 4. SPACE POPULATE  (new dark page fills in from darkness)
  *    JS toggles .is-populating on .backgrounds
  * ------------------------------------------------------------------ */
 
@@ -384,7 +384,7 @@
 }
 
 /* ------------------------------------------------------------------
- * 6. REDUCED MOTION
+ * 5. REDUCED MOTION
  * ------------------------------------------------------------------ */
 
 @media (prefers-reduced-motion: reduce) {

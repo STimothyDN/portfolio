@@ -3,6 +3,10 @@
  * Uploads a folder of photos to Bunny.net Storage and scaffolds/updates the
  * shoot's content collection JSON file with filenames, dimensions, and EXIF.
  *
+ * Photos are uploaded with empty captions. Generate them afterwards with
+ * `npm run generate-caption`, which captions every captionless photo across
+ * all shoots (see scripts/generate-caption.mjs).
+ *
  * Must be run with env vars loaded, e.g. via the `upload-shoot` npm script
  * (`node --env-file=.env scripts/upload-shoot.mjs ...`) — a bare
  * `node scripts/upload-shoot.mjs` will not have BUNNY_STORAGE_* available.
@@ -258,6 +262,7 @@ async function main() {
 
 			photos.push({
 				filename,
+				// Captions are generated separately with `npm run generate-caption`.
 				caption: existing?.caption ?? '',
 				width: meta.width,
 				height: meta.height,
@@ -290,7 +295,14 @@ async function main() {
 	await writeFile(shootFilePath, JSON.stringify(shoot, null, 2) + '\n');
 
 	console.log(`\nWrote src/content/photography/${slug}.json`);
-	console.log('Next steps: fill in captions for the new photos, then commit and push.');
+	const missingCaptions = photos.filter((p) => !p.caption).length;
+	if (missingCaptions > 0) {
+		console.log(
+			`Next steps: ${missingCaptions} photo(s) need captions — run "npm run generate-caption" (or edit by hand), then commit and push.`
+		);
+	} else {
+		console.log('Next steps: review the captions, then commit and push.');
+	}
 }
 
 main().catch((err) => {

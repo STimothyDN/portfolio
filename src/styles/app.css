@@ -3,10 +3,10 @@
  *
  * Layering: Tailwind's theme + utilities are layered; tokens.css and
  * transitions.css are intentionally UNLAYERED — the four-palette custom
- * properties must win over the theme layer, and the liquid-drain
- * ::view-transition rules must never be reordered under a cascade layer
- * (layered rules lose to unlayered ones, which would silently break
- * one direction of the section transition).
+ * properties must win over the theme layer, and the section-transition
+ * overlay rules must always beat layered styles (layered rules lose to
+ * unlayered ones, so moving them under a layer could silently let a
+ * utility restyle a mid-transition overlay).
  *
  * No Tailwind preflight: the site ships its own reset in base.css, and
  * preflight would silently restyle typography across all four palettes.

@@ -8,7 +8,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "upload-shoot": "node --env-file=.env scripts/upload-shoot.mjs"
+    "upload-shoot": "node --env-file=.env scripts/upload-shoot.mjs",
+    "generate-caption": "node --env-file=.env scripts/generate-caption.mjs"
   },
   "dependencies": {
     "@astrojs/vue": "^5.1.4",
@@ -17,8 +18,6 @@
     "@fontsource-variable/instrument-sans": "^5.2.8",
     "@fontsource-variable/newsreader": "^5.2.10",
     "@tailwindcss/vite": "^4.3.2",
-    "@vercel/analytics": "^1.1.2",
-    "@vitejs/plugin-vue": "^5.2.1",
     "astro": "^5.17.3",
     "d3": "^7.9.0",
     "gsap": "^3.15.0",

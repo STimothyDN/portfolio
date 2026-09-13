@@ -31,8 +31,8 @@ const section =
 		<!--
 			The canvas element renders ambient sky effects: clouds in light mode and
 			stars/meteors in dark mode. The page content is wrapped in .content so it appears above.
-			The canvas is intentionally NOT persisted: on a section transition we want it
-			captured in the View Transition snapshot so it drains away with the page.
+			The canvas is intentionally NOT persisted: it belongs to each page, and the
+			sky renderer re-binds to the fresh one after every ClientRouter swap.
 		-->
 		<div class="stack backgrounds">
 			<canvas class="twinkling-stars"></canvas>
@@ -43,47 +43,18 @@ const section =
 			</div>
 		</div>
 
-		<!-- Section Transition Overlays -->
-		<div class="flash-transition" aria-hidden="true" data-astro-transition-persist="flash-overlay">
-			<div class="flash-transition__base"></div>
-			<div class="flash-transition__tint"></div>
-			<div class="flash-transition__bloom"></div>
-			<div class="flash-transition__grain"></div>
-		</div>
-
-		<div class="dslr-shutdown__blackout" aria-hidden="true" data-astro-transition-persist="dslr-blackout"></div>
-		<div class="dslr-shutdown" aria-hidden="true" data-astro-transition-persist="dslr-modal">
-			<div class="dslr-shutdown__panel">
-				<div class="dslr-shutdown__bracket dslr-shutdown__bracket--tl"></div>
-				<div class="dslr-shutdown__bracket dslr-shutdown__bracket--tr"></div>
-				<div class="dslr-shutdown__bracket dslr-shutdown__bracket--bl"></div>
-				<div class="dslr-shutdown__bracket dslr-shutdown__bracket--br"></div>
-				
-				<div class="dslr-shutdown__icon">🔴</div>
-				<div class="dslr-shutdown__text">Powering Off</div>
-				<div class="dslr-shutdown__bar">
-					<div class="dslr-shutdown__bar-fill"></div>
-				</div>
-			</div>
-		</div>
-
 		<!--
-			Turbulence displacement filter for the "liquid drain" section transition. It's
-			referenced by ::view-transition-old/new(root) in transitions.css to warp the draining
-			page like fluid. Lives here so it exists in the live document during the swap.
+			Section-transition persistence anchors. Empty shells whose only job is to
+			let Astro's ClientRouter carry the live (animating) overlays built by
+			section-transition.ts across the swap: an element with a matching
+			data-astro-transition-persist id must exist in the incoming page. The
+			script owns all inner markup and rebuilds it on demand — keeping children
+			here would just be a second copy to drift out of sync.
 		-->
-		<svg class="liquid-defs" width="0" height="0" aria-hidden="true" focusable="false">
-			<defs>
-				<filter id="liquid-drain" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
-					<feTurbulence type="fractalNoise" baseFrequency="0.009 0.013" numOctaves="2" seed="7" result="noise">
-						<animate attributeName="baseFrequency" dur="7s" values="0.009 0.013;0.013 0.02;0.009 0.013" repeatCount="indefinite" />
-					</feTurbulence>
-					<!-- scale starts at 0 (crisp page) and is ramped up during the drain by
-					     section-transition.ts, so the "goo-ification" builds gradually. -->
-					<feDisplacementMap id="liquid-disp" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G" />
-				</filter>
-			</defs>
-		</svg>
+		<div class="flash-transition" aria-hidden="true" data-astro-transition-persist="flash-overlay"></div>
+		<div class="dslr-shutdown__blackout" aria-hidden="true" data-astro-transition-persist="dslr-blackout"></div>
+		<div class="dslr-shutdown" aria-hidden="true" data-astro-transition-persist="dslr-modal"></div>
+		<div class="dslr-shutdown__crt" aria-hidden="true" data-astro-transition-persist="dslr-crt"></div>
 
 		<script>
 			import '../scripts/photo-section-snap';
@@ -132,13 +103,6 @@ const section =
 			/* Stars fade out in the editorial world; the renderer pauses there too. */
 			html[data-section='photography'] .twinkling-stars {
 				opacity: 0;
-			}
-
-			.liquid-defs {
-				position: absolute;
-				width: 0;
-				height: 0;
-				overflow: hidden;
 			}
 
 			/* Ensure main content appears above the canvas */

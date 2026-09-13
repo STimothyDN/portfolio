@@ -1,0 +1,2756 @@
+{
+  "title": "Sightsees the Sacred Valley",
+  "date": "2026-09-07",
+  "photos": [
+    {
+      "filename": "DSC_2101.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T12:48:33.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2102.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T12:49:18.000Z"
+      },
+      "location": {
+        "latitude": -13.392344999999999,
+        "longitude": -72.04864166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2105.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T12:51:47.000Z"
+      },
+      "location": {
+        "latitude": -13.392344999999999,
+        "longitude": -72.04864166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2106.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T12:52:08.000Z"
+      },
+      "location": {
+        "latitude": -13.392344999999999,
+        "longitude": -72.04864166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2109.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T12:55:27.000Z"
+      },
+      "location": {
+        "latitude": -13.392344999999999,
+        "longitude": -72.04864166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2112.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T12:56:22.000Z"
+      },
+      "location": {
+        "latitude": -13.392344999999999,
+        "longitude": -72.04864166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2114.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T12:56:35.000Z"
+      },
+      "location": {
+        "latitude": -13.391586666666667,
+        "longitude": -72.048475,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2115.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T12:57:06.000Z"
+      },
+      "location": {
+        "latitude": -13.391586666666667,
+        "longitude": -72.048475,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2118.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T12:57:33.000Z"
+      },
+      "location": {
+        "latitude": -13.391586666666667,
+        "longitude": -72.048475,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2125.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/10",
+        "shutterSpeed": "1/60s",
+        "iso": 250,
+        "capturedAt": "2026-09-07T12:59:58.000Z"
+      },
+      "location": {
+        "latitude": -13.390839999999999,
+        "longitude": -72.04775,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2129.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:09:57.000Z"
+      },
+      "location": {
+        "latitude": -13.390839999999999,
+        "longitude": -72.04775,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2130.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:10:16.000Z"
+      },
+      "location": {
+        "latitude": -13.390839999999999,
+        "longitude": -72.04775,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2135.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:11:23.000Z"
+      },
+      "location": {
+        "latitude": -13.390651666666667,
+        "longitude": -72.04748166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2136.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:12:00.000Z"
+      },
+      "location": {
+        "latitude": -13.390651666666667,
+        "longitude": -72.04748166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2138.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:13:12.000Z"
+      },
+      "location": {
+        "latitude": -13.390651666666667,
+        "longitude": -72.04748166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2139.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:13:24.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2140.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:13:49.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2141.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:14:29.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2145.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:14:48.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2148.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:16:48.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2154.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:20:01.000Z"
+      },
+      "location": {
+        "latitude": -13.390416666666667,
+        "longitude": -72.04932666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2156.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:20:35.000Z"
+      },
+      "location": {
+        "latitude": -13.390416666666667,
+        "longitude": -72.04932666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2159.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:22:40.000Z"
+      },
+      "location": {
+        "latitude": -13.390416666666667,
+        "longitude": -72.04932666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2164.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:24:14.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2165.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:24:31.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2167.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/9",
+        "shutterSpeed": "1/80s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:25:32.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2175.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.8",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:26:35.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2180.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/9",
+        "shutterSpeed": "1/80s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:26:52.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2182.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:27:40.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2184.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:28:00.000Z"
+      },
+      "location": {
+        "latitude": -13.390471666666667,
+        "longitude": -72.04864333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2191.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:29:31.000Z"
+      },
+      "location": {
+        "latitude": -13.390471666666667,
+        "longitude": -72.04864333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2193.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:30:13.000Z"
+      },
+      "location": {
+        "latitude": -13.390931666666667,
+        "longitude": -72.04868666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2195.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:32:34.000Z"
+      },
+      "location": {
+        "latitude": -13.390931666666667,
+        "longitude": -72.04868666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2198.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:32:38.000Z"
+      },
+      "location": {
+        "latitude": -13.390931666666667,
+        "longitude": -72.04868666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2200.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:34:26.000Z"
+      },
+      "location": {
+        "latitude": -13.390931666666667,
+        "longitude": -72.04868666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2201.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 125,
+        "capturedAt": "2026-09-07T13:40:49.000Z"
+      },
+      "location": {
+        "latitude": -13.390931666666667,
+        "longitude": -72.04868666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2203.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 125,
+        "capturedAt": "2026-09-07T13:41:04.000Z"
+      },
+      "location": {
+        "latitude": -13.390931666666667,
+        "longitude": -72.04868666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2204.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 200,
+        "capturedAt": "2026-09-07T13:41:18.000Z"
+      },
+      "location": {
+        "latitude": -13.390931666666667,
+        "longitude": -72.04868666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2206.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:45:21.000Z"
+      },
+      "location": {
+        "latitude": -13.388169999999999,
+        "longitude": -72.05571499999999,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2207.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:45:59.000Z"
+      },
+      "location": {
+        "latitude": -13.388169999999999,
+        "longitude": -72.05571499999999,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2211.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/125s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:46:44.000Z"
+      },
+      "location": {
+        "latitude": -13.387723333333334,
+        "longitude": -72.05573,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2216.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:47:21.000Z"
+      },
+      "location": {
+        "latitude": -13.387723333333334,
+        "longitude": -72.05573,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2221.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:48:01.000Z"
+      },
+      "location": {
+        "latitude": -13.387723333333334,
+        "longitude": -72.05573,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2229.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T13:52:56.000Z"
+      },
+      "location": {
+        "latitude": -13.387723333333334,
+        "longitude": -72.05573,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2231.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T14:01:29.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2234.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T14:01:53.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2238.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T14:02:15.000Z"
+      },
+      "location": {
+        "latitude": -13.387628333333334,
+        "longitude": -72.05573,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2240.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T14:02:44.000Z"
+      },
+      "location": {
+        "latitude": -13.387628333333334,
+        "longitude": -72.05573,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2242.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T14:03:20.000Z"
+      },
+      "location": {
+        "latitude": -13.387628333333334,
+        "longitude": -72.05573,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2243.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/320s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T14:03:48.000Z"
+      },
+      "location": {
+        "latitude": -13.387628333333334,
+        "longitude": -72.05573,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2245.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/125s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T14:04:24.000Z"
+      },
+      "location": {
+        "latitude": -13.387628333333334,
+        "longitude": -72.05573,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2247.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/60s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T14:09:50.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2252.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T15:45:08.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2254.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T15:46:15.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2255.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T15:46:19.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2260.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T15:49:52.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2261.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T15:56:15.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2262.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T15:56:18.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2263.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T15:57:42.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2264.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T15:57:59.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2265.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:03:32.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2266.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:03:43.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2268.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/13",
+        "shutterSpeed": "1/100s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:05:19.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2271.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:22:00.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2272.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:22:11.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2276.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:22:21.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2280.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:29:03.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2281.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:29:11.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2282.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:30:28.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2283.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:31:00.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2285.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:31:45.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2289.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/16",
+        "shutterSpeed": "1/60s",
+        "iso": 180,
+        "capturedAt": "2026-09-07T16:34:09.000Z"
+      },
+      "location": {
+        "latitude": -13.387911666666666,
+        "longitude": -72.05572166666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2294.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:35:03.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2297.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:36:15.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2298.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:37:09.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2300.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:38:30.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2302.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:39:14.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2305.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:40:12.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2306.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:40:14.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2308.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:40:24.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2311.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T16:40:59.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2317.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T18:10:54.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2327.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/3200s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T18:15:05.000Z"
+      }
+    },
+    {
+      "filename": "DSC_2331.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:35:50.000Z"
+      },
+      "location": {
+        "latitude": -13.405506666666668,
+        "longitude": -71.84117499999999,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2332.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:37:20.000Z"
+      },
+      "location": {
+        "latitude": -13.405506666666668,
+        "longitude": -71.84117499999999,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2335.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:39:34.000Z"
+      },
+      "location": {
+        "latitude": -13.406003333333334,
+        "longitude": -71.84146666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2336.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:40:19.000Z"
+      },
+      "location": {
+        "latitude": -13.406003333333334,
+        "longitude": -71.84146666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2342.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:41:53.000Z"
+      },
+      "location": {
+        "latitude": -13.406003333333334,
+        "longitude": -71.84146666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2343.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1600s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:42:22.000Z"
+      },
+      "location": {
+        "latitude": -13.406848333333334,
+        "longitude": -71.84134333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2345.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:42:38.000Z"
+      },
+      "location": {
+        "latitude": -13.406848333333334,
+        "longitude": -71.84134333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2349.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/16",
+        "shutterSpeed": "1/125s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:43:43.000Z"
+      },
+      "location": {
+        "latitude": -13.406848333333334,
+        "longitude": -71.84134333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2353.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:44:51.000Z"
+      },
+      "location": {
+        "latitude": -13.406848333333334,
+        "longitude": -71.84134333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2354.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:44:55.000Z"
+      },
+      "location": {
+        "latitude": -13.406848333333334,
+        "longitude": -71.84134333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2356.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:46:33.000Z"
+      },
+      "location": {
+        "latitude": -13.406848333333334,
+        "longitude": -71.84134333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2359.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:48:44.000Z"
+      },
+      "location": {
+        "latitude": -13.40713,
+        "longitude": -71.84132833333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2362.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:53:12.000Z"
+      },
+      "location": {
+        "latitude": -13.40704,
+        "longitude": -71.84190833333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2365.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:57:25.000Z"
+      },
+      "location": {
+        "latitude": -13.40704,
+        "longitude": -71.84190833333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2371.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/2000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T19:59:26.000Z"
+      },
+      "location": {
+        "latitude": -13.407598333333334,
+        "longitude": -71.84455333333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2372.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:01:31.000Z"
+      },
+      "location": {
+        "latitude": -13.407598333333334,
+        "longitude": -71.84455333333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2374.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:01:56.000Z"
+      },
+      "location": {
+        "latitude": -13.407598333333334,
+        "longitude": -71.84455333333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2376.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/100s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:02:55.000Z"
+      },
+      "location": {
+        "latitude": -13.42185,
+        "longitude": -71.85203,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2377.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:04:10.000Z"
+      },
+      "location": {
+        "latitude": -13.42185,
+        "longitude": -71.85203,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2379.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:05:41.000Z"
+      },
+      "location": {
+        "latitude": -13.408361666666668,
+        "longitude": -71.84493333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2381.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:05:55.000Z"
+      },
+      "location": {
+        "latitude": -13.408361666666668,
+        "longitude": -71.84493333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2382.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:05:56.000Z"
+      },
+      "location": {
+        "latitude": -13.408361666666668,
+        "longitude": -71.84493333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2383.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:06:02.000Z"
+      },
+      "location": {
+        "latitude": -13.408361666666668,
+        "longitude": -71.84493333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2386.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:06:35.000Z"
+      },
+      "location": {
+        "latitude": -13.408213333333334,
+        "longitude": -71.84470333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2387.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:07:44.000Z"
+      },
+      "location": {
+        "latitude": -13.408213333333334,
+        "longitude": -71.84470333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2390.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.5",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:10:20.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2391.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.5",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:10:22.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2396.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:12:37.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2400.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:13:25.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2403.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/320s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:13:57.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2405.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/320s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:18:52.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2407.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:19:18.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2409.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:19:20.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2410.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/320s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:19:35.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2414.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/100s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:19:54.000Z"
+      },
+      "location": {
+        "latitude": -13.408031666666668,
+        "longitude": -71.84454333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2416.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:20:27.000Z"
+      },
+      "location": {
+        "latitude": -13.408598333333334,
+        "longitude": -71.84465999999999,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2417.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/125s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:20:39.000Z"
+      },
+      "location": {
+        "latitude": -13.408598333333334,
+        "longitude": -71.84465999999999,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2420.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:21:29.000Z"
+      },
+      "location": {
+        "latitude": -13.408598333333334,
+        "longitude": -71.84465999999999,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2422.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:22:05.000Z"
+      },
+      "location": {
+        "latitude": -13.408598333333334,
+        "longitude": -71.84465999999999,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2424.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/320s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:23:04.000Z"
+      },
+      "location": {
+        "latitude": -13.408896666666667,
+        "longitude": -71.84458666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2436.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:26:26.000Z"
+      },
+      "location": {
+        "latitude": -13.408896666666667,
+        "longitude": -71.84458666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2439.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/4000s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:28:07.000Z"
+      },
+      "location": {
+        "latitude": -13.407976666666666,
+        "longitude": -71.84687333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2440.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/200s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:29:45.000Z"
+      },
+      "location": {
+        "latitude": -13.407976666666666,
+        "longitude": -71.84687333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2441.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:29:49.000Z"
+      },
+      "location": {
+        "latitude": -13.407976666666666,
+        "longitude": -71.84687333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2442.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:31:10.000Z"
+      },
+      "location": {
+        "latitude": -13.407976666666666,
+        "longitude": -71.84687333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2444.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/400s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:31:56.000Z"
+      },
+      "location": {
+        "latitude": -13.40889,
+        "longitude": -71.84435666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2448.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:42:55.000Z"
+      },
+      "location": {
+        "latitude": -13.40889,
+        "longitude": -71.84435666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2451.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/320s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:43:02.000Z"
+      },
+      "location": {
+        "latitude": -13.40889,
+        "longitude": -71.84435666666666,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2461.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:44:53.000Z"
+      },
+      "location": {
+        "latitude": -13.409053333333334,
+        "longitude": -71.84420833333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2463.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/1250s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:45:33.000Z"
+      },
+      "location": {
+        "latitude": -13.409053333333334,
+        "longitude": -71.84420833333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2466.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:46:03.000Z"
+      },
+      "location": {
+        "latitude": -13.408746666666667,
+        "longitude": -71.84371333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2467.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/640s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:46:09.000Z"
+      },
+      "location": {
+        "latitude": -13.408746666666667,
+        "longitude": -71.84371333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2468.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:46:10.000Z"
+      },
+      "location": {
+        "latitude": -13.408746666666667,
+        "longitude": -71.84371333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2470.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/800s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:50:21.000Z"
+      },
+      "location": {
+        "latitude": -13.408746666666667,
+        "longitude": -71.84371333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2474.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/320s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:52:08.000Z"
+      },
+      "location": {
+        "latitude": -13.408746666666667,
+        "longitude": -71.84371333333333,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2477.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/60s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:56:01.000Z"
+      },
+      "location": {
+        "latitude": -13.406203333333334,
+        "longitude": -71.84446833333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2478.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:56:05.000Z"
+      },
+      "location": {
+        "latitude": -13.406203333333334,
+        "longitude": -71.84446833333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2479.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.2",
+        "shutterSpeed": "1/160s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:56:07.000Z"
+      },
+      "location": {
+        "latitude": -13.406203333333334,
+        "longitude": -71.84446833333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2481.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.5",
+        "shutterSpeed": "1/500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T20:57:44.000Z"
+      },
+      "location": {
+        "latitude": -13.406203333333334,
+        "longitude": -71.84446833333332,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2488.JPG",
+      "caption": "",
+      "width": 5568,
+      "height": 3712,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.8",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T21:05:22.000Z"
+      },
+      "location": {
+        "latitude": -13.407108333333333,
+        "longitude": -71.84201666666667,
+        "source": "exif"
+      }
+    },
+    {
+      "filename": "DSC_2491.JPG",
+      "caption": "",
+      "width": 3712,
+      "height": 5568,
+      "exif": {
+        "camera": "NIKON CORPORATION NIKON Z fc",
+        "lens": "NIKKOR Z 40mm f/2",
+        "focalLength": "40mm",
+        "aperture": "f/2.8",
+        "shutterSpeed": "1/2500s",
+        "iso": 100,
+        "capturedAt": "2026-09-07T21:06:34.000Z"
+      },
+      "location": {
+        "latitude": -13.407433333333334,
+        "longitude": -71.84250166666666,
+        "source": "exif"
+      }
+    }
+  ]
+}

@@ -162,7 +162,7 @@ class GlobeController {
 
 	private initScene() {
 		this.scene = new THREE.Scene();
-		this.camera = new THREE.PerspectiveCamera(32, this.aspect(), 0.1, 100);
+		this.camera = new THREE.PerspectiveCamera(CAM_FOV, this.aspect(), 0.1, 100);
 
 		this.tiltGroup = new THREE.Group();
 		this.tiltGroup.rotation.z = 0.41; // ~23.5deg axial lean
@@ -384,7 +384,6 @@ class GlobeController {
 	};
 
 	private onPointerLeave = () => {
-		this.pointerInside = false;
 		this.setActivePin(-1);
 		this.resetTarget();
 	};
