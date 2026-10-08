@@ -2,17 +2,27 @@
 	<section class="rolls" aria-labelledby="film-rolls-label">
 		<div class="rolls-head">
 			<h2 id="film-rolls-label" class="rolls-label">
-				Rolls <span class="rolls-count">{{ rolls.length }}</span>
+				Rolls
+				<span class="rolls-count">
+					{{ shown.length < rolls.length ? `${shown.length} of ${rolls.length}` : rolls.length }}
+				</span>
 			</h2>
 			<p class="rolls-status" aria-live="polite">{{ status }}</p>
 		</div>
-		<ul class="roll-list" role="list">
-			<li v-for="(roll, i) in rolls" :key="roll.id">
+		<!-- Only rolls the active filters allow; the rest slide out of the row. -->
+		<TransitionGroup
+			ref="listRef"
+			tag="ul"
+			name="can"
+			class="roll-list"
+			role="list"
+			@before-leave="holdPlace"
+		>
+			<li v-for="({ roll, label }, i) in shown" :key="roll.id" :data-roll="roll.id">
 				<button
 					type="button"
 					class="roll"
-					:class="{ 'is-dim': !selected.includes(roll.id) && counts[roll.id] === 0 }"
-					:style="canStyle(roll, i)"
+					:style="canStyle(roll, label, i)"
 					:aria-pressed="selected.includes(roll.id)"
 					@click="emit('toggle', roll.id)"
 				>
@@ -23,7 +33,7 @@
 							<span class="can-cap"></span>
 							<span class="can-body">
 								<span class="can-label">
-									<span v-for="(line, n) in labels[i].lines" :key="n">{{ line }}</span>
+									<span v-for="(line, n) in label.lines" :key="n">{{ line }}</span>
 								</span>
 							</span>
 							<span class="can-cap"></span>
@@ -52,12 +62,12 @@
 					</span>
 				</button>
 			</li>
-		</ul>
+		</TransitionGroup>
 	</section>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { type ComponentPublicInstance, computed, ref, watch } from 'vue';
 
 import { bunnyUrl } from '../../utils/bunny';
 import type { FilmRollData } from './types';
@@ -115,6 +125,41 @@ function canLabel(name: string): { lines: string[]; fit: number } {
 
 const labels = computed(() => props.rolls.map((roll) => canLabel(roll.stockLabel)));
 
+const shown = computed(() =>
+	props.rolls
+		.map((roll, i) => ({ roll, label: labels.value[i] }))
+		.filter(({ roll }) => props.counts[roll.id] > 0 || props.selected.includes(roll.id))
+);
+
+// A leaving roll is taken out of flow so its neighbours can slide over, and
+// pinned where it stood (a flex row would otherwise drop it at the start).
+// Positions are read before the list re-renders: rolls leave one by one, so
+// measuring in the leave hook would see earlier leavers already gone.
+const listRef = ref<ComponentPublicInstance | null>(null);
+const places = new Map<string, { left: number; top: number; width: number }>();
+
+watch(
+	shown,
+	() => {
+		const ul = listRef.value?.$el as HTMLElement | undefined;
+		if (!ul) return;
+		for (const li of ul.children as HTMLCollectionOf<HTMLElement>) {
+			const id = li.dataset.roll;
+			if (id) places.set(id, { left: li.offsetLeft, top: li.offsetTop, width: li.offsetWidth });
+		}
+	},
+	{ flush: 'pre' }
+);
+
+function holdPlace(el: Element) {
+	const li = el as HTMLElement;
+	const place = places.get(li.dataset.roll ?? '');
+	if (!place) return;
+	li.style.left = `${place.left}px`;
+	li.style.top = `${place.top}px`;
+	li.style.width = `${place.width}px`;
+}
+
 // Canister colors by film brand (read from the stock's display name), so a
 // row of rolls reads like a real drawer of them. Unknown brands get a stable hue.
 const BRANDS: [RegExp, string, string][] = [
@@ -126,7 +171,7 @@ const BRANDS: [RegExp, string, string][] = [
 	[/lomo/i, '#2f5fb3', '#f4f1e8'],
 ];
 
-function canStyle(roll: FilmRollData, i: number) {
+function canStyle(roll: FilmRollData, label: { fit: number }, i: number) {
 	const brand = BRANDS.find(([re]) => re.test(roll.stockLabel));
 	let can = brand?.[1];
 	let ink = brand?.[2];
@@ -135,7 +180,7 @@ function canStyle(roll: FilmRollData, i: number) {
 		can = `oklch(58% 0.12 ${hue})`;
 		ink = '#f7f4ee';
 	}
-	return { '--can': can, '--can-ink': ink, '--label-fit': labels.value[i].fit.toFixed(3), '--i': i };
+	return { '--can': can, '--can-ink': ink, '--label-fit': label.fit.toFixed(3), '--i': i };
 }
 </script>
 
@@ -186,6 +231,7 @@ function canStyle(roll: FilmRollData, i: number) {
 }
 
 .roll-list {
+	position: relative;
 	display: flex;
 	gap: 1.75rem;
 	margin: 0;
@@ -221,10 +267,6 @@ function canStyle(roll: FilmRollData, i: number) {
 	text-align: left;
 	cursor: pointer;
 	transition: opacity 300ms ease;
-}
-
-.roll.is-dim {
-	opacity: 0.35;
 }
 
 /* Selected: an ink rule draws in under the roll. */
@@ -453,6 +495,25 @@ function canStyle(roll: FilmRollData, i: number) {
 	border-width: 0;
 }
 
+/* Rolls coming and going as filters change. */
+.can-move,
+.can-enter-active,
+.can-leave-active {
+	transition:
+		transform 450ms cubic-bezier(0.33, 1, 0.68, 1),
+		opacity 300ms ease;
+}
+
+.can-enter-from,
+.can-leave-to {
+	opacity: 0;
+	transform: translateY(14px) scale(0.94);
+}
+
+.can-leave-active {
+	position: absolute;
+}
+
 /* First load: each roll unspools in turn. */
 @media (prefers-reduced-motion: no-preference) {
 	.strip {
@@ -461,6 +522,12 @@ function canStyle(roll: FilmRollData, i: number) {
 
 	.canister {
 		animation: tug 900ms calc(250ms + var(--i) * 70ms) ease-out backwards;
+	}
+
+	/* A roll brought back by a filter change unspools right away. */
+	.can-enter-active .strip,
+	.can-enter-active .canister {
+		animation-delay: 120ms;
 	}
 
 	@keyframes unspool {
@@ -489,7 +556,10 @@ function canStyle(roll: FilmRollData, i: number) {
 	.strip,
 	.canister,
 	.roll-object,
-	.roll::after {
+	.roll::after,
+	.can-move,
+	.can-enter-active,
+	.can-leave-active {
 		transition: none;
 	}
 }

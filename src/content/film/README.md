@@ -68,7 +68,7 @@ Folder tokens are terse (`minoltax700`). The site shows them through
 
 Rename something once there and every roll using it updates.
 
-Along the top of the page each roll is a film canister labeled with its **film stock**
+Along the bottom of the page each roll is a film canister labeled with its **film stock**
 (the display name above, fitted onto up to three lines), with the roll's **title** and
 date under the strip of film. Canister colors follow the stock's display name (Kodak
 yellow, Fuji green, Lucky red, Ilford white, CineStill black; anything else gets a steady

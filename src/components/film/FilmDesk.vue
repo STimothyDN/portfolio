@@ -4,32 +4,32 @@
 		class="film"
 		:class="{ 'is-live': live, 'is-grid': mode === 'grid', 'is-dragging': dragging }"
 	>
-		<!-- Floating over the top of the desk, just under the site nav: the rolls,
-		     on a scrim that lets the pile fade out beneath them. -->
-		<div ref="topRef" class="film-top">
+		<!-- Keeps the floating site nav legible over the pile. -->
+		<div class="film-nav-scrim" aria-hidden="true"></div>
+
+		<!-- Floating along the bottom, under the pile: the rolls, then the
+		     controls. Before the desk in the DOM so keyboard users reach both
+		     without tabbing through every print. -->
+		<div ref="bottomRef" class="film-bottom">
 			<FilmRollStrip
 				:rolls="rolls"
 				:selected="selected.roll"
 				:counts="rollCounts"
 				:status="status"
-				@toggle="toggleRoll"
+				@toggle="(id) => toggle('roll', id)"
 			/>
+			<FilmFilterDock
+				class="film-dock"
+				:facets="FILTER_FACETS"
+				:options="options"
+				:has-filters="hasFilters"
+				@toggle="toggle"
+				@clear="clearAll"
+				@toss="retoss"
+			>
+				<slot />
+			</FilmFilterDock>
 		</div>
-
-		<!-- Floating at the bottom. Before the desk in the DOM so keyboard users
-		     reach the controls without tabbing through every print. -->
-		<FilmFilterDock
-			ref="dockRef"
-			class="film-dock"
-			:facets="FILTER_FACETS"
-			:options="options"
-			:has-filters="hasFilters"
-			@toggle="toggle"
-			@clear="clearAll"
-			@toss="retoss"
-		>
-			<slot />
-		</FilmFilterDock>
 
 		<div
 			ref="deskRef"
@@ -224,16 +224,17 @@ function toggle(f: FacetKey, value: string) {
 	else list.push(value);
 	if (list.length && !facetOrder.value.includes(f)) facetOrder.value = [...facetOrder.value, f];
 	if (!list.length) facetOrder.value = facetOrder.value.filter((x) => x !== f);
+	if (f !== 'roll') pruneRolls();
 }
 
-// A roll that the other filters rule out is still one click away: picking it
-// clears those filters rather than producing an empty desk.
-function toggleRoll(id: string) {
-	if (!selected.roll.includes(id) && !rollCounts.value[id]) {
-		for (const { key } of FILTER_FACETS) selected[key] = [];
-		facetOrder.value = facetOrder.value.filter((f) => f === 'roll');
-	}
-	toggle('roll', id);
+// The roll list only shows rolls the other filters allow, so a selected roll
+// those filters rule out is dropped rather than left selected out of sight.
+function pruneRolls() {
+	if (!selected.roll.length) return;
+	const keep = selected.roll.filter((id) => rollCounts.value[id] > 0);
+	if (keep.length === selected.roll.length) return;
+	selected.roll = keep;
+	if (!keep.length) facetOrder.value = facetOrder.value.filter((x) => x !== 'roll');
 }
 
 function clearAll() {
@@ -280,8 +281,7 @@ const live = ref(false);
 const rootRef = ref<HTMLElement | null>(null);
 const deskRef = ref<HTMLElement | null>(null);
 const glowRef = ref<HTMLElement | null>(null);
-const topRef = ref<HTMLElement | null>(null);
-const dockRef = ref<InstanceType<typeof FilmFilterDock> | null>(null);
+const bottomRef = ref<HTMLElement | null>(null);
 
 const printLong = ref(200);
 const deskHeight = ref(0);
@@ -355,23 +355,21 @@ function toLightbox(i: number) {
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const scrollTopOf = () => document.body.scrollTop + window.scrollY;
 
-// W: desk width. H: pile-mode desk height (the whole screen). topH/dockH: the
-// floating chrome; top/bottom: how far the pile keeps clear of it.
-const geo = { W: 0, H: 0, top: 0, bottom: 0, topH: 0, dockH: 0 };
+// W: desk width. H: pile-mode desk height (the whole screen). navH/bottomH:
+// the floating chrome; top/bottom: how far the pile keeps clear of it.
+const geo = { W: 0, H: 0, top: 0, bottom: 0, navH: 0, bottomH: 0 };
 
 function measure() {
 	const desk = deskRef.value!;
 	geo.W = desk.clientWidth;
-	// The rolls sit just under the floating site nav, whatever its height.
-	const navH = document.querySelector<HTMLElement>('nav')?.offsetHeight ?? 0;
-	rootRef.value?.style.setProperty('--film-nav-h', `${navH}px`);
-	geo.topH = topRef.value?.offsetHeight ?? 0;
-	geo.dockH = (dockRef.value?.$el as HTMLElement | undefined)?.offsetHeight ?? 0;
+	geo.navH = document.querySelector<HTMLElement>('nav')?.offsetHeight ?? 0;
+	rootRef.value?.style.setProperty('--film-nav-h', `${geo.navH}px`);
+	geo.bottomH = bottomRef.value?.offsetHeight ?? 0;
 	geo.H = Math.max(420, window.innerHeight);
-	// Prints may tuck partway under the rolls and the dock — it reads as one
-	// surface fading out under the controls.
-	geo.top = geo.topH * 0.62;
-	geo.bottom = (geo.dockH + 16) * 0.7;
+	// Prints may tuck partway under the nav and under the rolls — it reads as
+	// one surface fading out beneath the controls.
+	geo.top = geo.navH * 0.8;
+	geo.bottom = geo.bottomH * 0.6;
 	printLong.value = printLongFor(geo.W, geo.H - geo.top - geo.bottom);
 }
 
@@ -450,8 +448,8 @@ async function applyLayout(kind: Kind) {
 		order = [...pile].sort((a, b) => b.z - a.z).map((e) => e.i);
 	} else {
 		const grid = layoutGrid(groups.value, geo.W, {
-			top: geo.topH + 20,
-			bottom: geo.dockH + 64,
+			top: geo.navH + 16,
+			bottom: geo.bottomH + 40,
 			maxContent: 1280,
 		});
 		deskHeight.value = Math.max(grid.height, geo.H);
@@ -874,6 +872,7 @@ function onResize() {
 
 onMounted(async () => {
 	readUrl();
+	pruneRolls();
 	live.value = true;
 	// The masthead's display face can shift the desk's top as it swaps in.
 	await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 700))]);
@@ -926,50 +925,67 @@ onBeforeUnmount(() => {
 
 /* ── Floating chrome ── */
 
-.film-top {
+/* Scrims: the pile fades (and on wide screens, softly blurs) out under the
+   nav and under the rolls, so both stay legible over any photo. */
+.film-nav-scrim,
+.film-bottom::before {
+	--scrim: var(--gray-999) 0%, color-mix(in srgb, var(--gray-999) 92%, transparent) 45%,
+		color-mix(in srgb, var(--gray-999) 70%, transparent) 72%, transparent;
+	pointer-events: none;
+}
+
+.film-nav-scrim {
 	position: fixed;
 	inset: 0 0 auto;
 	z-index: 3;
 	/* --film-nav-h is measured from the nav at runtime; this is the pre-hydration guess. */
-	padding-top: var(--film-nav-h, 4.75rem);
+	height: calc(var(--film-nav-h, 4.75rem) + 2.5rem);
+	background: linear-gradient(to bottom, var(--scrim));
+}
+
+.film-bottom {
+	position: fixed;
+	inset: auto 0 0;
+	z-index: 4;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding-bottom: max(1rem, env(safe-area-inset-bottom));
 	pointer-events: none;
 }
 
-.film-top > * {
+.film-bottom > * {
 	pointer-events: auto;
 }
 
-/* Scrim: the pile fades (and on wide screens, softly blurs) out under the
-   nav and the rolls, so both stay legible over any photo. */
-.film-top::before {
+.film-bottom::before {
 	content: '';
 	position: absolute;
-	inset: 0 0 -3rem;
+	inset: -3rem 0 0;
 	z-index: -1;
-	background: linear-gradient(
-		to bottom,
-		var(--gray-999) 0%,
-		color-mix(in srgb, var(--gray-999) 92%, transparent) 45%,
-		color-mix(in srgb, var(--gray-999) 70%, transparent) 72%,
-		transparent
-	);
-	pointer-events: none;
+	background: linear-gradient(to top, var(--scrim));
 }
 
 @media (min-width: 50em) {
-	.film-top::before {
+	.film-nav-scrim,
+	.film-bottom::before {
 		backdrop-filter: blur(6px);
 		-webkit-backdrop-filter: blur(6px);
-		mask-image: linear-gradient(to bottom, #000 70%, transparent);
+	}
+
+	.film-nav-scrim {
+		mask-image: linear-gradient(to bottom, #000 60%, transparent);
+	}
+
+	.film-bottom::before {
+		mask-image: linear-gradient(to top, #000 70%, transparent);
 	}
 }
 
-/* Centered by auto margins (with left and right both pinned) rather than
-   left: 50% — that would cap its shrink-to-fit width at half the viewport. */
-.film > .film-dock {
-	position: fixed;
-	inset: auto 0 max(1rem, env(safe-area-inset-bottom));
-	z-index: 4;
+/* Its option lists open upward over the rolls. */
+.film-bottom > .film-dock {
+	position: relative;
+	z-index: 2;
 }
 
 /* ── The desk: the whole page ── */
