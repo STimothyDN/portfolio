@@ -31,6 +31,17 @@ const photoSchema = z.object({
 	location: photoLocationSchema.optional(),
 });
 
+// One scan from a film roll. Scans carry no EXIF worth showing, so the roll
+// (folder) supplies the metadata; `priority` decides how close to the top of
+// the film desk's pile a print tends to land (1 = buried, 5 = nearly always on top).
+const filmPhotoSchema = z.object({
+	filename: z.string(),
+	width: z.number().optional(),
+	height: z.number().optional(),
+	priority: z.number().int().min(1).max(5).default(3),
+	caption: z.string().optional(),
+});
+
 export const collections = {
 	work: defineCollection({
 		schema: z.object({
@@ -67,5 +78,24 @@ export const collections = {
 				message: 'coverPhoto must match one of the filenames in photos.',
 				path: ['coverPhoto'],
 			}),
+	}),
+	// One JSON per roll, written by `npm run upload-film` from the scan folder's
+	// name (dateDeveloped_camera_filmStock_lab_summary). camera/stock/lab hold the
+	// raw folder tokens; their display names live in src/data/film-labels.json.
+	film: defineCollection({
+		loader: glob({ pattern: '**/*.json', base: './src/content/film' }),
+		schema: z.object({
+			title: z.string(),
+			developed: z.coerce.date(),
+			camera: z.string(),
+			stock: z.string(),
+			lab: z.string(),
+			description: z.string().optional(),
+			// CDN folder holding the scans; defaults to `film/<roll id>`.
+			cdnFolder: z.string().optional(),
+			// Dev-only sample rolls — never included in production builds.
+			demo: z.boolean().optional(),
+			photos: z.array(filmPhotoSchema).min(1),
+		}),
 	}),
 };

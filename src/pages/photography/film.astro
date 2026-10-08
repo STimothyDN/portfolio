@@ -1,0 +1,121 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+import MediumToggle from '../../components/MediumToggle.astro';
+import FilmDesk from '../../components/film/FilmDesk.vue';
+import { bunnyUrl } from '../../utils/bunny';
+import { getFilmRolls, rollFolder, toFilmDeskData } from '../../utils/film';
+
+const rolls = await getFilmRolls();
+const desk = toFilmDeskData(rolls);
+
+const formatDate = (date: Date) =>
+	date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+---
+
+<BaseLayout
+	title="Film | Photography | Timothy Navarro"
+	description="Every film scan Timothy Navarro has, tossed onto one desk — sort them by camera, film stock, lab, year, or roll."
+	immersive
+>
+	<!-- The whole page is the desk: rolls float along the top, controls along
+	     the bottom, and the site nav hovers over both. -->
+	<div class="film-page">
+		<h1 class="sr-only">Film photography by Timothy Navarro</h1>
+		{
+			rolls.length > 0 ? (
+				<>
+					<FilmDesk client:load rolls={desk.rolls} photos={desk.photos}>
+						<MediumToggle current="film" variant="dock" />
+					</FilmDesk>
+					<noscript>
+						<div class="film-static wrapper">
+							{rolls.map((roll) => (
+								<section>
+									<h2>{roll.data.title}</h2>
+									<p class="film-static-meta">Developed {formatDate(roll.data.developed)}</p>
+									<div class="film-static-grid">
+										{roll.data.photos.map((photo) => (
+											<img
+												src={bunnyUrl(`${rollFolder(roll)}/${photo.filename}`, {
+													width: 480,
+													format: 'webp',
+													quality: 72,
+												})}
+												alt={photo.caption ?? ''}
+												width={photo.width}
+												height={photo.height}
+												loading="lazy"
+												decoding="async"
+											/>
+										))}
+									</div>
+								</section>
+							))}
+						</div>
+					</noscript>
+				</>
+			) : (
+				<div class="film-empty">
+					<p>The scans are still at the lab. Check back soon.</p>
+					<MediumToggle current="film" />
+				</div>
+			)
+		}
+	</div>
+</BaseLayout>
+
+<style>
+	.film-empty {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 1.5rem;
+		min-height: 100svh;
+		padding: 6rem 1.5rem;
+		font-size: var(--text-lg);
+		font-style: italic;
+		color: var(--gray-300);
+		text-align: center;
+	}
+
+	/* The desk needs JavaScript; without it, the <noscript> contact sheets stand in. */
+	@media (scripting: none) {
+		.film-page :global(.film) {
+			display: none;
+		}
+	}
+
+	.film-static {
+		padding-block: 8rem 4rem;
+	}
+
+	.film-static section + section {
+		margin-top: 3rem;
+	}
+
+	.film-static h2 {
+		font-size: var(--text-2xl);
+	}
+
+	.film-static-meta {
+		margin-top: 0.25rem;
+		font-size: var(--text-sm);
+		letter-spacing: 0.06em;
+		font-variant-caps: all-small-caps;
+		color: var(--gray-300);
+	}
+
+	.film-static-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+		gap: 1rem;
+		margin-top: 1.25rem;
+	}
+
+	.film-static-grid img {
+		width: 100%;
+		height: auto;
+	}
+</style>

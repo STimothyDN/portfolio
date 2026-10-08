@@ -10,9 +10,11 @@ import Footer from '../components/Footer.astro';
 interface Props {
 	title?: string | undefined;
 	description?: string | undefined;
+	/** Full-screen page (the film desk): the nav floats over it and there's no footer. */
+	immersive?: boolean;
 }
 
-const { title, description } = Astro.props;
+const { title, description, immersive = false } = Astro.props;
 
 // Which "world" is this page in? The photography section gets the editorial
 // theme (see tokens.css `html[data-section="photography"]`). Computed server-side
@@ -37,9 +39,9 @@ const section =
 		<div class="stack backgrounds">
 			<canvas class="twinkling-stars"></canvas>
 			<div class="content">
-				<Nav />
+				<Nav floating={immersive} />
 				<slot />
-				<Footer />
+				{!immersive && <Footer />}
 			</div>
 		</div>
 

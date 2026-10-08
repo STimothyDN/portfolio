@@ -9,6 +9,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "upload-shoot": "node --env-file=.env scripts/upload-shoot.mjs",
+    "upload-film": "node --env-file=.env scripts/upload-film.mjs",
     "generate-caption": "node --env-file=.env scripts/generate-caption.mjs"
   },
   "dependencies": {

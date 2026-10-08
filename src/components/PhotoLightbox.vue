@@ -8,7 +8,7 @@
 				:class="{ 'chrome-hidden': !chromeVisible, 'info-open': showInfo && hasInfo }"
 				role="dialog"
 				aria-modal="true"
-				:aria-label="current?.caption || 'Photo viewer'"
+				:aria-label="current?.caption || current?.label || 'Photo viewer'"
 				@click.self="close"
 				@mousemove="wakeChrome"
 			>
@@ -61,7 +61,7 @@
 									<div class="photo-thumb" :style="{ backgroundImage: `url(${current?.thumbUrl})` }"></div>
 									<img
 										:src="current?.fullUrl"
-										:alt="current?.caption || ''"
+										:alt="current?.caption || current?.label || ''"
 										decoding="async"
 										:style="current?.width && current?.height ? { aspectRatio: `${current.width} / ${current.height}` } : undefined"
 										@load="loadedSrc = current?.fullUrl"
@@ -70,7 +70,9 @@
 							</Transition>
 						</div>
 						<figcaption class="plate-line">
-							<span v-if="current?.caption" class="plate-caption">{{ current.caption }}</span>
+							<span v-if="current?.caption || current?.label" class="plate-caption">{{
+								current.caption || current.label
+							}}</span>
 							<span v-else class="plate-caption plate-caption--empty">Untitled</span>
 							<span class="plate-counter">{{ pad(currentIndex + 1) }} — {{ pad(list.length) }}</span>
 						</figcaption>
@@ -83,7 +85,9 @@
 					<aside v-if="showInfo && hasInfo" id="lightbox-info" class="rail">
 						<header class="rail-head">
 							<p class="rail-eyebrow">Plate {{ pad(currentIndex + 1) }} of {{ pad(list.length) }}</p>
-							<h2 v-if="current?.caption" class="rail-caption">{{ current.caption }}</h2>
+							<h2 v-if="current?.caption || current?.label" class="rail-caption">
+								{{ current.caption || current.label }}
+							</h2>
 						</header>
 
 						<div v-if="triad.length" class="rail-triad" :style="{ '--triad-cols': Math.min(triad.length, 2) }">
@@ -106,6 +110,11 @@
 								<dt>Captured</dt>
 								<dd>{{ formattedCapturedAt }}</dd>
 							</div>
+							<!-- Free-form rows (film frames have no EXIF; their roll supplies these). -->
+							<div v-for="d in current?.details ?? []" :key="d.label" class="spec">
+								<dt>{{ d.label }}</dt>
+								<dd>{{ d.value }}</dd>
+							</div>
 							<div v-if="formattedLocation" class="spec">
 								<dt>Location</dt>
 								<dd>
@@ -120,7 +129,8 @@
 				</Transition>
 
 				<div class="sr-only" aria-live="polite">
-					Photo {{ currentIndex + 1 }} of {{ list.length }}{{ current?.caption ? `: ${current.caption}` : '' }}
+					Photo {{ currentIndex + 1 }} of {{ list.length
+					}}{{ current?.caption || current?.label ? `: ${current.caption || current.label}` : '' }}
 				</div>
 			</div>
 		</Transition>
@@ -161,7 +171,9 @@ const canIdleHide =
 
 const list = computed(() => activeSet.value ?? props.photos);
 const current = computed(() => list.value[currentIndex.value]);
-const hasInfo = computed(() => Boolean(current.value?.exif || current.value?.location));
+const hasInfo = computed(() =>
+	Boolean(current.value?.exif || current.value?.location || current.value?.details?.length)
+);
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -306,6 +318,13 @@ function onTouchEnd(e) {
 }
 
 function resolveAndOpen(detail) {
+	// Ad-hoc list (the film desk): whatever is on the desk right now.
+	if (Array.isArray(detail?.photos)) {
+		if (!detail.photos.length) return false;
+		activeSet.value = detail.photos;
+		open(detail.index ?? 0);
+		return true;
+	}
 	if (props.photoSets) {
 		const set = detail?.shootSlug ? props.photoSets[detail.shootSlug] : null;
 		if (!set) return false;

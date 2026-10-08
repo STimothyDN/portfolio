@@ -1,0 +1,31 @@
+{
+  "cameras": {
+    "canonae1": "Canon AE-1 Program",
+    "canont70": "Canon T-70",
+    "minoltax700": "Minolta X-700",
+    "nikononetouch": "Nikon One Touch",
+    "olympusaf1": "Olympus AF-1",
+    "olympusinfinityjr": "Olympus Infinity Jr",
+    "olympusinfinitytwin": "Olympus Infinity Twin",
+    "olympusstylusepic": "Olympus Stylus Epic",
+    "ricohaf40": "Ricoh AF-40"
+  },
+  "stocks": {
+    "fuji200": "Fujifilm 200",
+    "fuji400": "Fujifilm 400",
+    "fujisuperiaxtra400": "Fujicolor Superia X-Tra 400",
+    "gold200": "Kodak Gold 200",
+    "lucky200": "Lucky 200",
+    "lucky400": "Lucky 400",
+    "portra400": "Kodak Portra 400",
+    "portra800": "Kodak Portra 800",
+    "ultramax400": "Kodak UltraMax 400"
+  },
+  "labs": {
+    "bellows": "Bellows",
+    "fotoshoppe": "Fotoshoppe",
+    "indiefilmlab": "Indie Film Lab",
+    "seccarrboro": "Southeastern Camera Carrboro",
+    "thedarkroom": "The Darkroom"
+  }
+}

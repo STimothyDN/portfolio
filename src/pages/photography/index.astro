@@ -4,11 +4,13 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
 import ContactCTA from '../../components/ContactCTA.astro';
+import MediumToggle from '../../components/MediumToggle.astro';
 import ShootCover from '../../components/ShootCover.astro';
 import ShootPanel from '../../components/ShootPanel.astro';
 import PhotoLightbox from '../../components/PhotoLightbox.vue';
 import PhotographyGlobe from '../../components/PhotographyGlobe.vue';
 import { bunnyImageUrl } from '../../utils/bunny';
+import { getFilmRolls } from '../../utils/film';
 import { toLightboxPhotos } from '../../utils/lightbox';
 
 const shoots = (await getCollection('photography')).sort(
@@ -47,6 +49,9 @@ for (const shoot of shoots) {
 	}
 }
 const globePins: GlobePin[] = [...pinMap.values()];
+
+// The Digital ⇄ Film switch only appears once there are scans to switch to.
+const hasFilm = (await getFilmRolls()).length > 0;
 ---
 
 <BaseLayout
@@ -59,12 +64,15 @@ const globePins: GlobePin[] = [...pinMap.values()];
 				<PhotographyGlobe client:idle pins={globePins} />
 				<div class="landing-veil"></div>
 			</header>
-			<main class="shoot-stage" data-photo-stage>
+			<main class="shoot-stage" id="shoots" data-photo-stage>
 				<div class="stage-header" data-photo-title>
-					<div class="wrapper">
-						<a class="stage-back" href="/photography/" data-panel-close>Back to all shoots</a>
-						<h1>Timo From 3,</h1>
-						<p class="tagline">He shoots! He-</p>
+					<div class="wrapper stage-masthead">
+						<div>
+							<a class="stage-back" href="/photography/" data-panel-close>Back to all shoots</a>
+							<h1>Timo From 3,</h1>
+							<p class="tagline">He shoots! He-</p>
+						</div>
+						{hasFilm && <MediumToggle current="digital" />}
 					</div>
 				</div>
 				<div class="wrapper stage-body">
@@ -191,6 +199,20 @@ const globePins: GlobePin[] = [...pinMap.values()];
 	.stage-header.is-stuck {
 		padding-block: clamp(0.75rem, 2vw, 1.25rem);
 		border-bottom-color: var(--gray-800);
+	}
+
+	/* Titles left, Digital ⇄ Film switch right (stacked below on narrow screens). */
+	.stage-masthead {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 1rem 2rem;
+	}
+
+	/* Inside a shoot, "Back to all shoots" is the way out — no format switch. */
+	.photography-page[data-shoot-open] .stage-masthead > :global(.medium-toggle) {
+		display: none;
 	}
 
 	.stage-back {

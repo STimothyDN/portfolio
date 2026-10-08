@@ -21,11 +21,13 @@
  *   npm run upload-shoot -- ./more-photos 2026-06-30-golden-gate-park "Golden Gate Park" 2026-06-30 --force
  */
 
-import { readdir, readFile, writeFile, access } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import readline from 'node:readline/promises';
 import exifr from 'exifr';
 import { imageSize } from 'image-size';
+
+import { fileExists, naturalSort, uploadToBunny } from './lib/bunny-storage.mjs';
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const CONTENT_DIR = path.resolve(import.meta.dirname, '../src/content/photography');
@@ -84,23 +86,6 @@ function requireEnv(name) {
 		);
 	}
 	return value;
-}
-
-function storageHostFromRegion(region) {
-	const trimmed = region.trim();
-	if (!trimmed) return 'storage.bunnycdn.com';
-
-	try {
-		const url = new URL(trimmed);
-		return url.hostname;
-	} catch {
-		// Accept either a full storage hostname or Bunny's short region code.
-		return trimmed.includes('.') ? trimmed : `${trimmed}.storage.bunnycdn.com`;
-	}
-}
-
-function naturalSort(a, b) {
-	return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 }
 
 function formatShutterSpeed(exposureTime) {
@@ -175,38 +160,6 @@ async function extractPhotoMeta(buffer) {
 	return { width, height, exif: hasExif ? exifData : undefined, location };
 }
 
-async function uploadToBunny({ zone, region, accessKey, shootSlug, filename, buffer }) {
-	const host = storageHostFromRegion(region);
-	const url = `https://${host}/${zone}/photography/${shootSlug}/${filename}`;
-
-	for (let attempt = 1; attempt <= 2; attempt++) {
-		let res;
-		try {
-			res = await fetch(url, {
-				method: 'PUT',
-				headers: { AccessKey: accessKey, 'Content-Type': 'application/octet-stream' },
-				body: buffer,
-			});
-		} catch (error) {
-			const cause = error.cause?.message ? ` (${error.cause.message})` : '';
-			throw new Error(`Upload failed for ${filename}: ${error.message}${cause}`);
-		}
-		if (res.ok) return;
-		if (attempt === 2) {
-			throw new Error(`Upload failed for ${filename}: ${res.status} ${res.statusText}`);
-		}
-	}
-}
-
-async function fileExists(filePath) {
-	try {
-		await access(filePath);
-		return true;
-	} catch {
-		return false;
-	}
-}
-
 async function main() {
 	const { folder, slug, title, date, location, missingPhotoLocation, promptMissingPhotoLocations, force } = parseArgs(
 		process.argv.slice(2)
@@ -251,7 +204,7 @@ async function main() {
 			const buffer = await readFile(filePath);
 
 			const meta = await extractPhotoMeta(buffer);
-			await uploadToBunny({ zone, region, accessKey, shootSlug: slug, filename, buffer });
+			await uploadToBunny({ zone, region, accessKey, remotePath: `photography/${slug}/${filename}`, buffer });
 
 			const existing = existingPhotosByFilename.get(filename);
 			let photoLocation = existing?.location ?? meta.location ?? manualLocation(missingPhotoLocation);

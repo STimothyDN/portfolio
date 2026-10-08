@@ -1,0 +1,172 @@
+---
+/*
+ * Digital ⇄ Film switch for the photography masthead. It's navigation (two
+ * real pages), dressed as a slide switch: the ink thumb slides to the chosen
+ * side on click, while the ClientRouter fetches the other view underneath.
+ */
+interface Props {
+	current: 'digital' | 'film';
+	/** `dock`: borderless and tighter, for the film desk's floating control bar. */
+	variant?: 'masthead' | 'dock';
+}
+
+const { current, variant = 'masthead' } = Astro.props;
+---
+
+<nav
+	class="medium-toggle"
+	aria-label="Photography format"
+	data-current={current}
+	data-variant={variant}
+	data-medium-toggle
+>
+	<span class="thumb" aria-hidden="true"></span>
+	<a
+		href="/photography/#shoots"
+		data-medium="digital"
+		aria-current={current === 'digital' ? 'page' : undefined}
+	>
+		<svg viewBox="0 0 256 256" aria-hidden="true">
+			<path d="M72 32h88l48 48v128a16 16 0 0 1-16 16H72a16 16 0 0 1-16-16V48a16 16 0 0 1 16-16Z" />
+			<path d="M104 72v32M136 72v32M168 88v16" />
+		</svg>
+		<span>Digital</span>
+	</a>
+	<a href="/photography/film/" data-medium="film" aria-current={current === 'film' ? 'page' : undefined}>
+		<svg viewBox="0 0 256 256" aria-hidden="true">
+			<rect x="40" y="64" width="96" height="152" rx="12" />
+			<path d="M72 64V36h32v28M136 96h56a16 16 0 0 1 16 16v64a16 16 0 0 1-16 16h-56" />
+			<circle cx="166" cy="120" r="2" />
+			<circle cx="166" cy="168" r="2" />
+		</svg>
+		<span>Film</span>
+	</a>
+</nav>
+
+<style>
+	.medium-toggle {
+		position: relative;
+		display: inline-grid;
+		grid-template-columns: 1fr 1fr;
+		padding: 0.25rem;
+		border-radius: 999rem;
+		box-shadow: inset 0 0 0 1px var(--gray-700);
+		background: var(--gray-999);
+	}
+
+	.thumb {
+		position: absolute;
+		inset: 0.25rem auto 0.25rem 0.25rem;
+		width: calc(50% - 0.25rem);
+		border-radius: 999rem;
+		background: var(--accent-regular);
+	}
+
+	.medium-toggle[data-current='film'] .thumb {
+		transform: translateX(100%);
+	}
+
+	a {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.45rem;
+		padding: 0.45rem 1rem;
+		border-radius: 999rem;
+		color: var(--gray-300);
+		font-size: var(--text-sm);
+		letter-spacing: 0.1em;
+		font-variant-caps: all-small-caps;
+		text-decoration: none;
+		transition: color var(--theme-transition);
+	}
+
+	a:hover {
+		color: var(--gray-0);
+	}
+
+	.medium-toggle[data-current='digital'] [data-medium='digital'],
+	.medium-toggle[data-current='film'] [data-medium='film'] {
+		color: var(--accent-text-over);
+	}
+
+	a:focus-visible {
+		outline: 2px solid var(--accent-regular);
+		outline-offset: 3px;
+	}
+
+	svg {
+		width: 1rem;
+		height: 1rem;
+		flex: none;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 16;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	circle {
+		stroke-width: 20;
+	}
+
+	.medium-toggle[data-variant='dock'] {
+		padding: 0;
+		box-shadow: none;
+		background: none;
+	}
+
+	[data-variant='dock'] .thumb {
+		inset: 0 auto 0 0;
+		width: 50%;
+	}
+
+	[data-variant='dock'] a {
+		min-height: 2.5rem;
+		padding-block: 0;
+	}
+
+	@media (max-width: 40em) {
+		a {
+			padding: 0.35rem 0.85rem;
+		}
+
+		[data-variant='dock'] a {
+			gap: 0.35rem;
+			padding-inline: 0.7rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.thumb {
+			transition: transform 380ms cubic-bezier(0.65, 0, 0.35, 1);
+		}
+
+		a {
+			transition: color 380ms ease;
+		}
+	}
+
+	@media (forced-colors: active) {
+		.thumb {
+			background: SelectedItem;
+		}
+	}
+</style>
+
+<script>
+	// Slide the thumb the moment the switch is pressed (the new page is still
+	// loading); pressing the side you're already on does nothing.
+	document.addEventListener('click', (event) => {
+		const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('[data-medium-toggle] a');
+		if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+		const toggle = link.closest<HTMLElement>('[data-medium-toggle]')!;
+		if (link.dataset.medium === toggle.dataset.current) {
+			// Digital → its own index still scrolls down to the shoot list.
+			if (link.dataset.medium === 'film') event.preventDefault();
+			return;
+		}
+		toggle.dataset.current = link.dataset.medium;
+	});
+</script>

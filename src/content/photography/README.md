@@ -6,6 +6,8 @@ This folder holds one JSON file per **shoot**. Each file is a content-collection
 - the listing page at **`/photography/`** (one cover card per shoot), and
 - a detail page at **`/photography/<shoot-slug>/`** (masonry gallery + lightbox).
 
+Film scans have their own workflow and page — see [`../film/README.md`](../film/README.md).
+
 Photos themselves are **not** stored in the repo — they live in a Bunny.net Storage zone
 and are served through a Bunny Pull Zone CDN. This folder only holds the metadata
 (filenames, captions, camera settings).

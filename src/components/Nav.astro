@@ -2,6 +2,13 @@
 import Icon, { type Props as IconProps } from './Icon.astro';
 import ThemeToggle from './ThemeToggle.astro';
 
+interface Props {
+	/** Hover over a full-screen page instead of sitting above it. */
+	floating?: boolean;
+}
+
+const { floating = false } = Astro.props;
+
 /** Main menu items */
 const textLinks: { label: string; href: string }[] = [
 	{ label: 'Home', href: '/' },
@@ -20,7 +27,7 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 ];
 ---
 
-<nav>
+<nav class:list={{ 'is-floating': floating }}>
 	<div class="menu-header">
 		<a href="/" class="site-title">
 			<Icon icon="terminal-window" color="var(--accent-regular)" size="1.6em" gradient />
@@ -118,6 +125,18 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 		font-family: var(--font-brand);
 		font-weight: 500;
 		margin-bottom: 3.5rem;
+	}
+
+	/* Full-screen pages: the nav hovers over the content (which supplies its
+	   own scrim for legibility) and gives up its bottom margin. */
+	nav.is-floating {
+		position: fixed;
+		inset: 0 0 auto;
+		margin-bottom: 0;
+	}
+
+	.is-floating .menu-header {
+		padding: 1rem 1.25rem;
 	}
 
 	.menu-header {
@@ -244,8 +263,13 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 			gap: 1rem;
 		}
 
-		.menu-header {
+		.menu-header,
+		.is-floating .menu-header {
 			padding: 0;
+		}
+
+		nav.is-floating {
+			padding: 1.25rem 2.5rem;
 		}
 
 		.site-title {
