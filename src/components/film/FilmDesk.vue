@@ -17,6 +17,9 @@
 				:counts="rollCounts"
 				:status="status"
 				:negative="negative"
+				:state="rollsState"
+				:current="rollsCurrent"
+				@toggle-open="rollsState = NEXT_ROLLS_STATE[rollsCurrent]"
 				@toggle="pickRoll"
 			/>
 			<FilmFilterDock
@@ -200,7 +203,7 @@ import {
 	weightedSample,
 	type PileSlot,
 } from './layout';
-import type { FacetKey, FacetOption, FilmPhotoData, FilmRollData } from './types';
+import type { FacetKey, FacetOption, FilmPhotoData, FilmRollData, RollsState } from './types';
 
 const props = defineProps<{ rolls: FilmRollData[]; photos: FilmPhotoData[] }>();
 
@@ -432,6 +435,15 @@ const deskStyle = computed(() => {
 const rendered = ref<number[]>([]);
 const pileSet = shallowRef(new Set<number>());
 const dragging = ref(false);
+
+// Roll selector: open, rewound onto its shelf, or put away entirely. The
+// toggle steps through them in that order and loops. null = the screen's
+// default (open on desktop, put away on phones — CSS applies it, so there's
+// no flash).
+const NEXT_ROLLS_STATE = { open: 'closed', closed: 'away', away: 'open' } as const;
+const rollsState = ref<RollsState | null>(null);
+const narrow = ref(false);
+const rollsCurrent = computed<RollsState>(() => rollsState.value ?? (narrow.value ? 'away' : 'open'));
 
 // Negative view: strips show as color negatives (a viewer convenience, kept
 // in this browser only; it starts off and is read after hydration).
@@ -1069,7 +1081,33 @@ function onResize() {
 	}, 160);
 }
 
+let narrowQuery: MediaQueryList | null = null;
+const onNarrow = (e: MediaQueryList | MediaQueryListEvent) => (narrow.value = e.matches);
+
+// When the bottom chrome changes height (the roll row rewinding or opening,
+// titles wrapping), re-spread the pile — or re-pad the strips — once it settles.
+let chromeObserver: ResizeObserver | null = null;
+let chromeTimer = 0;
+let chromeH = 0;
+function watchChrome() {
+	if (!bottomRef.value) return;
+	chromeH = bottomRef.value.offsetHeight;
+	chromeObserver = new ResizeObserver(() => {
+		const h = bottomRef.value?.offsetHeight ?? 0;
+		if (Math.abs(h - chromeH) < 4) return;
+		chromeH = h;
+		window.clearTimeout(chromeTimer);
+		chromeTimer = window.setTimeout(() => {
+			if (ready && !drag) applyLayout('shift');
+		}, 180);
+	});
+	chromeObserver.observe(bottomRef.value);
+}
+
 onMounted(async () => {
+	narrowQuery = window.matchMedia('(max-width: 40em)');
+	onNarrow(narrowQuery);
+	narrowQuery.addEventListener('change', onNarrow);
 	try {
 		negative.value = localStorage.getItem(NEGATIVE_KEY) === '1';
 	} catch {
@@ -1098,10 +1136,14 @@ onMounted(async () => {
 	}
 	ready = true;
 	window.addEventListener('resize', onResize);
+	watchChrome();
 });
 
 onBeforeUnmount(() => {
 	gen++;
+	narrowQuery?.removeEventListener('change', onNarrow);
+	chromeObserver?.disconnect();
+	window.clearTimeout(chromeTimer);
 	window.removeEventListener('resize', onResize);
 	window.clearTimeout(resizeTimer);
 	gsap.ticker.remove(syncGlow);

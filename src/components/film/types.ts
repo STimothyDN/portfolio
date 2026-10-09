@@ -1,6 +1,9 @@
 /** Facets the film desk can filter on. `roll` is driven by the roll strip. */
 export type FacetKey = 'roll' | 'camera' | 'stock' | 'lab' | 'year';
 
+/** The roll selector: film pulled out, rewound onto its shelf, or put away. */
+export type RollsState = 'open' | 'closed' | 'away';
+
 /** One choice in a filter list, with its count under the other active filters. */
 export interface FacetOption {
 	value: string;

@@ -1,16 +1,24 @@
 <template>
-	<section class="rolls" :class="{ 'is-negative': negative }" aria-labelledby="film-rolls-label">
-		<div class="rolls-head">
-			<h2 id="film-rolls-label" class="rolls-label">
-				Rolls
-				<span class="rolls-count">
-					{{ shown.length < rolls.length ? `${shown.length} of ${rolls.length}` : rolls.length }}
-				</span>
-			</h2>
-			<p class="rolls-status" aria-live="polite">{{ status }}</p>
-		</div>
+	<!-- Open: canisters with their film pulled out. Rewound: the film winds
+	     back into small canisters lined up on a shelf, each with just its
+	     leader's tip showing. Put away: the cans slide off the shelf and it
+	     fades, leaving only the counts and the toggle. Desktop starts open,
+	     phones put away — set in CSS (is-open / is-rewound / is-away override
+	     it), so neither flashes. -->
+	<section
+		class="rolls"
+		:class="{
+			'is-negative': negative,
+			'is-open': state === 'open',
+			'is-rewound': state === 'closed' || state === 'away',
+			'is-away': state === 'away',
+		}"
+		aria-labelledby="film-rolls-label"
+	>
+		<h2 id="film-rolls-label" class="sr-only">Rolls</h2>
 		<!-- Only rolls the active filters allow; the rest slide out of the row. -->
 		<TransitionGroup
+			id="film-roll-list"
 			ref="listRef"
 			tag="ul"
 			name="can"
@@ -22,8 +30,11 @@
 				<button
 					type="button"
 					class="roll"
-					:class="{ 'is-mono': roll.mono }"
+					:class="{ 'is-mono': roll.mono, 'is-rewinding': rewinding.has(roll.id) }"
+					@pointerleave="startRewind(roll.id)"
+					@blur="startRewind(roll.id)"
 					:style="{ '--i': i }"
+					:title="roll.title"
 					:aria-pressed="selected.includes(roll.id)"
 					@click="emit('toggle', roll.id)"
 				>
@@ -48,6 +59,11 @@
 										draggable="false"
 									/>
 								</span>
+								<!-- Rewound, the leader carries the lab's sticker with the roll's
+								     name; a tug on the can pulls it out into view. -->
+								<span class="leader-tag" :style="{ '--tag-fs': `${tags[roll.id].fs}px` }">
+									<span v-for="(line, n) in tags[roll.id].lines" :key="n">{{ line }}</span>
+								</span>
 								<span class="leader"></span>
 							</span>
 						</span>
@@ -59,15 +75,46 @@
 				</button>
 			</li>
 		</TransitionGroup>
+
+		<!-- Rewound, the cans stand on a little wooden film shelf with a
+		     label-maker tape on its edge. -->
+		<div class="shelf" aria-hidden="true">
+			<span class="shelf-label">{{ shown.length }} {{ shown.length === 1 ? 'roll' : 'rolls' }}</span>
+		</div>
+
+		<div class="rolls-foot">
+			<p class="rolls-summary" aria-live="polite">
+				<!-- On the shelf, the roll count is on its label tape instead. -->
+				<span class="summary-rolls">{{ rollCount }} · </span>{{ status }}
+			</p>
+			<button
+				type="button"
+				class="rolls-toggle"
+				:aria-expanded="current !== 'away'"
+				aria-controls="film-roll-list"
+				@click="emit('toggleOpen')"
+			>
+				<!-- A camera's rewind crank. -->
+				<svg class="crank" viewBox="0 0 256 256" aria-hidden="true">
+					<circle cx="128" cy="128" r="40" />
+					<path d="M128 88V40h56M184 40v28" />
+				</svg>
+				<span class="when-open">Rewind</span>
+				<span class="when-rewound">Put away film</span>
+				<span class="when-away">Pull out film</span>
+				<svg class="chevron" viewBox="0 0 256 256" aria-hidden="true"><path d="m48 96 80 80 80-80" /></svg>
+			</button>
+		</div>
 	</section>
 </template>
 
 <script setup lang="ts">
-import { type ComponentPublicInstance, computed, ref, watch } from 'vue';
+import { type ComponentPublicInstance, computed, onBeforeUnmount, ref, watch } from 'vue';
 
 import { bunnyUrl } from '../../utils/bunny';
+import { bestSplit } from './canister';
 import FilmCanister from './FilmCanister.vue';
-import type { FilmRollData } from './types';
+import type { FilmRollData, RollsState } from './types';
 
 const props = defineProps<{
 	rolls: FilmRollData[];
@@ -77,12 +124,56 @@ const props = defineProps<{
 	status: string;
 	/** Show the pulled-out film as color negatives. */
 	negative: boolean;
+	/** The viewer's choice; null = the default for the screen size. */
+	state: RollsState | null;
+	/** The state actually showing (the choice, or the screen's default). */
+	current: RollsState;
 }>();
 
-const emit = defineEmits<{ toggle: [id: string] }>();
+const emit = defineEmits<{ toggle: [id: string]; toggleOpen: [] }>();
+
+const rollCount = computed(() => {
+	const total = props.rolls.length;
+	return shown.value.length < total ? `${shown.value.length} of ${total} rolls` : `${total} rolls`;
+});
 
 const previewUrl = (roll: FilmRollData, file: string) =>
 	bunnyUrl(`${roll.folder}/${file}`, { width: 160, format: 'webp', quality: 60 });
+
+// The leader sticker's writing: the title in marker on up to two lines, as
+// large as a ~124×22px label allows (the marker face runs ~0.6em a character).
+const tags = computed(() =>
+	Object.fromEntries(
+		props.rolls.map((roll) => {
+			const { lines, score } = bestSplit(roll.title, 2, (ls) =>
+				Math.min(22 / (ls.length * 1.08), 120 / (Math.max(...ls.map((l) => l.length)) * 0.6), 11)
+			);
+			return [roll.id, { lines, fs: Math.max(6.5, Math.round(score * 10) / 10) }];
+		})
+	)
+);
+
+// A can whose leader is winding back in stays above everything — including a
+// neighbour the pointer has just moved onto — until the leader is home. The
+// strip's own translate (520ms) trails --stub (420ms), so the leader is still
+// moving for roughly the sum of the two.
+const REWIND_MS = 960;
+const rewinding = ref(new Set<string>());
+const rewindTimers = new Map<string, number>();
+function startRewind(id: string) {
+	window.clearTimeout(rewindTimers.get(id));
+	rewinding.value = new Set(rewinding.value).add(id);
+	rewindTimers.set(
+		id,
+		window.setTimeout(() => {
+			const next = new Set(rewinding.value);
+			next.delete(id);
+			rewinding.value = next;
+			rewindTimers.delete(id);
+		}, REWIND_MS)
+	);
+}
+onBeforeUnmount(() => rewindTimers.forEach((t) => window.clearTimeout(t)));
 
 const shown = computed(() =>
 	props.rolls.filter((roll) => props.counts[roll.id] > 0 || props.selected.includes(roll.id))
@@ -120,7 +211,48 @@ function holdPlace(el: Element) {
 </script>
 
 <style scoped>
+/* Registered so the open ⇄ rewound sizes animate. */
+@property --can-h {
+	syntax: '<length>';
+	inherits: true;
+	initial-value: 102px;
+}
+
+@property --frame-h {
+	syntax: '<length>';
+	inherits: true;
+	initial-value: 44px;
+}
+
+@property --stub {
+	syntax: '<length>';
+	inherits: true;
+	initial-value: 0px;
+}
+
+@property --rest {
+	syntax: '<length>';
+	inherits: true;
+	initial-value: 0px;
+}
+
+@property --leader-w {
+	syntax: '<length>';
+	inherits: true;
+	initial-value: 34px;
+}
+
+@property --rail {
+	syntax: '<length>';
+	inherits: true;
+	initial-value: 10px;
+}
+
 .rolls {
+	/* The row of cans, then the counts and toggle. The first row folds to
+	   nothing when the film is put away (fr rows interpolate, so it eases). */
+	display: grid;
+	grid-template-rows: 1fr auto;
 	--can-h: 102px;
 	--frame-w: 66px;
 	--frame-h: 44px;
@@ -133,39 +265,25 @@ function holdPlace(el: Element) {
 	--base: #2c241d;
 }
 
-.rolls-head {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 1rem;
-	padding-inline: var(--film-gutter);
-	margin-bottom: 0.5rem;
-}
-
-.rolls-label,
-.rolls-status {
-	font-family: var(--font-body);
-	font-size: var(--text-sm);
-	font-weight: 500;
-	letter-spacing: 0.1em;
-	font-variant-caps: all-small-caps;
-	font-variant-numeric: tabular-nums;
-	color: var(--gray-300);
-}
-
-.rolls-count {
-	margin-left: 0.35rem;
-}
-
-.rolls-status {
-	font-weight: 400;
-	text-align: right;
+@media (prefers-reduced-motion: no-preference) {
+	.rolls {
+		transition:
+			--can-h 520ms cubic-bezier(0.65, 0, 0.35, 1),
+			--frame-h 520ms cubic-bezier(0.65, 0, 0.35, 1),
+			--rail 520ms cubic-bezier(0.65, 0, 0.35, 1),
+			--leader-w 520ms cubic-bezier(0.65, 0, 0.35, 1),
+			grid-template-rows 520ms cubic-bezier(0.65, 0, 0.35, 1);
+	}
 }
 
 .roll-list {
+	min-height: 0;
 	position: relative;
 	display: flex;
 	gap: 1.75rem;
+	transition:
+		gap 520ms cubic-bezier(0.65, 0, 0.35, 1),
+		padding 520ms cubic-bezier(0.65, 0, 0.35, 1);
 	margin: 0;
 	padding: 0.5rem var(--film-gutter) 0.75rem;
 	list-style: none;
@@ -200,7 +318,9 @@ function holdPlace(el: Element) {
 	font: inherit;
 	text-align: left;
 	cursor: pointer;
-	transition: opacity 300ms ease;
+	transition:
+		opacity 300ms ease,
+		--stub 420ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 /* Selected: an ink rule draws in under the roll. */
@@ -229,10 +349,31 @@ function holdPlace(el: Element) {
 }
 
 .roll-object {
+	position: relative;
 	display: flex;
 	align-items: center;
 	filter: drop-shadow(0 6px 6px rgba(17, 16, 16, 0.22));
-	transition: transform 300ms cubic-bezier(0.33, 1, 0.68, 1);
+	transform-origin: 50% 100%;
+	transition:
+		transform 300ms cubic-bezier(0.33, 1, 0.68, 1),
+		rotate 520ms cubic-bezier(0.65, 0, 0.35, 1),
+		filter 520ms ease;
+}
+
+/* Contact shadow where the can meets the shelf (shown when rewound). */
+.roll-object::before {
+	content: '';
+	position: absolute;
+	left: calc(var(--can-h) * 0.02);
+	bottom: -3px;
+	width: calc(var(--can-h) * 0.4);
+	height: 6px;
+	border-radius: 50%;
+	background: radial-gradient(closest-side, rgba(30, 20, 10, 0.45), transparent);
+	opacity: 0;
+	transition:
+		opacity 360ms ease,
+		scale 300ms ease;
 }
 
 :root.theme-dark .roll-object {
@@ -258,8 +399,12 @@ function holdPlace(el: Element) {
 .film {
 	position: relative;
 	z-index: 1;
-	margin-left: -16px;
+	max-width: 24rem;
+	margin-left: calc(var(--can-h) * -0.157);
 	clip-path: inset(-20px -60px -20px 0);
+	transition:
+		max-width 520ms cubic-bezier(0.65, 0, 0.35, 1),
+		clip-path 520ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 .strip {
@@ -270,6 +415,8 @@ function holdPlace(el: Element) {
 	display: flex;
 	align-items: center;
 	gap: 4px;
+	/* Its natural length, even while the visible film is cut short (rewound). */
+	width: max-content;
 	height: calc(var(--frame-h) + var(--rail) * 2);
 	padding: 0 0 0 22px;
 	/* Real sprocket holes: punched out of the base, not painted on. */
@@ -345,6 +492,30 @@ function holdPlace(el: Element) {
 	filter: none;
 }
 
+/* The lab's sticker on the leader — only there once the film is rewound. */
+.leader-tag {
+	display: none;
+	flex: none;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 128px;
+	height: calc(var(--frame-h) + var(--rail) * 2 - 6px);
+	margin: 0 4px 0 14px;
+	overflow: hidden;
+	border-radius: 2px;
+	background:
+		linear-gradient(170deg, rgba(255, 255, 255, 0.55), transparent 45%),
+		#efe8d6;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+	color: #18191d;
+	font-family: 'Permanent Marker', var(--font-brand), cursive;
+	font-size: var(--tag-fs);
+	line-height: 1.05;
+	white-space: nowrap;
+	rotate: -2deg;
+}
+
 /* The cut tongue at the end of a 35mm leader. */
 .leader {
 	flex: none;
@@ -384,7 +555,11 @@ function holdPlace(el: Element) {
 	font-variant-caps: all-small-caps;
 	overflow-wrap: anywhere;
 	color: var(--gray-300);
-	transition: color 200ms ease;
+	max-height: 4.2em;
+	transition:
+		color 200ms ease,
+		max-height 420ms cubic-bezier(0.65, 0, 0.35, 1),
+		opacity 300ms ease;
 }
 
 .roll[aria-pressed='true'] .roll-meta {
@@ -469,6 +644,526 @@ function holdPlace(el: Element) {
 	.can-enter-active,
 	.can-leave-active {
 		transition: none;
+	}
+}
+
+
+/* ── Below the row: the counts, and the rewind crank that folds it away ── */
+
+/* ── The film shelf (rewound state) ── */
+
+.rolls {
+	position: relative;
+}
+
+.roll-list {
+	z-index: 1;
+}
+
+.shelf {
+	--wood-top: linear-gradient(180deg, #e6cca8, #cda578);
+	--wood-edge: linear-gradient(180deg, #ab7f51, #86613d);
+	position: absolute;
+	left: calc(var(--film-gutter) - 0.75rem);
+	right: calc(var(--film-gutter) - 0.75rem);
+	/* The top surface ends where the cans' bases sit. */
+	top: calc(0.6rem + var(--can-h) - 6px);
+	height: 20px;
+	z-index: 0;
+	opacity: 0;
+	translate: 0 10px;
+	pointer-events: none;
+	transition:
+		opacity 360ms ease,
+		translate 520ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+:root.theme-dark .shelf {
+	--wood-top: linear-gradient(180deg, #7a5d40, #634a32);
+	--wood-edge: linear-gradient(180deg, #503a26, #3d2c1c);
+}
+
+/* Top surface, lit from above… */
+.shelf::before {
+	content: '';
+	position: absolute;
+	inset: 0 0 auto;
+	height: 6px;
+	border-radius: 3px 3px 0 0;
+	background: var(--wood-top);
+}
+
+/* …and the front edge, with the shelf's own shadow below. */
+.shelf::after {
+	content: '';
+	position: absolute;
+	inset: 6px 0 0;
+	border-radius: 0 0 3px 3px;
+	background: var(--wood-edge);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.18),
+		0 10px 16px -8px rgba(40, 25, 10, 0.45);
+}
+
+/* Label-maker tape: embossed white capitals on black. */
+.shelf-label {
+	position: absolute;
+	z-index: 1;
+	left: 0.9rem;
+	top: 7.5px;
+	padding: 1px 6px 0;
+	border-radius: 2px;
+	background: linear-gradient(180deg, #2a2a2d, #141416);
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+	color: #f2f2f2;
+	font-family: var(--font-body);
+	font-size: 8.5px;
+	font-weight: 700;
+	line-height: 11px;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	text-shadow:
+		0 1px 0 rgba(0, 0, 0, 0.7),
+		0 -1px 0 rgba(255, 255, 255, 0.22);
+	rotate: -1deg;
+}
+
+.rolls-foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0 var(--film-gutter);
+}
+
+.rolls-summary {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-family: var(--font-body);
+	font-size: var(--text-sm);
+	letter-spacing: 0.08em;
+	font-variant-caps: all-small-caps;
+	font-variant-numeric: tabular-nums;
+	color: var(--gray-300);
+}
+
+.rolls-toggle {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.25rem 0.7rem 0.25rem 0.55rem;
+	border: 1px solid var(--gray-700);
+	border-radius: 999rem;
+	background: color-mix(in srgb, var(--gray-999) 70%, transparent);
+	color: var(--gray-200);
+	font: inherit;
+	font-size: var(--text-sm);
+	letter-spacing: 0.08em;
+	font-variant-caps: all-small-caps;
+	cursor: pointer;
+	transition:
+		background-color 200ms ease,
+		color 200ms ease;
+}
+
+.rolls-toggle:hover {
+	background: var(--gray-900);
+	color: var(--gray-0);
+}
+
+.rolls-toggle:focus-visible {
+	outline: 2px solid var(--accent-regular);
+	outline-offset: 2px;
+}
+
+.rolls-toggle svg {
+	width: 0.95rem;
+	height: 0.95rem;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 16;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	transition: rotate 520ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.rolls-toggle .chevron {
+	width: 0.8rem;
+	height: 0.8rem;
+}
+
+/* Rewound on request (any screen)… */
+.rolls.is-rewound {
+	--can-h: 52px;
+	--frame-h: 20px;
+	--rail: 7px;
+}
+
+.rolls.is-rewound .roll-list {
+	gap: 0.75rem;
+	padding-top: 0.6rem;
+	padding-bottom: 1.5rem;
+}
+
+/* The film winds back in, leaving the cut tip of its leader showing;
+   pointing at a can pulls the leader out — sticker and all — across the
+   shelf. --rest is the tip's reach past the felt lip (it sets the layout
+   width); --stub is how far the film actually reaches, revealed by the
+   clip without nudging the neighbouring cans. */
+.rolls.is-rewound {
+	--leader-w: 22px;
+}
+
+.rolls.is-rewound .roll {
+	--rest: calc(var(--can-h) * 0.157 + 16px);
+	--stub: var(--rest);
+	z-index: 1;
+}
+
+.rolls.is-rewound .roll:hover,
+.rolls.is-rewound .roll:focus-visible {
+	--stub: calc(var(--can-h) * 0.157 + 176px);
+	/* Pulled out over its neighbours… */
+	z-index: 3;
+}
+
+/* …and kept above everything while the leader winds back in. */
+.rolls.is-rewound .roll.is-rewinding {
+	z-index: 4;
+}
+
+.rolls.is-rewound .roll[aria-pressed='true'] {
+	--stub: calc(var(--can-h) * 0.157 + 28px);
+}
+
+.rolls.is-rewound .film {
+	max-width: var(--rest);
+	clip-path: inset(-20px calc(var(--rest) - var(--stub)) -20px 0);
+}
+
+.rolls.is-rewound .leader-tag {
+	display: flex;
+}
+
+/* Slide the strip so its leader end, not its start, sits at the lip. */
+.rolls.is-rewound .strip,
+.rolls.is-rewound .roll:hover .strip,
+.rolls.is-rewound .roll:focus-visible .strip,
+.rolls.is-rewound .roll[aria-pressed='true'] .strip {
+	translate: calc(var(--stub) - 100%) 0;
+	transition: translate 520ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* The tongue's cut, drawn to scale at this small size. */
+.rolls.is-rewound .leader {
+	clip-path: polygon(0 0, 18% 0, 30% 12%, 38% 38%, 50% 47%, 88% 47%, 97% 49%, 100% 55%, 100% 100%, 0 100%);
+}
+
+.rolls.is-rewound .roll:hover .canister {
+	rotate: 0deg;
+}
+
+.rolls.is-rewound .roll {
+	gap: 0;
+}
+
+.rolls.is-rewound .roll-meta {
+	max-height: 0;
+	opacity: 0;
+}
+
+.rolls.is-rewound .summary-rolls {
+	display: none;
+}
+
+.rolls.is-rewound .shelf {
+	opacity: 1;
+	translate: 0 0;
+}
+
+/* Standing on the shelf: a tight shadow. */
+.rolls.is-rewound .roll-object {
+	filter: drop-shadow(0 1px 1px rgba(17, 16, 16, 0.3));
+}
+
+.rolls.is-rewound .roll-object::before {
+	opacity: 1;
+}
+
+/* The chosen roll is lifted off the shelf. */
+.rolls.is-rewound .roll[aria-pressed='true'] .roll-object {
+	transform: translateY(-7px);
+}
+
+.rolls.is-rewound .roll[aria-pressed='true'] .roll-object::before {
+	bottom: -10px;
+	opacity: 0.55;
+	scale: 1.25;
+}
+
+.rolls.is-rewound .roll::after {
+	display: none;
+}
+
+/* …and on phones unless opened, since they start put away (below), which
+   builds on the rewound look. */
+@media (max-width: 40em) {
+	.rolls:not(.is-open) {
+		--can-h: 48px;
+		--frame-h: 18px;
+		--rail: 6px;
+	}
+
+	.rolls:not(.is-open) .roll-list {
+		gap: 0.75rem;
+		padding-top: 0.6rem;
+		padding-bottom: 1.5rem;
+	}
+
+	/* The film winds back in, leaving the cut tip of its leader showing;
+	   pointing at a can pulls the leader out — sticker and all — across the
+	   shelf. --rest is the tip's reach past the felt lip (it sets the layout
+	   width); --stub is how far the film actually reaches, revealed by the
+	   clip without nudging the neighbouring cans. */
+	.rolls:not(.is-open) {
+		--leader-w: 20px;
+	}
+
+	.rolls:not(.is-open) .roll {
+		--rest: calc(var(--can-h) * 0.157 + 16px);
+		--stub: var(--rest);
+		z-index: 1;
+	}
+
+	.rolls:not(.is-open) .roll:hover,
+	.rolls:not(.is-open) .roll:focus-visible {
+		--stub: calc(var(--can-h) * 0.157 + 176px);
+		/* Pulled out over its neighbours… */
+		z-index: 3;
+	}
+
+	/* …and kept above everything while the leader winds back in. */
+	.rolls:not(.is-open) .roll.is-rewinding {
+		z-index: 4;
+	}
+
+	.rolls:not(.is-open) .roll[aria-pressed='true'] {
+		--stub: calc(var(--can-h) * 0.157 + 28px);
+	}
+
+	.rolls:not(.is-open) .film {
+		max-width: var(--rest);
+		clip-path: inset(-20px calc(var(--rest) - var(--stub)) -20px 0);
+	}
+
+	.rolls:not(.is-open) .leader-tag {
+		display: flex;
+	}
+
+	/* Slide the strip so its leader end, not its start, sits at the lip. */
+	.rolls:not(.is-open) .strip,
+	.rolls:not(.is-open) .roll:hover .strip,
+	.rolls:not(.is-open) .roll:focus-visible .strip,
+	.rolls:not(.is-open) .roll[aria-pressed='true'] .strip {
+		translate: calc(var(--stub) - 100%) 0;
+		transition: translate 520ms cubic-bezier(0.65, 0, 0.35, 1);
+	}
+
+	/* The tongue's cut, drawn to scale at this small size. */
+	.rolls:not(.is-open) .leader {
+		clip-path: polygon(0 0, 18% 0, 30% 12%, 38% 38%, 50% 47%, 88% 47%, 97% 49%, 100% 55%, 100% 100%, 0 100%);
+	}
+
+	.rolls:not(.is-open) .roll:hover .canister {
+		rotate: 0deg;
+	}
+
+	.rolls:not(.is-open) .roll {
+		gap: 0;
+	}
+
+	.rolls:not(.is-open) .roll-meta {
+		max-height: 0;
+		opacity: 0;
+	}
+
+	.rolls:not(.is-open) .summary-rolls {
+		display: none;
+	}
+
+	.rolls:not(.is-open) .shelf {
+		opacity: 1;
+		translate: 0 0;
+	}
+
+	/* Standing on the shelf: a tight shadow. */
+	.rolls:not(.is-open) .roll-object {
+		filter: drop-shadow(0 1px 1px rgba(17, 16, 16, 0.3));
+	}
+
+	.rolls:not(.is-open) .roll-object::before {
+		opacity: 1;
+	}
+
+	/* The chosen roll is lifted off the shelf. */
+	.rolls:not(.is-open) .roll[aria-pressed='true'] .roll-object {
+		transform: translateY(-7px);
+	}
+
+	.rolls:not(.is-open) .roll[aria-pressed='true'] .roll-object::before {
+		bottom: -10px;
+		opacity: 0.55;
+		scale: 1.25;
+	}
+
+	.rolls:not(.is-open) .roll::after {
+		display: none;
+	}
+}
+
+/* ── Put away: the cans slide off the end of the shelf, the shelf goes, and
+   the row folds up, leaving the counts and the toggle — every bit of the
+   screen for the pictures. On request anywhere (is-away, which also carries
+   is-rewound so the cans are small as they leave)… ── */
+
+.when-rewound,
+.when-away {
+	display: none;
+}
+
+.rolls.is-rewound .when-open {
+	display: none;
+}
+
+.rolls.is-rewound .when-rewound {
+	display: inline;
+}
+
+.rolls.is-rewound .crank {
+	rotate: -270deg;
+}
+
+.rolls.is-away .when-rewound {
+	display: none;
+}
+
+.rolls.is-away .when-away {
+	display: inline;
+}
+
+.rolls.is-away {
+	grid-template-rows: 0fr auto;
+}
+
+.rolls.is-away .roll-list {
+	padding-block: 0;
+	visibility: hidden;
+}
+
+.rolls.is-away .roll {
+	translate: calc(-100vw - 100%) 0;
+}
+
+.rolls.is-away .shelf {
+	opacity: 0;
+	translate: 0 6px;
+}
+
+/* Nothing on the shelf to read the count off any more. */
+.rolls.is-away .summary-rolls {
+	display: inline;
+}
+
+.rolls.is-away .crank {
+	rotate: -540deg;
+}
+
+.rolls.is-away .chevron {
+	rotate: 180deg;
+}
+
+/* …and by default on phones, until the toggle is used. */
+@media (max-width: 40em) {
+	.rolls:not(.is-open):not(.is-rewound) {
+		grid-template-rows: 0fr auto;
+	}
+
+	.rolls:not(.is-open):not(.is-rewound) .roll-list {
+		padding-block: 0;
+		visibility: hidden;
+	}
+
+	.rolls:not(.is-open):not(.is-rewound) .roll {
+		translate: calc(-100vw - 100%) 0;
+	}
+
+	.rolls:not(.is-open):not(.is-rewound) .shelf {
+		opacity: 0;
+		translate: 0 6px;
+	}
+
+	.rolls:not(.is-open):not(.is-rewound) .summary-rolls {
+		display: inline;
+	}
+
+	.rolls:not(.is-open):not(.is-rewound) .when-open {
+		display: none;
+	}
+
+	.rolls:not(.is-open):not(.is-rewound) .when-away {
+		display: inline;
+	}
+
+	.rolls:not(.is-open):not(.is-rewound) .crank {
+		rotate: -540deg;
+	}
+
+	.rolls:not(.is-open):not(.is-rewound) .chevron {
+		rotate: 180deg;
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* Coming back, the cans slide in one after another as the row opens. */
+	.rolls .roll {
+		transition:
+			opacity 300ms ease,
+			--stub 420ms cubic-bezier(0.33, 1, 0.68, 1),
+			translate 560ms cubic-bezier(0.33, 1, 0.68, 1) calc(120ms + min(var(--i), 8) * 40ms);
+	}
+
+	/* Leaving, they accelerate off the end of the shelf, left to right; then
+	   the shelf goes, then the row folds up. */
+	.rolls.is-away .roll {
+		transition:
+			opacity 300ms ease,
+			--stub 420ms cubic-bezier(0.33, 1, 0.68, 1),
+			translate 460ms cubic-bezier(0.55, 0, 0.85, 0.35) calc(min(var(--i), 8) * 35ms);
+	}
+
+	.rolls.is-away .shelf {
+		transition:
+			opacity 320ms ease 300ms,
+			translate 420ms cubic-bezier(0.65, 0, 0.35, 1) 300ms;
+	}
+
+	.rolls.is-away {
+		transition:
+			--can-h 520ms cubic-bezier(0.65, 0, 0.35, 1),
+			--frame-h 520ms cubic-bezier(0.65, 0, 0.35, 1),
+			--rail 520ms cubic-bezier(0.65, 0, 0.35, 1),
+			--leader-w 520ms cubic-bezier(0.65, 0, 0.35, 1),
+			grid-template-rows 420ms cubic-bezier(0.65, 0, 0.35, 1) 480ms;
+	}
+
+	.rolls.is-away .roll-list {
+		transition:
+			gap 520ms cubic-bezier(0.65, 0, 0.35, 1),
+			padding 420ms cubic-bezier(0.65, 0, 0.35, 1) 480ms,
+			visibility 0s linear 920ms;
 	}
 }
 
