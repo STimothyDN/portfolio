@@ -31,7 +31,7 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 <article class="shoot-row" data-animate="fade">
 	<span class="rule" aria-hidden="true"></span>
 	<div class="label">
-		<h2 class="title"><a href={`/photography/${id}`} data-shoot-open={id}>{data.title}</a></h2>
+		<h2 class="title"><a href={`/photography/digital/${id}`} data-shoot-open={id}>{data.title}</a></h2>
 		<p class="meta">
 			<time datetime={data.date.toISOString().slice(0, 10)}>{formattedDate}</time>
 			{data.location && <> · {data.location}</>} · {data.photos.length} photos

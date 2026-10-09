@@ -5,7 +5,7 @@
 				v-if="isOpen"
 				ref="overlayRef"
 				class="overlay"
-				:class="{ 'chrome-hidden': !chromeVisible, 'info-open': showInfo && hasInfo }"
+				:class="{ 'chrome-hidden': !chromeVisible, 'info-open': showInfo && hasInfo, 'scan-mode': scanMode }"
 				role="dialog"
 				aria-modal="true"
 				:aria-label="current?.caption || current?.label || 'Photo viewer'"
@@ -42,10 +42,10 @@
 					<svg viewBox="0 0 256 256" class="icon" v-html="iconPaths.info"></svg>
 				</button>
 
-				<button type="button" class="control nav prev" @click="prev" aria-label="Previous photo">
+				<button v-if="hasSiblings" type="button" class="control nav prev" @click="prev" aria-label="Previous photo">
 					<svg viewBox="0 0 256 256" class="icon" v-html="iconPaths['caret-left']"></svg>
 				</button>
-				<button type="button" class="control nav next" @click="next" aria-label="Next photo">
+				<button v-if="hasSiblings" type="button" class="control nav next" @click="next" aria-label="Next photo">
 					<svg viewBox="0 0 256 256" class="icon" v-html="iconPaths['caret-right']"></svg>
 				</button>
 
@@ -66,6 +66,22 @@
 										:style="current?.width && current?.height ? { aspectRatio: `${current.width} / ${current.height}` } : undefined"
 										@load="loadedSrc = current?.fullUrl"
 									/>
+									<!-- Opened from a strip of negatives: the frame arrives as the
+									     negative and a light bar scans it into the positive. -->
+									<template v-if="scanMode">
+										<div
+											class="scan-negative"
+											:class="{ 'is-running': loadedSrc === current?.fullUrl }"
+											aria-hidden="true"
+										>
+											<img :src="current?.fullUrl" alt="" decoding="async" />
+										</div>
+										<div
+											class="scan-bar"
+											:class="{ 'is-running': loadedSrc === current?.fullUrl }"
+											aria-hidden="true"
+										></div>
+									</template>
 								</div>
 							</Transition>
 						</div>
@@ -74,7 +90,7 @@
 								current.caption || current.label
 							}}</span>
 							<span v-else class="plate-caption plate-caption--empty">Untitled</span>
-							<span class="plate-counter">{{ pad(currentIndex + 1) }} — {{ pad(list.length) }}</span>
+							<span v-if="hasSiblings" class="plate-counter">{{ pad(currentIndex + 1) }} — {{ pad(list.length) }}</span>
 						</figcaption>
 					</figure>
 				</div>
@@ -84,7 +100,7 @@
 				<Transition name="rail">
 					<aside v-if="showInfo && hasInfo" id="lightbox-info" class="rail">
 						<header class="rail-head">
-							<p class="rail-eyebrow">Plate {{ pad(currentIndex + 1) }} of {{ pad(list.length) }}</p>
+							<p v-if="hasSiblings" class="rail-eyebrow">Plate {{ pad(currentIndex + 1) }} of {{ pad(list.length) }}</p>
 							<h2 v-if="current?.caption || current?.label" class="rail-caption">
 								{{ current.caption || current.label }}
 							</h2>
@@ -161,6 +177,8 @@ const loadedSrc = ref('');
 const closeButtonRef = ref(null);
 const overlayRef = ref(null);
 const activeSet = ref(null);
+// Scan each frame in from its negative (the film desk's negative view).
+const scanMode = ref(false);
 let lastFocusedElement = null;
 let touchStartX = 0;
 let idleTimer = null;
@@ -255,7 +273,11 @@ function close() {
 	if (lastFocusedElement instanceof HTMLElement) lastFocusedElement.focus();
 }
 
+// A lone photo (one picked off the film pile) has nothing to step to.
+const hasSiblings = computed(() => list.value.length > 1);
+
 function next() {
+	if (!hasSiblings.value) return;
 	direction.value = 'next';
 	currentIndex.value = (currentIndex.value + 1) % list.value.length;
 	preload(currentIndex.value + 1 >= list.value.length ? 0 : currentIndex.value + 1);
@@ -263,6 +285,7 @@ function next() {
 }
 
 function prev() {
+	if (!hasSiblings.value) return;
 	direction.value = 'prev';
 	currentIndex.value = (currentIndex.value - 1 + list.value.length) % list.value.length;
 	preload(currentIndex.value - 1 < 0 ? list.value.length - 1 : currentIndex.value - 1);
@@ -322,9 +345,12 @@ function resolveAndOpen(detail) {
 	if (Array.isArray(detail?.photos)) {
 		if (!detail.photos.length) return false;
 		activeSet.value = detail.photos;
+		scanMode.value =
+			Boolean(detail.negative) && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		open(detail.index ?? 0);
 		return true;
 	}
+	scanMode.value = false;
 	if (props.photoSets) {
 		const set = detail?.shootSlug ? props.photoSets[detail.shootSlug] : null;
 		if (!set) return false;
@@ -690,6 +716,75 @@ onBeforeUnmount(() => {
 	clip: rect(0, 0, 0, 0);
 	white-space: nowrap;
 	border-width: 0;
+}
+
+/* ── Negative scan (from the film desk's negative view) ── */
+
+/* While the full scan loads, the placeholder is a negative too. */
+.scan-mode .photo-thumb {
+	filter: blur(20px) invert(1) sepia(0.55) saturate(1.7) hue-rotate(-14deg) brightness(0.9) contrast(0.92);
+}
+
+.scan-negative {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.scan-negative img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	filter: invert(1) sepia(0.55) saturate(1.7) hue-rotate(-14deg) brightness(0.9) contrast(0.92);
+}
+
+/* The negative peels away top to bottom behind the moving light bar. */
+.scan-negative.is-running {
+	opacity: 1;
+	animation: scan-reveal 1.9s 0.35s cubic-bezier(0.5, 0, 0.25, 1) forwards;
+}
+
+@keyframes scan-reveal {
+	from {
+		clip-path: inset(0 0 0 0);
+	}
+	to {
+		clip-path: inset(100% 0 0 0);
+	}
+}
+
+.scan-bar {
+	position: absolute;
+	left: -1%;
+	right: -1%;
+	top: 0;
+	height: 3px;
+	opacity: 0;
+	background: linear-gradient(90deg, transparent, rgba(255, 250, 236, 0.95) 12%, rgba(255, 250, 236, 0.95) 88%, transparent);
+	box-shadow:
+		0 0 14px 4px rgba(255, 238, 205, 0.55),
+		0 0 48px 10px rgba(255, 226, 180, 0.25);
+	pointer-events: none;
+}
+
+.scan-bar.is-running {
+	animation: scan-bar 1.9s 0.35s cubic-bezier(0.5, 0, 0.25, 1) forwards;
+}
+
+@keyframes scan-bar {
+	0% {
+		top: 0;
+		opacity: 1;
+	}
+	94% {
+		opacity: 1;
+	}
+	100% {
+		top: 100%;
+		opacity: 0;
+	}
 }
 
 /* ── Transitions ── */

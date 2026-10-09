@@ -1,5 +1,5 @@
 <template>
-	<section class="rolls" aria-labelledby="film-rolls-label">
+	<section class="rolls" :class="{ 'is-negative': negative }" aria-labelledby="film-rolls-label">
 		<div class="rolls-head">
 			<h2 id="film-rolls-label" class="rolls-label">
 				Rolls
@@ -69,6 +69,8 @@ const props = defineProps<{
 	/** Frames each roll would show under the other active filters. */
 	counts: Record<string, number>;
 	status: string;
+	/** Show the pulled-out film as color negatives. */
+	negative: boolean;
 }>();
 
 const emit = defineEmits<{ toggle: [id: string] }>();
@@ -303,6 +305,29 @@ function holdPlace(el: Element) {
 	height: 100%;
 	object-fit: cover;
 	pointer-events: none;
+	transition: filter 650ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* Negative view: orange-masked film, inverted frames (positive on hover). */
+.rolls.is-negative {
+	--base: #a85d27;
+}
+
+:root.theme-dark .rolls.is-negative {
+	--base: #8c4c20;
+}
+
+.is-negative .frame {
+	background: #c27a3f;
+}
+
+.is-negative .frame img {
+	filter: invert(1) sepia(0.55) saturate(1.7) hue-rotate(-14deg) brightness(0.9) contrast(0.92);
+}
+
+.is-negative .roll:hover .frame img,
+.is-negative .roll:focus-visible .frame img {
+	filter: none;
 }
 
 /* The cut tongue at the end of a 35mm leader. */

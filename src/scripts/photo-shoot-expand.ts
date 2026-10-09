@@ -155,7 +155,7 @@ function initPhotoShootExpand() {
 		history.pushState(
 			{ index: (history.state?.index ?? 0) + 1, scrollX: 0, scrollY: 0, photoPanel: id },
 			'',
-			`/photography/${id}`
+			`/photography/digital/${id}`
 		);
 
 		panel.querySelector<HTMLElement>('[data-panel-title]')?.focus({ preventScroll: true });
@@ -190,7 +190,7 @@ function initPhotoShootExpand() {
 
 		// Swap this history entry back to the index (keeping the ClientRouter
 		// fields) rather than pushing — back still leaves the section cleanly.
-		history.replaceState({ ...(history.state ?? {}), photoPanel: null }, '', '/photography/');
+		history.replaceState({ ...(history.state ?? {}), photoPanel: null }, '', '/photography/digital/');
 
 		scrollToY(returnY, false);
 		returnFocus?.focus({ preventScroll: true });

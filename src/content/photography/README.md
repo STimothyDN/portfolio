@@ -3,8 +3,11 @@
 This folder holds one JSON file per **shoot**. Each file is a content-collection entry
 (schema defined in [`src/content/config.ts`](../config.ts)) that powers:
 
-- the listing page at **`/photography/`** (one cover card per shoot), and
-- a detail page at **`/photography/<shoot-slug>/`** (masonry gallery + lightbox).
+- the digital listing at **`/photography/digital/`** (one cover card per shoot), and
+- a detail page at **`/photography/digital/<shoot-slug>/`** (masonry gallery + lightbox).
+
+`/photography/` itself is the film desk (see [`../film/README.md`](../film/README.md)); old
+`/photography/<shoot-slug>/` links redirect to the new addresses (`astro.config.mjs`).
 
 Film scans have their own workflow and page — see [`../film/README.md`](../film/README.md).
 
@@ -77,7 +80,7 @@ This will:
 5. Write `src/content/photography/<shoot-slug>.json` with everything filled in.
 
 > **Slug convention:** use `<date>-<kebab-title>`, e.g. `2026-06-15-golden-gate-park`.
-> The slug becomes the URL (`/photography/<slug>/`) **and** the Bunny storage folder,
+> The slug becomes the URL (`/photography/digital/<slug>/`) **and** the Bunny storage folder,
 > so keep them identical.
 
 ### 3. Review captions and commit
@@ -196,9 +199,9 @@ should still review). `description`, `coverPhoto`, and manual `location` labels 
 
 ## How the pages behave for visitors
 
-- **Listing (`/photography/`)** — shoots shown newest-first as cover cards with date and
+- **Listing (`/photography/digital/`)** — shoots shown newest-first as cover cards with date and
   photo count.
-- **Shoot detail (`/photography/<slug>/`)** — a responsive masonry grid (2 columns on
+- **Shoot detail (`/photography/digital/<slug>/`)** — a responsive masonry grid (2 columns on
   mobile, 3 on desktop). Clicking any photo opens the lightbox:
 
   | Action | Control |
@@ -213,7 +216,7 @@ should still review). `description`, `coverPhoto`, and manual `location` labels 
 
 ## Testing locally
 
-Run `npm run dev` and visit `/photography/`. A `test-shoot.json` fixture (with local
+Run `npm run dev` and visit `/photography/digital/`. A `test-shoot.json` fixture (with local
 placeholder images under `public/photography/test-shoot/`) is included so the gallery and
 lightbox work without any Bunny.net setup. **Delete `test-shoot.json` and that folder once
 you've uploaded a real shoot.**

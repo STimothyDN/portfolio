@@ -88,6 +88,20 @@
 			</div>
 		</div>
 
+		<!-- Show every strip as color negatives (the lightbox then scans them in). -->
+		<button
+			type="button"
+			class="dock-btn dock-neg"
+			:aria-pressed="negative"
+			title="Show the film as negatives"
+			@click="emit('negative')"
+		>
+			<svg viewBox="0 0 256 256" aria-hidden="true">
+				<circle cx="128" cy="128" r="88" />
+				<path d="M128 40a88 88 0 0 1 0 176Z" fill="currentColor" stroke="none" />
+			</svg>
+			<span class="action-label">Negative</span>
+		</button>
 		<span class="dock-rule" aria-hidden="true"></span>
 		<button v-if="hasFilters" type="button" class="dock-btn dock-action" @click="emit('clear')">
 			<svg viewBox="0 0 256 256" aria-hidden="true"><path d="m56 56 144 144M200 56 56 200" /></svg>
@@ -113,12 +127,14 @@ const props = defineProps<{
 	facets: { key: FacetKey; label: string; title: string }[];
 	options: Record<string, FacetOption[]>;
 	hasFilters: boolean;
+	negative: boolean;
 }>();
 
 const emit = defineEmits<{
 	toggle: [facet: FacetKey, value: string];
 	clear: [];
 	toss: [];
+	negative: [];
 }>();
 
 type OpenList = FacetKey | 'all';
@@ -200,6 +216,11 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 
 .dock-btn.is-active {
 	color: var(--gray-0);
+}
+
+.dock-neg[aria-pressed='true'] {
+	background: var(--accent-regular);
+	color: var(--accent-text-over);
 }
 
 .dock-btn:focus-visible,
@@ -391,9 +412,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 		letter-spacing: 0.05em;
 	}
 
-	/* Icon-only action on phones; the label stays for screen readers. */
-	.dock-action {
-		padding-inline: 0.75rem;
+	/* Icon-only actions on phones; the labels stay for screen readers. */
+	.dock-action,
+	.dock-neg {
+		padding-inline: 0.7rem;
 	}
 
 	.action-label {
@@ -405,7 +427,8 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 		white-space: nowrap;
 	}
 
-	.dock-action svg {
+	.dock-action svg,
+	.dock-neg svg {
 		width: 1.1rem;
 		height: 1.1rem;
 	}

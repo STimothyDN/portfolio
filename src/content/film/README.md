@@ -2,7 +2,7 @@
 
 This folder holds one JSON file per **roll of film** (schema in
 [`src/content/config.ts`](../config.ts)). Together they power the film desk at
-**`/photography/film/`**: every scan tossed onto one surface as a messy pile of prints,
+**`/photography/`** (the photography home; digital shoots live at `/photography/digital/`): every scan tossed onto one surface as a messy pile of prints,
 which can be dragged around, opened in the lightbox, or filed into rows by camera, film
 stock, lab, year, or roll.
 

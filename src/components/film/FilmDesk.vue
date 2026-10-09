@@ -2,7 +2,7 @@
 	<div
 		ref="rootRef"
 		class="film"
-		:class="{ 'is-live': live, 'is-grid': mode === 'grid', 'is-dragging': dragging }"
+		:class="{ 'is-live': live, 'is-grid': mode === 'grid', 'is-dragging': dragging, 'is-negative': negative }"
 	>
 		<!-- Keeps the floating site nav legible over the pile. -->
 		<div class="film-nav-scrim" aria-hidden="true"></div>
@@ -16,13 +16,16 @@
 				:selected="selected.roll"
 				:counts="rollCounts"
 				:status="status"
-				@toggle="(id) => toggle('roll', id)"
+				:negative="negative"
+				@toggle="pickRoll"
 			/>
 			<FilmFilterDock
 				class="film-dock"
 				:facets="FILTER_FACETS"
 				:options="options"
 				:has-filters="hasFilters"
+				:negative="negative"
+				@negative="negative = !negative"
 				@toggle="toggle"
 				@clear="clearAll"
 				@toss="retoss"
@@ -248,8 +251,6 @@ const universe = Object.fromEntries(
 ) as Record<FacetKey, string[]>;
 
 const rollById = new Map(props.rolls.map((roll) => [roll.id, roll]));
-const framesByRoll = props.rolls.map(() => [] as number[]);
-props.photos.forEach((p, i) => framesByRoll[p.r].push(i));
 
 /* ── Filter state ───────────────────────────────────────────────────── */
 
@@ -309,6 +310,14 @@ function toggle(f: FacetKey, value: string) {
 	if (f !== 'roll') pruneRolls();
 }
 
+// Rolls are picked one at a time: choosing another replaces the current one,
+// and choosing the current one again puts it back.
+function pickRoll(id: string) {
+	const current = selected.roll[0];
+	if (current && current !== id) selected.roll = [];
+	toggle('roll', id);
+}
+
 // The roll list only shows rolls the other filters allow, so a selected roll
 // those filters rule out is dropped rather than left selected out of sight.
 function pruneRolls() {
@@ -352,7 +361,8 @@ function readUrl() {
 		const f = key as FacetKey;
 		const values = raw.split(',').filter((v) => universe[f].includes(v));
 		if (!values.length) continue;
-		selected[f] = values;
+		// One roll at a time, even from a hand-edited link.
+		selected[f] = f === 'roll' ? values.slice(0, 1) : values;
 		if (!facetOrder.value.includes(f)) facetOrder.value = [...facetOrder.value, f];
 	}
 }
@@ -402,6 +412,18 @@ const deskStyle = computed(() => {
 const rendered = ref<number[]>([]);
 const pileSet = shallowRef(new Set<number>());
 const dragging = ref(false);
+
+// Negative view: strips show as color negatives (a viewer convenience, kept
+// in this browser only; it starts off and is read after hydration).
+const negative = ref(false);
+const NEGATIVE_KEY = 'film-negative';
+watch(negative, (on) => {
+	try {
+		localStorage.setItem(NEGATIVE_KEY, on ? '1' : '0');
+	} catch {
+		/* storage unavailable — the toggle still works for this visit */
+	}
+});
 
 const els = new Map<number, HTMLElement>();
 const setPrintEl = (i: number, el: unknown) => {
@@ -984,10 +1006,15 @@ function onPrintClick(i: number) {
 		suppressClick = false;
 		return;
 	}
-	// On the pile a print opens within its roll; in the grid, within the grid.
-	const list = mode.value === 'pile' ? framesByRoll[props.photos[i].r] : groups.value.flatMap((g) => g.items);
+	// A print picked off the pile opens on its own; once a roll or filter has
+	// filed the desk into strips, the lightbox steps through those frames.
+	const list = mode.value === 'pile' ? [i] : groups.value.flatMap((g) => g.items);
+	// From a strip of negatives, the lightbox scans the frame into a positive.
+	const scan = negative.value && mode.value === 'grid';
 	window.dispatchEvent(
-		new CustomEvent('open-lightbox', { detail: { photos: list.map(toLightbox), index: list.indexOf(i) } })
+		new CustomEvent('open-lightbox', {
+			detail: { photos: list.map(toLightbox), index: list.indexOf(i), negative: scan },
+		})
 	);
 }
 
@@ -1021,6 +1048,11 @@ function onResize() {
 }
 
 onMounted(async () => {
+	try {
+		negative.value = localStorage.getItem(NEGATIVE_KEY) === '1';
+	} catch {
+		/* storage unavailable */
+	}
 	readUrl();
 	pruneRolls();
 	live.value = true;
@@ -1068,7 +1100,22 @@ onBeforeUnmount(() => {
 	--neg-base: #211a14;
 	--neg-frame: #0f0b09;
 	--neg-ink: rgba(232, 168, 82, 0.85);
+	/* A color negative: inverted, under the orange mask of C-41 film. */
+	--negative: invert(1) sepia(0.55) saturate(1.7) hue-rotate(-14deg) brightness(0.9) contrast(0.92);
 	position: relative;
+}
+
+/* Negative view: the strips turn to orange-masked film with dark edge print. */
+.film.is-negative {
+	--neg-base: #a85d27;
+	--neg-frame: #c27a3f;
+	--neg-ink: rgba(52, 22, 6, 0.8);
+}
+
+:root.theme-dark .film.is-negative {
+	--neg-base: #8c4c20;
+	--neg-frame: #a6622f;
+	--neg-ink: rgba(30, 12, 3, 0.85);
 }
 
 :root.theme-dark .film {
@@ -1371,6 +1418,19 @@ onBeforeUnmount(() => {
 
 .print-body img.is-loaded {
 	opacity: 1;
+}
+
+/* Frames in the strips read as negatives; pointing at one flips it positive. */
+.is-negative.is-grid .print-body img {
+	filter: var(--negative);
+	transition:
+		opacity 400ms ease,
+		filter 650ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.is-negative.is-grid .print:hover .print-body img,
+.is-negative.is-grid .print:focus-visible .print-body img {
+	filter: none;
 }
 
 /* Height shadow: strong while a print is in the air, gone once it lands. */

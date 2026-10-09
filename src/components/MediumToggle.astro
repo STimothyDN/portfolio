@@ -22,7 +22,7 @@ const { current, variant = 'masthead' } = Astro.props;
 >
 	<span class="thumb" aria-hidden="true"></span>
 	<a
-		href="/photography/#shoots"
+		href="/photography/digital/#shoots"
 		data-medium="digital"
 		aria-current={current === 'digital' ? 'page' : undefined}
 	>
@@ -32,7 +32,7 @@ const { current, variant = 'masthead' } = Astro.props;
 		</svg>
 		<span>Digital</span>
 	</a>
-	<a href="/photography/film/" data-medium="film" aria-current={current === 'film' ? 'page' : undefined}>
+	<a href="/photography/" data-medium="film" aria-current={current === 'film' ? 'page' : undefined}>
 		<svg viewBox="0 0 256 256" aria-hidden="true">
 			<rect x="40" y="64" width="96" height="152" rx="12" />
 			<path d="M72 64V36h32v28M136 96h56a16 16 0 0 1 16 16v64a16 16 0 0 1-16 16h-56" />

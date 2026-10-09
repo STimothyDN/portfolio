@@ -1,13 +1,13 @@
 ---
 import { type CollectionEntry, getCollection } from 'astro:content';
 
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
 
-import ContactCTA from '../../components/ContactCTA.astro';
-import PhotoParentBar from '../../components/PhotoParentBar.astro';
-import PhotoGrid from '../../components/PhotoGrid.astro';
-import PhotoLightbox from '../../components/PhotoLightbox.vue';
-import { toLightboxPhotos } from '../../utils/lightbox';
+import ContactCTA from '../../../components/ContactCTA.astro';
+import PhotoParentBar from '../../../components/PhotoParentBar.astro';
+import PhotoGrid from '../../../components/PhotoGrid.astro';
+import PhotoLightbox from '../../../components/PhotoLightbox.vue';
+import { toLightboxPhotos } from '../../../utils/lightbox';
 
 interface Props {
 	entry: CollectionEntry<'photography'>;
