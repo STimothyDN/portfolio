@@ -18,27 +18,17 @@
 			role="list"
 			@before-leave="holdPlace"
 		>
-			<li v-for="({ roll, label }, i) in shown" :key="roll.id" :data-roll="roll.id">
+			<li v-for="(roll, i) in shown" :key="roll.id" :data-roll="roll.id">
 				<button
 					type="button"
 					class="roll"
-					:style="canStyle(roll, label, i)"
+					:style="{ '--i': i }"
 					:aria-pressed="selected.includes(roll.id)"
 					@click="emit('toggle', roll.id)"
 				>
 					<span class="roll-object" aria-hidden="true">
 						<!-- A 35mm canister, standing, labeled with the film stock it held… -->
-						<span class="canister">
-							<span class="can-spool"></span>
-							<span class="can-cap"></span>
-							<span class="can-body">
-								<span class="can-label">
-									<span v-for="(line, n) in label.lines" :key="n">{{ line }}</span>
-								</span>
-							</span>
-							<span class="can-cap"></span>
-							<span class="can-lip"></span>
-						</span>
+						<FilmCanister class="canister" :stock="roll.stock" :stock-label="roll.stockLabel" />
 						<!-- …and its film pulled out through the felt lip: a few favorite
 						     frames, then the cut leader. -->
 						<span class="film">
@@ -70,6 +60,7 @@
 import { type ComponentPublicInstance, computed, ref, watch } from 'vue';
 
 import { bunnyUrl } from '../../utils/bunny';
+import FilmCanister from './FilmCanister.vue';
 import type { FilmRollData } from './types';
 
 const props = defineProps<{
@@ -92,43 +83,8 @@ const shortDate = (iso: string) =>
 		timeZone: 'UTC',
 	});
 
-/** Every way to break `words` into `k` lines, in order. */
-function splits(words: string[], k: number): string[][] {
-	if (k === 1) return [[words.join(' ')]];
-	const out: string[][] = [];
-	for (let i = 1; i <= words.length - k + 1; i++) {
-		for (const rest of splits(words.slice(i), k - 1)) out.push([words.slice(0, i).join(' '), ...rest]);
-	}
-	return out;
-}
-
-/**
- * Lay the film stock's name out along the canister in up to three lines,
- * picking whichever split prints largest. `fit` is the type size as a fraction
- * of the label's length (--label-room), so it holds at every canister size:
- * capped overall, by the longest line's length, and by the lines' combined
- * thickness across the body.
- */
-function canLabel(name: string): { lines: string[]; fit: number } {
-	const words = name.trim().split(/\s+/);
-	let best = { lines: [name], fit: 0 };
-	for (let k = 1; k <= Math.min(3, words.length); k++) {
-		for (const lines of splits(words, k)) {
-			const longest = Math.max(...lines.map((l) => l.length));
-			const fit = Math.min(0.17, 1 / (longest * 0.74), 0.44 / (k * 1.08));
-			// Ties go to fewer lines.
-			if (fit > best.fit + 0.002) best = { lines, fit };
-		}
-	}
-	return { lines: best.lines, fit: Math.max(0.085, best.fit) };
-}
-
-const labels = computed(() => props.rolls.map((roll) => canLabel(roll.stockLabel)));
-
 const shown = computed(() =>
-	props.rolls
-		.map((roll, i) => ({ roll, label: labels.value[i] }))
-		.filter(({ roll }) => props.counts[roll.id] > 0 || props.selected.includes(roll.id))
+	props.rolls.filter((roll) => props.counts[roll.id] > 0 || props.selected.includes(roll.id))
 );
 
 // A leaving roll is taken out of flow so its neighbours can slide over, and
@@ -160,36 +116,11 @@ function holdPlace(el: Element) {
 	li.style.width = `${place.width}px`;
 }
 
-// Canister colors by film brand (read from the stock's display name), so a
-// row of rolls reads like a real drawer of them. Unknown brands get a stable hue.
-const BRANDS: [RegExp, string, string][] = [
-	[/kodak|portra|ektar|gold|ultramax|colorplus|tri-?x/i, '#f2b705', '#2a1a05'],
-	[/fuji|superia|velvia|provia/i, '#1d8a4c', '#f4f1e8'],
-	[/lucky/i, '#c4262e', '#fbf3e6'],
-	[/ilford|hp5|delta|fp4/i, '#ece9e2', '#151515'],
-	[/cinestill/i, '#1b1b1d', '#e8392c'],
-	[/lomo/i, '#2f5fb3', '#f4f1e8'],
-];
-
-function canStyle(roll: FilmRollData, label: { fit: number }, i: number) {
-	const brand = BRANDS.find(([re]) => re.test(roll.stockLabel));
-	let can = brand?.[1];
-	let ink = brand?.[2];
-	if (!can) {
-		const hue = [...roll.stock].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
-		can = `oklch(58% 0.12 ${hue})`;
-		ink = '#f7f4ee';
-	}
-	return { '--can': can, '--can-ink': ink, '--label-fit': label.fit.toFixed(3), '--i': i };
-}
 </script>
 
 <style scoped>
 .rolls {
-	--can-w: 44px;
 	--can-h: 102px;
-	/* Length of the label along the canister body, for fitting names. */
-	--label-room: 74px;
 	--frame-w: 66px;
 	--frame-h: 44px;
 	--rail: 10px;
@@ -259,6 +190,8 @@ function canStyle(roll: FilmRollData, label: { fit: number }, i: number) {
 	flex-direction: column;
 	align-items: flex-start;
 	gap: 0.4rem;
+	/* As wide as the canister and its film; the title wraps beneath them. */
+	width: min-content;
 	padding: 0 0 0.5rem;
 	border: 0;
 	background: none;
@@ -309,85 +242,12 @@ function canStyle(roll: FilmRollData, label: { fit: number }, i: number) {
 	transform: translateY(-3px);
 }
 
-/* ── The canister ── */
+/* ── The canister (FilmCanister.vue draws it; this is how it sits here) ── */
 
 .canister {
-	position: relative;
 	z-index: 2;
-	display: flex;
-	flex: none;
-	flex-direction: column;
-	align-items: center;
-	width: var(--can-w);
-	height: var(--can-h);
 	transform-origin: 50% 85%;
 	transition: rotate 300ms cubic-bezier(0.33, 1, 0.68, 1);
-}
-
-/* Cylinder shading shared by spool, caps and body. */
-.can-cap,
-.can-body,
-.can-spool {
-	background-image: linear-gradient(
-		90deg,
-		rgba(0, 0, 0, 0.32) 0%,
-		rgba(255, 255, 255, 0.34) 28%,
-		rgba(255, 255, 255, 0.08) 52%,
-		rgba(0, 0, 0, 0.36) 100%
-	);
-}
-
-.can-spool {
-	flex: none;
-	width: 34%;
-	height: 7px;
-	border-radius: 2px 2px 0 0;
-	background-color: #3b3632;
-}
-
-.can-cap {
-	flex: none;
-	width: 100%;
-	height: 7px;
-	border-radius: 3px;
-	background-color: #b9b4aa;
-}
-
-.can-body {
-	position: relative;
-	display: grid;
-	place-items: center;
-	flex: 1;
-	width: calc(100% - 4px);
-	overflow: hidden;
-	background-color: var(--can);
-}
-
-.can-label {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	writing-mode: vertical-rl;
-	rotate: 180deg;
-	color: var(--can-ink);
-	font-family: var(--font-brand);
-	font-size: calc(var(--label-room) * var(--label-fit));
-	font-weight: 700;
-	line-height: 1.05;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-	white-space: nowrap;
-}
-
-/* Felt light-trap the film slides out through. */
-.can-lip {
-	position: absolute;
-	top: 20px;
-	bottom: 12px;
-	right: -2px;
-	width: 5px;
-	border-radius: 2px;
-	background: #120f0d;
 }
 
 /* ── The film ── */
@@ -470,11 +330,19 @@ function canStyle(roll: FilmRollData, label: { fit: number }, i: number) {
 }
 
 .roll-meta {
+	/* Long titles wrap under the film (up to three lines) instead of running
+	   into the next roll. */
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
+	line-clamp: 3;
+	overflow: hidden;
 	padding-left: 2px;
 	font-size: var(--text-sm);
+	line-height: 1.35;
 	letter-spacing: 0.06em;
 	font-variant-caps: all-small-caps;
-	white-space: nowrap;
+	overflow-wrap: anywhere;
 	color: var(--gray-300);
 	transition: color 200ms ease;
 }
@@ -566,9 +434,7 @@ function canStyle(roll: FilmRollData, label: { fit: number }, i: number) {
 
 @media (max-width: 40em) {
 	.rolls {
-		--can-w: 36px;
 		--can-h: 84px;
-		--label-room: 60px;
 		--frame-w: 52px;
 		--frame-h: 35px;
 		--rail: 9px;
@@ -584,11 +450,6 @@ function canStyle(roll: FilmRollData, label: { fit: number }, i: number) {
 
 	.leader {
 		clip-path: path('M0 0 H5 C11 0 10 25 17 25 H24 Q28 25 28 29 V53 H0 Z');
-	}
-
-	.can-lip {
-		top: 17px;
-		bottom: 10px;
 	}
 }
 </style>

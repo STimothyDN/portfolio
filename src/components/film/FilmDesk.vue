@@ -34,22 +34,99 @@
 		<div
 			ref="deskRef"
 			class="desk"
-			:style="deskHeight ? { height: `${deskHeight}px` } : undefined"
+			:class="{ 'is-vertical': vertical }"
+			:style="deskStyle"
 			role="region"
 			aria-label="Film prints"
 		>
 			<div ref="glowRef" class="glow" aria-hidden="true"><span class="glow-light"></span></div>
 
-			<header
+			<!-- Organized view: each roll is cut into strips of negatives, with the
+			     prints settling into their frames (they're positioned separately).
+			     A roll's first strip spools out of its canister; its last runs on
+			     into a blank leader and the cut tongue. -->
+			<TransitionGroup name="neg">
+				<div
+					v-for="(strip, k) in strips"
+					:key="strip.key"
+					class="neg-strip"
+					:class="{ 'is-tail': strip.tail }"
+					:style="{
+						left: `${strip.x}px`,
+						top: `${strip.y}px`,
+						width: `${strip.w}px`,
+						height: `${strip.h}px`,
+						'--k': k,
+					}"
+					aria-hidden="true"
+				>
+					<template v-for="f in strip.frames" :key="f.idx">
+						<span class="neg-window" :style="{ left: `${f.x}px`, top: `${f.y}px` }"></span>
+						<span class="neg-edge" :style="vertical ? { top: `${f.y}px` } : { left: `${f.x}px` }">
+							<span class="neg-stock">{{ f.stock }}</span>
+							<span class="neg-num">{{ f.n }}</span>
+							<span class="neg-num neg-num--half">▸ {{ f.n }}A</span>
+						</span>
+					</template>
+					<svg v-if="strip.tail && !vertical" class="neg-tongue" viewBox="0 0 40 100" preserveAspectRatio="none">
+						<path d="M0 0 H8 C16 0 15 46 26 46 H35 Q40 46 40 52 V100 H0 Z" />
+					</svg>
+					<svg v-if="strip.tail && vertical" class="neg-tongue" viewBox="0 0 100 40" preserveAspectRatio="none">
+						<path d="M0 0 H100 V35 Q100 40 95 40 H58 Q54 40 54 36 V26 C54 18 20 10 0 8 Z" />
+					</svg>
+				</div>
+			</TransitionGroup>
+
+			<TransitionGroup name="neg">
+				<FilmCanister
+					v-for="can in canisters"
+					:key="can.key"
+					class="desk-can"
+					:class="{ 'is-lying': vertical }"
+					:stock="can.stock"
+					:stock-label="can.stockLabel"
+					:style="{
+						left: `${can.x - (can.h * 0.43) / 2}px`,
+						top: `${can.y - can.h / 2}px`,
+						'--can-h': `${can.h}px`,
+						'--k': can.k,
+					}"
+				/>
+			</TransitionGroup>
+
+			<!-- The lab's sticker on each leader, the roll's name written on in marker. -->
+			<TransitionGroup name="neg">
+				<p
+					v-for="tag in stickers"
+					:key="tag.key"
+					class="lab-sticker"
+					:style="{
+						left: `${tag.x}px`,
+						top: `${tag.y}px`,
+						width: `${tag.w}px`,
+						height: `${tag.h}px`,
+						'--tilt': `${tag.tilt}deg`,
+						'--fs': `${tag.fs}px`,
+						'--k': tag.k,
+					}"
+				>
+					<span v-for="(line, n) in tag.lines" :key="n">{{ line }}</span>
+				</p>
+			</TransitionGroup>
+
+			<!-- A quiet heading per group (camera, film, lab or year) — none when
+			     grouped by roll, since each roll's sticker names it. -->
+			<h3
 				v-for="head in heads"
 				:key="head.key"
 				class="group-head"
-				:style="{ transform: `translateY(${head.y}px)`, left: `${gridPad}px`, right: `${gridPad}px` }"
+				:style="{ left: `${head.x}px`, width: `${head.w}px`, transform: `translateY(${head.y}px)` }"
 			>
-				<p class="group-eyebrow">{{ head.eyebrow }}</p>
-				<h3 class="group-title">{{ head.label }}</h3>
-				<p class="group-meta">{{ head.meta }}</p>
-			</header>
+				<span class="group-eyebrow">{{ head.eyebrow }}</span>
+				<span class="group-title">{{ head.label }}</span>
+				<span class="group-rule" aria-hidden="true"></span>
+				<span class="group-meta">{{ head.meta }}</span>
+			</h3>
 
 			<button
 				v-for="i in rendered"
@@ -98,11 +175,15 @@ import { gsap } from 'gsap';
 
 import PhotoLightbox from '../PhotoLightbox.vue';
 import FilmFilterDock from './FilmFilterDock.vue';
+import '@fontsource/permanent-marker/400.css';
+
+import FilmCanister from './FilmCanister.vue';
 import FilmRollStrip from './FilmRollStrip.vue';
+import { bestSplit } from './canister';
 import { bunnyUrl } from '../../utils/bunny';
 import {
 	clamp,
-	layoutGrid,
+	layoutStrips,
 	layoutPile,
 	mulberry32,
 	pileCapacity,
@@ -166,6 +247,7 @@ const universe = Object.fromEntries(
 	})
 ) as Record<FacetKey, string[]>;
 
+const rollById = new Map(props.rolls.map((roll) => [roll.id, roll]));
 const framesByRoll = props.rolls.map(() => [] as number[]);
 props.photos.forEach((p, i) => framesByRoll[p.r].push(i));
 
@@ -285,8 +367,37 @@ const bottomRef = ref<HTMLElement | null>(null);
 
 const printLong = ref(200);
 const deskHeight = ref(0);
-const gridPad = ref(24);
-const heads = ref<{ key: string; y: number; eyebrow: string; label: string; meta: string }[]>([]);
+const vertical = ref(false);
+const strips = ref<
+	{
+		key: string;
+		x: number;
+		y: number;
+		w: number;
+		h: number;
+		tail: boolean;
+		frames: { idx: number; x: number; y: number; n: number; stock: string }[];
+	}[]
+>([]);
+const heads = ref<{ key: string; x: number; y: number; w: number; eyebrow: string; label: string; meta: string }[]>([]);
+const canisters = ref<{ key: string; x: number; y: number; h: number; k: number; stock: string; stockLabel: string }[]>(
+	[]
+);
+const stickers = ref<
+	{ key: string; x: number; y: number; w: number; h: number; k: number; lines: string[]; fs: number; tilt: number }[]
+>([]);
+const frameGeo = ref({ w: 0, h: 0, rail: 0, tongue: 0 });
+const deskStyle = computed(() => {
+	if (!deskHeight.value) return undefined;
+	const { w, h, rail, tongue } = frameGeo.value;
+	return {
+		height: `${deskHeight.value}px`,
+		'--fw': `${w}px`,
+		'--fh': `${h}px`,
+		'--rail': `${rail}px`,
+		'--tongue': `${tongue}px`,
+	};
+});
 /** Photo indices with a DOM print, in focus order. */
 const rendered = ref<number[]>([]);
 const pileSet = shallowRef(new Set<number>());
@@ -441,27 +552,56 @@ async function applyLayout(kind: Kind) {
 		if (!pile.length) buildPile();
 		const area = pileArea();
 		deskHeight.value = geo.H;
+		strips.value = [];
+		canisters.value = [];
+		stickers.value = [];
 		heads.value = [];
 		for (const e of pile) {
 			next.set(e.i, { x: e.slot.u * area.w, y: geo.top + e.slot.v * area.h, r: e.slot.r, s: 1, z: e.z });
 		}
 		order = [...pile].sort((a, b) => b.z - a.z).map((e) => e.i);
 	} else {
-		const grid = layoutGrid(groups.value, geo.W, {
-			top: geo.navH + 16,
+		const sheet = layoutStrips(groups.value, geo.W, {
+			top: geo.navH + 28,
 			bottom: geo.bottomH + 40,
 			maxContent: 1280,
+			runOf: (i) => props.rolls[props.photos[i].r].id,
+			headings: facetOrder.value[0] !== 'roll',
 		});
-		deskHeight.value = Math.max(grid.height, geo.H);
-		gridPad.value = grid.pad;
+		vertical.value = sheet.vertical;
 		const f = facetOrder.value[0];
-		heads.value = grid.heads.map((h) => ({ ...h, ...groupInfo(f, h.key) }));
+		heads.value = sheet.heads.map((h) => ({ ...h, ...groupInfo(f, h.key) }));
+		deskHeight.value = Math.max(sheet.height, geo.H);
+		frameGeo.value = { ...sheet.frame, rail: sheet.rail, tongue: sheet.tongue };
+		canisters.value = sheet.canisters.map((can, k) => {
+			const roll = rollById.get(can.run)!;
+			return { ...can, k, stock: roll.stock, stockLabel: roll.stockLabel };
+		});
+		stickers.value = sheet.stickers.map((tag, k) => {
+			const roll = rollById.get(tag.run)!;
+			return { ...tag, k, ...stickerText(roll.title, tag.w, tag.h), tilt: tiltOf(roll.id) };
+		});
+		strips.value = sheet.strips.map((strip) => ({
+			...strip,
+			frames: strip.frames.map((fr) => ({
+				...fr,
+				n: props.photos[fr.idx].n,
+				stock: props.rolls[props.photos[fr.idx].r].stockLabel.toUpperCase(),
+			})),
+		}));
 		order = groups.value.flatMap((g) => g.items);
 		order.forEach((i, k) => {
-			const c = grid.centers.get(i)!;
+			const c = sheet.centers.get(i)!;
 			const size = sizeOf(i);
-			const s = Math.min((grid.cell.w * 0.94) / size.w, (grid.cell.h * 0.94) / size.h);
-			next.set(i, { x: c.x, y: c.y, r: 0, s, z: k + 1 });
+			// Frames sit along the film as developed: landscape on strips across
+			// the page, portrait on strips standing down it. A shot taken the
+			// other way round lies sideways in its frame (turned clockwise).
+			const frameTall = sheet.frame.h > sheet.frame.w;
+			const turn = size.h > size.w !== frameTall;
+			const s = turn
+				? Math.min(sheet.frame.w / size.h, sheet.frame.h / size.w)
+				: Math.min(sheet.frame.w / size.w, sheet.frame.h / size.h);
+			next.set(i, { x: c.x, y: c.y, r: turn ? 90 : 0, s, z: k + 1 });
 		});
 	}
 
@@ -641,24 +781,34 @@ async function retoss() {
 
 const topOfPile = (n = 24) => pile.slice(-n).map((e) => e.i);
 
+/** Heading for one group: what it is, its name, and how much is in it. */
 function groupInfo(f: FacetKey, key: string) {
 	const items = groups.value.find((g) => g.key === key)?.items ?? [];
-	const label = labelOf[f].get(key) ?? key;
-	if (f === 'roll') {
-		const roll = props.rolls.find((r) => r.id === key)!;
-		return {
-			eyebrow: `Roll · developed ${fullDate(roll.developed)}`,
-			label,
-			meta: `${roll.cameraLabel} · ${roll.stockLabel} · ${roll.labLabel} · ${plural(items.length, 'frame')}`,
-		};
-	}
 	const rollsIn = new Set(items.map((i) => props.photos[i].r)).size;
 	return {
-		eyebrow: FILTER_FACETS.find((x) => x.key === f)?.title ?? f,
-		label,
+		eyebrow: FILTER_FACETS.find((x) => x.key === f)?.title ?? '',
+		label: labelOf[f].get(key) ?? key,
 		meta: `${plural(items.length, 'frame')} · ${plural(rollsIn, 'roll')}`,
 	};
 }
+
+/**
+ * The roll's name as a lab tech would write it on the leader's sticker: in
+ * marker, broken over up to three lines to write as large as the sticker
+ * allows (the marker face runs about 0.6em per character).
+ */
+function stickerText(title: string, w: number, h: number) {
+	const innerW = w * 0.82;
+	const innerH = h * 0.74;
+	const { lines, score } = bestSplit(title, 3, (ls) => {
+		const longest = Math.max(...ls.map((l) => l.length));
+		return Math.min(innerH / (ls.length * 1.08), innerW / (longest * 0.6), h * 0.34);
+	});
+	return { lines, fs: Math.max(8, Math.round(score * 10) / 10) };
+}
+
+/** Each sticker goes on a little crooked — always the same way for a given roll. */
+const tiltOf = (id: string) => ([...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 3) % 9) - 5;
 
 /* ── Hover glow ─────────────────────────────────────────────────────── */
 
@@ -914,6 +1064,10 @@ onBeforeUnmount(() => {
 		0 10px 22px -10px rgba(17, 16, 16, 0.22);
 	/* Warm rim light on the hovered print, on top of its color halo (.glow). */
 	--print-glow: 0 0 0 1px rgba(255, 250, 238, 0.9), 0 0 18px 2px rgba(255, 236, 200, 0.55);
+	/* Negative strips: warm film base, darker frame gaps, amber edge print. */
+	--neg-base: #211a14;
+	--neg-frame: #0f0b09;
+	--neg-ink: rgba(232, 168, 82, 0.85);
 	position: relative;
 }
 
@@ -921,6 +1075,8 @@ onBeforeUnmount(() => {
 	--paper: #ece8df;
 	--print-rest: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 10px 24px -8px rgba(0, 0, 0, 0.9);
 	--print-glow: 0 0 0 1px rgba(255, 250, 238, 0.95), 0 0 28px 6px rgba(255, 238, 205, 0.45);
+	--neg-base: #2c241d;
+	--neg-frame: #120e0b;
 }
 
 /* ── Floating chrome ── */
@@ -1026,6 +1182,153 @@ onBeforeUnmount(() => {
 	touch-action: manipulation;
 }
 
+/* ── Negative strips (organized view) ── */
+
+.neg-strip {
+	/* Real 35mm proportions, scaled from the rail: holes ~2mm in a 5.5mm rail,
+	   ~4.75mm apart, about 2mm in from the edge. */
+	--hole-h: calc(var(--rail) * 0.36);
+	--hole-w: calc(var(--hole-h) * 1.4);
+	--hole-y: calc(var(--rail) * 0.36);
+	--pitch: calc(var(--rail) * 0.9);
+	--holes:
+		linear-gradient(90deg, #000 0 var(--hole-w), transparent var(--hole-w)) calc(var(--pitch) * 0.3)
+			var(--hole-y) / var(--pitch) var(--hole-h) repeat-x,
+		linear-gradient(90deg, #000 0 var(--hole-w), transparent var(--hole-w)) calc(var(--pitch) * 0.3)
+			calc(100% - var(--hole-y)) / var(--pitch) var(--hole-h) repeat-x;
+	position: absolute;
+	z-index: 0;
+	border-radius: 2px;
+	background: var(--neg-base);
+	/* Holes punched through to the desk. */
+	-webkit-mask: var(--holes), linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask: var(--holes), linear-gradient(#000 0 0);
+	mask-composite: exclude;
+}
+
+/* Standing strips (phones): rails, holes and edge print run down the sides. */
+.is-vertical .neg-strip {
+	--holes:
+		linear-gradient(180deg, #000 0 var(--hole-w), transparent var(--hole-w)) var(--hole-y)
+			calc(var(--pitch) * 0.3) / var(--hole-h) var(--pitch) repeat-y,
+		linear-gradient(180deg, #000 0 var(--hole-w), transparent var(--hole-w)) calc(100% - var(--hole-y))
+			calc(var(--pitch) * 0.3) / var(--hole-h) var(--pitch) repeat-y;
+}
+
+/* The exposed frame itself — the photo settles over it (and, when a photo
+   doesn't fill the frame, it shows around the edges like unexposed film). */
+.neg-window {
+	position: absolute;
+	width: var(--fw);
+	height: var(--fh);
+	border-radius: 1px;
+	background: var(--neg-frame);
+}
+
+/* Edge printing: stock name along the top, frame numbers along the bottom. */
+.neg-edge {
+	position: absolute;
+	inset: 0 auto;
+	width: var(--fw);
+	color: var(--neg-ink);
+	font-family: var(--font-body);
+	font-size: calc(var(--rail) * 0.3);
+	font-weight: 600;
+	line-height: 1;
+	letter-spacing: 0.08em;
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+.neg-stock,
+.neg-num {
+	position: absolute;
+	overflow: hidden;
+}
+
+.neg-stock {
+	top: calc(var(--rail) * 0.04);
+	left: 5%;
+	max-width: 95%;
+}
+
+.neg-num {
+	bottom: calc(var(--rail) * 0.04);
+	left: 6%;
+}
+
+.neg-num--half {
+	left: 56%;
+}
+
+.is-vertical .neg-edge {
+	inset: auto 0;
+	width: auto;
+	height: var(--fh);
+}
+
+.is-vertical .neg-stock,
+.is-vertical .neg-num {
+	writing-mode: vertical-rl;
+}
+
+.is-vertical .neg-stock {
+	top: 5%;
+	right: calc(var(--rail) * 0.04);
+	left: auto;
+	max-width: none;
+	max-height: 95%;
+}
+
+.is-vertical .neg-num {
+	top: 6%;
+	left: calc(var(--rail) * 0.04);
+	bottom: auto;
+}
+
+.is-vertical .neg-num--half {
+	top: 56%;
+}
+
+.neg-leave-active {
+	transition: opacity 300ms ease;
+}
+
+.neg-leave-to {
+	opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* Re-filing slides strips to their new rows (box properties — not
+	   transform, which would hand them to TransitionGroup's FLIP). */
+	.neg-strip {
+		transition:
+			left 850ms cubic-bezier(0.65, 0, 0.35, 1),
+			top 850ms cubic-bezier(0.65, 0, 0.35, 1),
+			width 850ms cubic-bezier(0.65, 0, 0.35, 1),
+			height 850ms cubic-bezier(0.65, 0, 0.35, 1);
+		animation: neg-in 700ms calc(min(var(--k), 12) * 45ms) cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+	}
+
+	.is-vertical .neg-strip {
+		animation-name: neg-in-down;
+	}
+
+	/* A new strip pulls out from its head end. */
+	@keyframes neg-in {
+		from {
+			clip-path: inset(0 100% 0 0);
+		}
+	}
+
+	@keyframes neg-in-down {
+		from {
+			clip-path: inset(0 0 100% 0);
+		}
+	}
+}
+
 .is-dragging,
 .is-dragging .print {
 	cursor: grabbing;
@@ -1042,7 +1345,16 @@ onBeforeUnmount(() => {
 	box-shadow: var(--print-rest);
 	transition:
 		scale 260ms cubic-bezier(0.33, 1, 0.68, 1),
-		box-shadow 260ms ease;
+		box-shadow 260ms ease,
+		padding 600ms cubic-bezier(0.33, 1, 0.68, 1),
+		background-color 600ms ease;
+}
+
+/* Filed into a strip, a print sheds its paper border and becomes a frame. */
+.is-grid .print-body {
+	padding: 0;
+	background-color: var(--neg-frame);
+	box-shadow: none;
 }
 
 .print-body img {
@@ -1126,17 +1438,118 @@ onBeforeUnmount(() => {
 	filter: blur(34px) saturate(2.2) brightness(1.6);
 }
 
-/* ── Grid group headings ── */
+/* ── A roll's two ends ── */
 
+@keyframes head-in {
+	from {
+		opacity: 0;
+	}
+}
+
+/* The last strip's base stops short of its cut tongue (drawn by the SVG). */
+.neg-strip.is-tail {
+	background: linear-gradient(var(--neg-base) 0 0) 0 0 / calc(100% - var(--tongue) + 1px) 100% no-repeat;
+}
+
+.is-vertical .neg-strip.is-tail {
+	background-size: 100% calc(100% - var(--tongue) + 1px);
+}
+
+.neg-tongue {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: var(--tongue);
+	height: 100%;
+	fill: var(--neg-base);
+}
+
+.is-vertical .neg-tongue {
+	top: auto;
+	bottom: 0;
+	width: 100%;
+	height: var(--tongue);
+}
+
+/* The canister at the head of a roll, its film running out of the felt lip
+   into the first strip (which starts tucked underneath). */
+.desk > .desk-can {
+	position: absolute;
+	z-index: 1;
+	filter: drop-shadow(0 8px 10px rgba(17, 16, 16, 0.25));
+	animation: head-in 450ms calc(min(var(--k), 12) * 60ms) ease-out backwards;
+}
+
+/* Standing strips: the canister lies across the head of the first one, lip down. */
+.desk > .desk-can.is-lying {
+	rotate: 90deg;
+}
+
+:root.theme-dark .desk > .desk-can {
+	filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.8));
+}
+
+/* The lab's sticker on the leader: a slip of cream label stock, slapped on a
+   little crooked, the roll's name written in marker. */
+.lab-sticker {
+	position: absolute;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	border-radius: 2px;
+	background:
+		linear-gradient(170deg, rgba(255, 255, 255, 0.55), transparent 45%),
+		linear-gradient(to bottom, transparent 0 12%, rgba(120, 150, 190, 0.18) 12% 14%, transparent 14%),
+		#efe8d6;
+	box-shadow:
+		0 1px 1px rgba(0, 0, 0, 0.3),
+		0 4px 10px -4px rgba(0, 0, 0, 0.45);
+	color: #18191d;
+	font-family: 'Permanent Marker', var(--font-brand), cursive;
+	font-size: var(--fs);
+	line-height: 1.05;
+	text-align: center;
+	rotate: var(--tilt);
+	animation: slap-on 420ms calc(300ms + min(var(--k), 12) * 60ms) cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
+}
+
+/* Handwriting never sits quite level. */
+.lab-sticker span:nth-child(2) {
+	rotate: 1.2deg;
+	translate: 0.15em 0;
+}
+
+.lab-sticker span:nth-child(3) {
+	rotate: -0.8deg;
+}
+
+@keyframes slap-on {
+	from {
+		opacity: 0;
+		scale: 1.25;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.desk-can,
+	.lab-sticker {
+		animation: none;
+	}
+}
+
+/* A quiet heading per group: what it is, its name, a hairline, the count. */
 .group-head {
 	position: absolute;
 	top: 0;
 	display: flex;
-	flex-wrap: wrap;
 	align-items: baseline;
-	column-gap: 1rem;
-	padding-top: 0.75rem;
-	border-top: 1px solid var(--gray-800);
+	gap: 0.6rem;
+	margin: 0;
+	padding-top: 0.25rem;
+	font-weight: 400;
 	animation: head-in 500ms 250ms cubic-bezier(0.33, 1, 0.68, 1) backwards;
 }
 
@@ -1146,32 +1559,39 @@ onBeforeUnmount(() => {
 	}
 }
 
-@keyframes head-in {
-	from {
-		opacity: 0;
-	}
-}
-
-.group-eyebrow {
-	flex-basis: 100%;
+.group-eyebrow,
+.group-meta {
+	flex: none;
+	font-family: var(--font-body);
 	font-size: var(--text-sm);
-	letter-spacing: 0.1em;
+	letter-spacing: 0.08em;
 	font-variant-caps: all-small-caps;
 	color: var(--gray-300);
 }
 
 .group-title {
-	font-size: var(--text-xl);
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-family: var(--font-brand);
+	font-size: var(--text-md);
 	font-weight: 500;
-	line-height: 1.2;
-	color: var(--gray-0);
+	color: var(--gray-100);
 }
 
-.group-meta {
-	font-size: var(--text-sm);
-	letter-spacing: 0.06em;
-	font-variant-caps: all-small-caps;
-	color: var(--gray-300);
+.group-rule {
+	flex: 1;
+	min-width: 1rem;
+	height: 1px;
+	align-self: center;
+	background: var(--gray-800);
+}
+
+@media (max-width: 40em) {
+	.group-eyebrow {
+		display: none;
+	}
 }
 
 .desk-empty {

@@ -1,5 +1,5 @@
 {
-  "title": "Lolla 2",
+  "title": "Lollapalooza 2026 Roll 2",
   "developed": "2026-08-03",
   "camera": "nikononetouch",
   "stock": "fujisuperiaxtra400",
@@ -7,51 +7,51 @@
   "photos": [
     {
       "filename": "TimothyNav300516-R1-002-00A.jpg",
-      "width": 4535,
-      "height": 3118,
-      "priority": 3
+      "width": 3118,
+      "height": 4535,
+      "priority": 5
     },
     {
       "filename": "TimothyNav300516-R1-004-0A.jpg",
-      "width": 4535,
-      "height": 3118,
-      "priority": 3
+      "width": 3118,
+      "height": 4535,
+      "priority": 1
     },
     {
       "filename": "TimothyNav300516-R1-006-1A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "TimothyNav300516-R1-008-2A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "TimothyNav300516-R1-010-3A.jpg",
-      "width": 4535,
-      "height": 3118,
-      "priority": 3
+      "width": 3118,
+      "height": 4535,
+      "priority": 1
     },
     {
       "filename": "TimothyNav300516-R1-012-4A.jpg",
-      "width": 4535,
-      "height": 3118,
+      "width": 3118,
+      "height": 4535,
       "priority": 3
     },
     {
       "filename": "TimothyNav300516-R1-014-5A.jpg",
-      "width": 4535,
-      "height": 3118,
-      "priority": 3
+      "width": 3118,
+      "height": 4535,
+      "priority": 4
     },
     {
       "filename": "TimothyNav300516-R1-016-6A.jpg",
-      "width": 4535,
-      "height": 3118,
-      "priority": 3
+      "width": 3118,
+      "height": 4535,
+      "priority": 5
     },
     {
       "filename": "TimothyNav300516-R1-018-7A.jpg",
@@ -63,7 +63,7 @@
       "filename": "TimothyNav300516-R1-020-8A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 4
     },
     {
       "filename": "TimothyNav300516-R1-022-9A.jpg",
@@ -75,31 +75,31 @@
       "filename": "TimothyNav300516-R1-024-10A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 1
     },
     {
       "filename": "TimothyNav300516-R1-026-11A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 1
     },
     {
       "filename": "TimothyNav300516-R1-028-12A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 4
     },
     {
       "filename": "TimothyNav300516-R1-030-13A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "TimothyNav300516-R1-032-14A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 5
     },
     {
       "filename": "TimothyNav300516-R1-034-15A.jpg",
@@ -111,60 +111,60 @@
       "filename": "TimothyNav300516-R1-036-16A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 4
     },
     {
       "filename": "TimothyNav300516-R1-038-17A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "TimothyNav300516-R1-040-18A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 5
     },
     {
       "filename": "TimothyNav300516-R1-042-19A.jpg",
-      "width": 4535,
-      "height": 3118,
+      "width": 3118,
+      "height": 4535,
       "priority": 3
     },
     {
       "filename": "TimothyNav300516-R1-044-20A.jpg",
-      "width": 4535,
-      "height": 3118,
+      "width": 3118,
+      "height": 4535,
       "priority": 3
     },
     {
       "filename": "TimothyNav300516-R1-046-21A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 4
     },
     {
       "filename": "TimothyNav300516-R1-048-22A.jpg",
-      "width": 4535,
-      "height": 3118,
-      "priority": 3
+      "width": 3118,
+      "height": 4535,
+      "priority": 4
     },
     {
       "filename": "TimothyNav300516-R1-050-23A.jpg",
-      "width": 4535,
-      "height": 3118,
+      "width": 3118,
+      "height": 4535,
       "priority": 3
     },
     {
       "filename": "TimothyNav300516-R1-052-24A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 5
     },
     {
       "filename": "TimothyNav300516-R1-054-25A.jpg",
-      "width": 4535,
-      "height": 3118,
+      "width": 3118,
+      "height": 4535,
       "priority": 3
     }
   ]

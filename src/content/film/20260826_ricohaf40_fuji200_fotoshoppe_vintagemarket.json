@@ -1,5 +1,5 @@
 {
-  "title": "Vintagemarket",
+  "title": "Raleigh Vintage Market/Chimney Ridge/Dog Park, August 2026",
   "developed": "2026-08-26",
   "camera": "ricohaf40",
   "stock": "fuji200",
@@ -9,31 +9,31 @@
       "filename": "NavarrT001256-R1-002-00A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 1
     },
     {
       "filename": "NavarrT001256-R1-004-0A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 5
     },
     {
       "filename": "NavarrT001256-R1-006-1A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 4
     },
     {
       "filename": "NavarrT001256-R1-008-2A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-010-3A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 5
     },
     {
       "filename": "NavarrT001256-R1-012-4A.jpg",
@@ -45,25 +45,25 @@
       "filename": "NavarrT001256-R1-014-5A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-016-6A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-018-7A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-020-8A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-022-9A.jpg",
@@ -75,18 +75,18 @@
       "filename": "NavarrT001256-R1-024-10A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 1
     },
     {
       "filename": "NavarrT001256-R1-026-11A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 4
     },
     {
       "filename": "NavarrT001256-R1-028-12A.jpg",
-      "width": 3637,
-      "height": 2433,
+      "width": 2433,
+      "height": 3637,
       "priority": 3
     },
     {
@@ -97,14 +97,14 @@
     },
     {
       "filename": "NavarrT001256-R1-032-14A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 4
     },
     {
       "filename": "NavarrT001256-R1-034-15A.jpg",
-      "width": 3637,
-      "height": 2433,
+      "width": 2433,
+      "height": 3637,
       "priority": 3
     },
     {
@@ -117,7 +117,7 @@
       "filename": "NavarrT001256-R1-038-17A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-040-18A.jpg",
@@ -133,21 +133,21 @@
     },
     {
       "filename": "NavarrT001256-R1-044-20A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 5
     },
     {
       "filename": "NavarrT001256-R1-046-21A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-048-22A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-050-23A.jpg",
@@ -157,9 +157,9 @@
     },
     {
       "filename": "NavarrT001256-R1-052-24A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-054-25A.jpg",
@@ -177,12 +177,12 @@
       "filename": "NavarrT001256-R1-058-27A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-060-28A.jpg",
-      "width": 3637,
-      "height": 2433,
+      "width": 2433,
+      "height": 3637,
       "priority": 3
     },
     {
@@ -195,13 +195,13 @@
       "filename": "NavarrT001256-R1-064-30A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-066-31A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-068-32A.jpg",
@@ -211,27 +211,27 @@
     },
     {
       "filename": "NavarrT001256-R1-070-33A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-072-34A.jpg",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-074-35A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 2
     },
     {
       "filename": "NavarrT001256-R1-076-36A.jpg",
-      "width": 3637,
-      "height": 2433,
-      "priority": 3
+      "width": 2433,
+      "height": 3637,
+      "priority": 2
     }
   ]
 }

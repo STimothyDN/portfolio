@@ -50,6 +50,16 @@ JPEG first), writes `src/content/film/<roll-id>.json`, and adds a display name t
 [`src/data/film-labels.json`](../../data/film-labels.json) for any camera, film stock or
 lab it hasn't seen before. **Check those names and each roll's `title`**, then commit.
 
+Labs often save vertical shots sideways with an EXIF "rotate 90" flag. The uploader
+records each scan's size as it actually displays. Rolls uploaded before it did that can
+be corrected in place (it only swaps width/height where the CDN serves a scan the other
+way round):
+
+```bash
+npm run fix-film-orientation -- --dry-run   # see what would change
+npm run fix-film-orientation
+```
+
 `--force` re-runs a roll that's already uploaded and merges: new scans are added, and
 titles, priorities and captions you've edited are kept.
 
@@ -70,7 +80,9 @@ Rename something once there and every roll using it updates.
 
 Along the bottom of the page each roll is a film canister labeled with its **film stock**
 (the display name above, fitted onto up to three lines), with the roll's **title** and
-date under the strip of film. Canister colors follow the stock's display name (Kodak
+date under the strip of film. Pick a filter or a roll and the frames file into strips of
+negatives: each roll spools out of its canister and ends on a leader with the title
+written on a lab sticker. Canister colors follow the stock's display name (Kodak
 yellow, Fuji green, Lucky red, Ilford white, CineStill black; anything else gets a steady
 color of its own).
 

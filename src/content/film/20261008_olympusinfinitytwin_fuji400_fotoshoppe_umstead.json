@@ -1,5 +1,5 @@
 {
-  "title": "Umstead",
+  "title": "Dog Park/Umstead Park, October 2026",
   "developed": "2026-10-08",
   "camera": "olympusinfinitytwin",
   "stock": "fuji400",
@@ -7,15 +7,15 @@
   "photos": [
     {
       "filename": "NavarroT003026-R2-006-1A.jpg",
-      "width": 1818,
-      "height": 1228,
+      "width": 1228,
+      "height": 1818,
       "priority": 3
     },
     {
       "filename": "NavarroT003026-R2-008-2A.jpg",
-      "width": 1818,
-      "height": 1228,
-      "priority": 3
+      "width": 1228,
+      "height": 1818,
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-010-3A.jpg",
@@ -27,7 +27,7 @@
       "filename": "NavarroT003026-R2-012-4A.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-014-5A.jpg",
@@ -37,15 +37,15 @@
     },
     {
       "filename": "NavarroT003026-R2-016-6A.jpg",
-      "width": 1818,
-      "height": 1228,
+      "width": 1228,
+      "height": 1818,
       "priority": 3
     },
     {
       "filename": "NavarroT003026-R2-018-7A.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-020-8A.jpg",
@@ -57,7 +57,7 @@
       "filename": "NavarroT003026-R2-022-9A.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 5
     },
     {
       "filename": "NavarroT003026-R2-024-10A.jpg",
@@ -67,27 +67,27 @@
     },
     {
       "filename": "NavarroT003026-R2-026-11A.jpg",
-      "width": 1818,
-      "height": 1228,
+      "width": 1228,
+      "height": 1818,
       "priority": 3
     },
     {
       "filename": "NavarroT003026-R2-028-12A.jpg",
-      "width": 1818,
-      "height": 1228,
+      "width": 1228,
+      "height": 1818,
       "priority": 3
     },
     {
       "filename": "NavarroT003026-R2-030-13A.jpg",
-      "width": 1818,
-      "height": 1228,
+      "width": 1228,
+      "height": 1818,
       "priority": 3
     },
     {
       "filename": "NavarroT003026-R2-032-14A.jpg",
-      "width": 1818,
-      "height": 1228,
-      "priority": 3
+      "width": 1228,
+      "height": 1818,
+      "priority": 4
     },
     {
       "filename": "NavarroT003026-R2-034-15A.jpg",
@@ -103,57 +103,57 @@
     },
     {
       "filename": "NavarroT003026-R2-038-17A.jpg",
-      "width": 1818,
-      "height": 1228,
+      "width": 1228,
+      "height": 1818,
       "priority": 3
     },
     {
       "filename": "NavarroT003026-R2-040-18A.jpg",
-      "width": 1818,
-      "height": 1228,
-      "priority": 3
+      "width": 1228,
+      "height": 1818,
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-042-19A.jpg",
-      "width": 1818,
-      "height": 1228,
-      "priority": 3
+      "width": 1228,
+      "height": 1818,
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-044-20A.jpg",
-      "width": 1818,
-      "height": 1228,
-      "priority": 3
+      "width": 1228,
+      "height": 1818,
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-046-21A.jpg",
-      "width": 1818,
-      "height": 1228,
-      "priority": 3
+      "width": 1228,
+      "height": 1818,
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-048-22A.jpg",
-      "width": 1818,
-      "height": 1228,
+      "width": 1228,
+      "height": 1818,
       "priority": 3
     },
     {
       "filename": "NavarroT003026-R2-050-23A.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 4
     },
     {
       "filename": "NavarroT003026-R2-052-24A.jpg",
-      "width": 1818,
-      "height": 1228,
-      "priority": 3
+      "width": 1228,
+      "height": 1818,
+      "priority": 4
     },
     {
       "filename": "NavarroT003026-R2-054-25A.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 4
     },
     {
       "filename": "NavarroT003026-R2-056-26A.jpg",
@@ -165,25 +165,25 @@
       "filename": "NavarroT003026-R2-058-27A.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-060-28A.jpg",
-      "width": 1818,
-      "height": 1228,
+      "width": 1228,
+      "height": 1818,
       "priority": 3
     },
     {
       "filename": "NavarroT003026-R2-062-29A.jpg",
-      "width": 1818,
-      "height": 1228,
-      "priority": 3
+      "width": 1228,
+      "height": 1818,
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-064-30A.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-066-31A.jpg",
@@ -201,19 +201,19 @@
       "filename": "NavarroT003026-R2-070-33A.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 2
     },
     {
       "filename": "NavarroT003026-R2-072-34A.jpg",
-      "width": 1818,
-      "height": 1228,
+      "width": 1228,
+      "height": 1818,
       "priority": 3
     },
     {
       "filename": "NavarroT003026-R2-074-35A.jpg",
-      "width": 1818,
-      "height": 1228,
-      "priority": 3
+      "width": 1228,
+      "height": 1818,
+      "priority": 4
     },
     {
       "filename": "NavarroT003026-R2-076-36A.jpg",
@@ -225,7 +225,7 @@
       "filename": "NavarroT003026-R2-078-37A.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 1
     }
   ]
 }

@@ -219,6 +219,10 @@ async function scanMeta(buffer) {
 		// Leave dimensions unset; the site falls back to 3:2.
 	}
 	const tags = await exifr.parse(buffer, { xmp: true, ifd0: true, exif: false, gps: false }).catch(() => null);
+	// Labs often save vertical shots sideways with an EXIF "rotate 90" flag.
+	// Browsers and the CDN honor it, so record the size as displayed.
+	const orientation = await exifr.orientation(buffer).catch(() => undefined);
+	if (orientation >= 5 && orientation <= 8) [width, height] = [height, width];
 	return { width, height, rating: tags?.Rating };
 }
 

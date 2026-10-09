@@ -158,54 +158,295 @@ export interface GridGroupInput {
 	items: number[];
 }
 
-export interface GridLayout {
-	/** Print centers by photo index. */
+/** One cut strip of negatives: frames on a band of film base. */
+export interface NegativeStrip {
+	key: string;
+	/** The roll this strip was cut from. */
+	run: string;
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	/** Each frame window's photo index and top-left corner, relative to the strip. */
+	frames: { idx: number; x: number; y: number }[];
+	/** The roll's last strip: it runs out into a blank leader and cut tongue. */
+	tail: boolean;
+}
+
+export interface StripLayout {
+	/** Strips run down the page (narrow screens) instead of across it. */
+	vertical: boolean;
+	/** Frame-window centers by photo index. */
 	centers: Map<number, { x: number; y: number }>;
-	/** Box each print is fitted into. */
-	cell: Size;
-	heads: { key: string; y: number }[];
+	/** A 35mm frame window (3:2): landscape across the page, portrait down it. */
+	frame: Size;
+	/** Thickness of each sprocket rail along the strip's edges. */
+	rail: number;
+	strips: NegativeStrip[];
+	/** A canister at the head of each roll, its film spooling out into the first
+	 * strip: center point and standing height (it lies down on vertical layouts). */
+	canisters: { key: string; run: string; x: number; y: number; h: number }[];
+	/** The lab's sticker on each roll's leader, where the title is written. */
+	stickers: { key: string; run: string; x: number; y: number; w: number; h: number }[];
+	/** One subtle heading per group, when the grouping isn't by roll. */
+	heads: { key: string; x: number; y: number; w: number }[];
+	/** Length of the cut tongue at the very end of a leader. */
+	tongue: number;
 	height: number;
-	pad: number;
+}
+
+interface StripOpts {
+	top: number;
+	bottom: number;
+	maxContent: number;
+	/** The roll each frame belongs to — a strip never mixes rolls. */
+	runOf: (idx: number) => string;
+	/** Give each group a heading (off when grouping by roll: stickers name those). */
+	headings: boolean;
+}
+
+/** Group items into runs of consecutive frames from one roll. */
+function runsOf(items: number[], runOf: (idx: number) => string) {
+	const runs: { key: string; items: number[] }[] = [];
+	for (const idx of items) {
+		const run = runOf(idx);
+		if (runs.at(-1)?.key === run) runs.at(-1)!.items.push(idx);
+		else runs.push({ key: run, items: [idx] });
+	}
+	return runs;
 }
 
 /**
- * Contact-sheet grid: one labeled block per group, prints centered in uniform
- * cells (rows shorter than columns — most scans are landscape 3:2).
+ * Cut a roll's frames into strips of at most `cap` frames — fewer on the
+ * strip that also carries the leader (`capTail`). One frame is held back
+ * when needed so the leader never ends up on a strip of its own unless the
+ * leader can't share a strip at all.
  */
-export function layoutGrid(
-	groups: GridGroupInput[],
-	width: number,
-	opts: { top: number; bottom: number; maxContent: number }
-): GridLayout {
-	const narrow = width < 640;
-	const pad = Math.max(narrow ? 16 : 24, (width - opts.maxContent) / 2);
-	const inner = width - pad * 2;
-	const gap = narrow ? 10 : 18;
-	const target = narrow ? 150 : 176;
-	const cols = Math.max(2, Math.floor((inner + gap) / (target + gap)));
-	const cellW = (inner - gap * (cols - 1)) / cols;
-	const cellH = cellW * 0.72;
-	const headH = narrow ? 64 : 76;
-	const groupGap = narrow ? 36 : 52;
+function cutRoll(count: number, cap: (head: boolean) => number, capTail: (head: boolean) => number) {
+	const pieces: { from: number; to: number; tail: boolean }[] = [];
+	let i = 0;
+	while (i < count) {
+		const head = pieces.length === 0;
+		const open = Math.max(1, cap(head));
+		const withLeader = capTail(head);
+		const left = count - i;
+		let take: number;
+		let tail = false;
+		if (withLeader >= 1 && left <= withLeader) {
+			take = left;
+			tail = true;
+		} else if (withLeader >= 1 && left <= open) {
+			take = left - 1;
+		} else {
+			take = Math.min(left, open);
+		}
+		pieces.push({ from: i, to: i + take, tail });
+		i += take;
+	}
+	if (!pieces.at(-1)?.tail) pieces.push({ from: count, to: count, tail: true });
+	return pieces;
+}
+
+const LINE = 0.06; // frame line, as a fraction of frame width (horizontal strips)
+const END = 0.12; // blank film at each cut end
+
+/**
+ * The organized view: each roll laid out as cut strips of 35mm negatives, all
+ * evenly spaced. A roll's first strip spools out of its canister (which hangs
+ * out into the margin rather than taking room from the frames); its last runs
+ * on into a blank leader, where the lab's sticker carries the roll's name,
+ * and ends in the cut tongue. A strip never holds two rolls.
+ *
+ * Wide screens lay strips across the page; narrow screens cut each roll in
+ * half and stand the two long strips side by side. Either way the frames sit
+ * as they were developed: along the film, so a shot taken the other way round
+ * lies sideways in its frame.
+ */
+export function layoutStrips(groups: GridGroupInput[], width: number, opts: StripOpts): StripLayout {
+	return width < 640 ? layoutColumns(groups, width, opts) : layoutRows(groups, width, opts);
+}
+
+function layoutRows(groups: GridGroupInput[], width: number, opts: StripOpts): StripLayout {
+	const target = 188;
+	const CAN = 1.2; // canister height, relative to the strip's
+	const base = Math.max(24, (width - opts.maxContent) / 2);
+
+	// Widen the side margins until the canister fits in the left one. (Each
+	// pass sizes the frames for the current margins; stop as soon as they're
+	// wide enough, so frames and margins always agree.)
+	let pad = base;
+	let inner = 0;
+	let cols = 0;
+	let fw = 0;
+	for (let k = 0; k < 4; k++) {
+		inner = width - pad * 2;
+		cols = Math.max(2, Math.floor((inner / target - 2 * END + LINE) / (1 + LINE)));
+		fw = inner / (cols + LINE * (cols - 1) + 2 * END);
+		const need = fw * 0.96 * CAN * 0.43 - fw * END * 0.5 + 10;
+		if (need <= pad + 0.5) break;
+		pad = need;
+	}
+	const fh = fw / 1.5;
+	const rail = fh * 0.22;
+	const stripH = fh + rail * 2;
+	const pitch = fw * (1 + LINE);
+	const end = fw * END;
+	const canH = stripH * CAN;
+	const canW = canH * 0.43;
+	const tongue = stripH * 0.42;
+	const leader = fw * 1.9;
+	const rowGap = 18;
+	const groupGap = 40;
+	const headH = 46;
+
+	const fits = (room: number) => Math.max(0, Math.floor((room + fw * LINE) / pitch + 1e-6));
+	const cap = () => fits(inner - end * 2);
+	const capTail = () => fits(inner - end * 2 - leader);
 
 	const centers = new Map<number, { x: number; y: number }>();
-	const heads: { key: string; y: number }[] = [];
+	const strips: NegativeStrip[] = [];
+	const canisters: StripLayout['canisters'] = [];
+	const stickers: StripLayout['stickers'] = [];
+	const heads: StripLayout['heads'] = [];
 	let y = opts.top;
-	groups.forEach((group, g) => {
-		if (g > 0) y += groupGap;
-		heads.push({ key: group.key, y });
-		y += headH;
-		group.items.forEach((idx, i) => {
-			const col = i % cols;
-			const row = Math.floor(i / cols);
-			centers.set(idx, {
-				x: pad + col * (cellW + gap) + cellW / 2,
-				y: y + row * (cellH + gap) + cellH / 2,
+	let first = true;
+
+	groups.forEach((group) => {
+		if (!first) y += groupGap;
+		if (opts.headings) {
+			heads.push({ key: group.key, x: pad, y, w: inner });
+			y += headH;
+		} else if (!first) {
+			y -= groupGap - rowGap;
+		}
+		first = false;
+
+		runsOf(group.items, opts.runOf).forEach((run, ri) => {
+			if (ri > 0) y += rowGap;
+			const pieces = cutRoll(run.items.length, cap, capTail);
+			pieces.forEach((piece, r) => {
+				if (r > 0) y += rowGap;
+				const items = run.items.slice(piece.from, piece.to);
+				const frames = items.map((idx, c) => ({ idx, x: end + c * pitch, y: rail }));
+				for (const f of frames) centers.set(f.idx, { x: pad + f.x + fw / 2, y: y + rail + fh / 2 });
+				const framesEnd = end + (items.length ? items.length * pitch - fw * LINE : 0);
+				const w = piece.tail ? framesEnd + (items.length ? end : 0) + leader : framesEnd + end;
+				if (r === 0) {
+					// Standing in the margin, its lip at the strip's cut end.
+					canisters.push({ key: `${run.key}@can`, run: run.key, x: pad + end * 0.5 - canW / 2, y: y + stripH / 2, h: canH });
+				}
+				if (piece.tail) {
+					const zoneX = framesEnd + (items.length ? end : 0);
+					const zone = w - tongue * 0.55 - zoneX;
+					const sw = Math.min(zone * 0.9, fw * 1.5);
+					const sh = Math.min(fh * 0.7, sw * 0.62);
+					stickers.push({ key: `${run.key}@tag`, run: run.key, x: pad + zoneX + (zone - sw) / 2, y: y + (stripH - sh) / 2, w: sw, h: sh });
+				}
+				strips.push({ key: `${run.key}#${r}`, run: run.key, x: pad, y, w, h: stripH, frames, tail: piece.tail });
+				y += stripH;
 			});
 		});
-		const rows = Math.ceil(group.items.length / cols);
-		y += rows * cellH + Math.max(0, rows - 1) * gap;
 	});
 
-	return { centers, cell: { w: cellW, h: cellH }, heads, height: y + opts.bottom, pad };
+	return {
+		vertical: false,
+		centers,
+		frame: { w: fw, h: fh },
+		rail,
+		strips,
+		canisters,
+		stickers,
+		heads,
+		tongue,
+		height: y + opts.bottom,
+	};
+}
+
+function layoutColumns(groups: GridGroupInput[], width: number, opts: StripOpts): StripLayout {
+	const pad = 14;
+	const colGap = 14;
+	const inner = width - pad * 2;
+	const stripW = (inner - colGap) / 2;
+	// True 35mm across the film: 35mm wide, 24mm of image, 5.5mm rails. Running
+	// down the page, each 36mm frame is portrait-shaped, like a real strip.
+	const rail = stripW * (5.5 / 35);
+	const fw = stripW - rail * 2;
+	const fh = fw * 1.5;
+	const gap = fw * (2 / 24); // frame line
+	const pitch = fh + gap;
+	const end = fw * 0.16;
+	// Lying across the head of the roll's first strip, a little wider than the film.
+	const canH = stripW * 1.06;
+	const canThick = canH * 0.43;
+	const headStart = canThick * 0.82;
+	const tongue = stripW * 0.4;
+	const leader = fw * 1.25;
+	const rowGap = 14;
+	const groupGap = 32;
+	const headH = 40;
+
+	const centers = new Map<number, { x: number; y: number }>();
+	const strips: NegativeStrip[] = [];
+	const canisters: StripLayout['canisters'] = [];
+	const stickers: StripLayout['stickers'] = [];
+	const heads: StripLayout['heads'] = [];
+	let y = opts.top;
+	let first = true;
+
+	groups.forEach((group) => {
+		if (!first) y += groupGap;
+		if (opts.headings) {
+			heads.push({ key: group.key, x: pad, y, w: inner });
+			y += headH;
+		} else if (!first) {
+			y -= groupGap - rowGap;
+		}
+		first = false;
+
+		runsOf(group.items, opts.runOf).forEach((run, ri) => {
+			if (ri > 0) y += rowGap;
+			// Each roll is cut in half: two long strips side by side. The left
+			// spools out of the canister; the right runs on into the leader.
+			const half = Math.ceil(run.items.length / 2);
+			const halves = [run.items.slice(0, half), run.items.slice(half)];
+			let tallest = 0;
+			halves.forEach((items, col) => {
+				const head = col === 0;
+				const tail = col === 1;
+				const x = pad + col * (stripW + colGap);
+				const s0 = head ? headStart : end;
+				const frames = items.map((idx, c) => ({ idx, x: rail, y: s0 + c * pitch }));
+				for (const f of frames) centers.set(f.idx, { x: x + rail + fw / 2, y: y + f.y + fh / 2 });
+				const framesEnd = s0 + (items.length ? items.length * pitch - gap : 0);
+				const h = tail ? framesEnd + (items.length ? end : 0) + leader : framesEnd + end;
+				if (head) {
+					// Lying across the strip's head, lip down, overhanging its sides.
+					canisters.push({ key: `${run.key}@can`, run: run.key, x: x + stripW / 2, y: y + canThick / 2 - 6, h: canH });
+				}
+				if (tail) {
+					const zoneY = framesEnd + (items.length ? end : 0);
+					const zone = h - tongue * 0.55 - zoneY;
+					const sw = fw * 0.96;
+					const sh = Math.min(zone * 0.88, sw * 0.62);
+					stickers.push({ key: `${run.key}@tag`, run: run.key, x: x + (stripW - sw) / 2, y: y + zoneY + (zone - sh) / 2, w: sw, h: sh });
+				}
+				strips.push({ key: `${run.key}#${col}`, run: run.key, x, y, w: stripW, h, frames, tail });
+				tallest = Math.max(tallest, h);
+			});
+			y += tallest;
+		});
+	});
+
+	return {
+		vertical: true,
+		centers,
+		frame: { w: fw, h: fh },
+		rail,
+		strips,
+		canisters,
+		stickers,
+		heads,
+		tongue,
+		height: y + opts.bottom,
+	};
 }
