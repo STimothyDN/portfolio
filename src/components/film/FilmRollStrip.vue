@@ -46,7 +46,7 @@
 							</span>
 						</span>
 					</span>
-					<span class="roll-meta">{{ shortDate(roll.developed) }} · {{ roll.title }}</span>
+					<span class="roll-meta">{{ roll.title }}</span>
 					<span class="sr-only">
 						{{ roll.title }}, {{ roll.cameraLabel }}, {{ roll.stockLabel }}, {{ roll.count }} frames
 					</span>
@@ -77,13 +77,6 @@ const emit = defineEmits<{ toggle: [id: string] }>();
 
 const previewUrl = (roll: FilmRollData, file: string) =>
 	bunnyUrl(`${roll.folder}/${file}`, { width: 160, format: 'webp', quality: 60 });
-
-const shortDate = (iso: string) =>
-	new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', {
-		month: 'short',
-		year: 'numeric',
-		timeZone: 'UTC',
-	});
 
 const shown = computed(() =>
 	props.rolls.filter((roll) => props.counts[roll.id] > 0 || props.selected.includes(roll.id))
