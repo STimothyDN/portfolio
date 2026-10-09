@@ -71,7 +71,7 @@
 									<template v-if="scanMode">
 										<div
 											class="scan-negative"
-											:class="{ 'is-running': loadedSrc === current?.fullUrl }"
+											:class="{ 'is-running': loadedSrc === current?.fullUrl, 'is-mono': current?.mono }"
 											aria-hidden="true"
 										>
 											<img :src="current?.fullUrl" alt="" decoding="async" />
@@ -741,6 +741,11 @@ onBeforeUnmount(() => {
 }
 
 /* The negative peels away top to bottom behind the moving light bar. */
+/* Black-and-white film: a gray negative, no orange mask. */
+.scan-negative.is-mono img {
+	filter: invert(1) grayscale(1) contrast(0.88) brightness(1.04);
+}
+
 .scan-negative.is-running {
 	opacity: 1;
 	animation: scan-reveal 1.9s 0.35s cubic-bezier(0.5, 0, 0.25, 1) forwards;

@@ -20,7 +20,7 @@ import { computed } from 'vue';
 
 import { canLabel, canisterColors } from './canister';
 
-const props = defineProps<{ stock: string; stockLabel: string }>();
+const props = defineProps<{ stock: string; stockLabel: string; stockBrand?: string }>();
 
 const label = computed(() => canLabel(props.stockLabel));
 const style = computed(() => {

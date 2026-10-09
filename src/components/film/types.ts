@@ -7,6 +7,8 @@ export interface FacetOption {
 	label: string;
 	count: number;
 	selected: boolean;
+	/** Maker, for camera and film stock options (drives the brand buttons). */
+	brand?: string;
 }
 
 /** One roll, as serialized from the film page into the FilmDesk island. */
@@ -18,10 +20,14 @@ export interface FilmRollData {
 	year: string;
 	camera: string;
 	cameraLabel: string;
+	cameraBrand: string;
 	stock: string;
 	stockLabel: string;
+	stockBrand: string;
 	lab: string;
 	labLabel: string;
+	/** Black-and-white stock: its negatives are gray, not orange-masked. */
+	mono: boolean;
 	description?: string;
 	/** CDN folder holding the scans. */
 	folder: string;

@@ -27,6 +27,7 @@
 				:negative="negative"
 				@negative="negative = !negative"
 				@toggle="toggle"
+				@toggle-many="toggleMany"
 				@clear="clearAll"
 				@toss="retoss"
 			>
@@ -53,7 +54,7 @@
 					v-for="(strip, k) in strips"
 					:key="strip.key"
 					class="neg-strip"
-					:class="{ 'is-tail': strip.tail }"
+					:class="{ 'is-tail': strip.tail, 'is-mono': strip.mono }"
 					:style="{
 						left: `${strip.x}px`,
 						top: `${strip.y}px`,
@@ -88,6 +89,7 @@
 					:class="{ 'is-lying': vertical }"
 					:stock="can.stock"
 					:stock-label="can.stockLabel"
+					:stock-brand="can.stockBrand"
 					:style="{
 						left: `${can.x - (can.h * 0.43) / 2}px`,
 						top: `${can.y - can.h / 2}px`,
@@ -137,6 +139,7 @@
 				:ref="(el) => setPrintEl(i, el)"
 				type="button"
 				class="print"
+				:class="{ 'is-mono': rolls[photos[i].r].mono }"
 				:style="{ width: `${sizeOf(i).w}px`, height: `${sizeOf(i).h}px` }"
 				:aria-label="printLabel(i)"
 				@click="onPrintClick(i)"
@@ -240,6 +243,12 @@ for (const roll of props.rolls) {
 	labelOf.year.set(roll.year, roll.year);
 }
 
+// Makers of each camera and film stock, for the brand buttons.
+const brandOf: Partial<Record<FacetKey, Map<string, string>>> = {
+	camera: new Map(props.rolls.map((r) => [r.camera, r.cameraBrand])),
+	stock: new Map(props.rolls.map((r) => [r.stock, r.stockBrand])),
+};
+
 // Option order: rolls newest-first (as given), years newest-first, the rest A→Z.
 const universe = Object.fromEntries(
 	ALL_FACETS.map((f) => {
@@ -293,6 +302,7 @@ const options = computed(() => {
 			label: labelOf[f].get(value) ?? value,
 			count: counts.get(value) ?? 0,
 			selected: selected[f].includes(value),
+			brand: brandOf[f]?.get(value),
 		}));
 	}
 	return out;
@@ -307,6 +317,15 @@ function toggle(f: FacetKey, value: string) {
 	else list.push(value);
 	if (list.length && !facetOrder.value.includes(f)) facetOrder.value = [...facetOrder.value, f];
 	if (!list.length) facetOrder.value = facetOrder.value.filter((x) => x !== f);
+	if (f !== 'roll') pruneRolls();
+}
+
+/** Select (or clear) several values of one facet at once — a whole brand. */
+function toggleMany(f: FacetKey, values: string[], on: boolean) {
+	const list = selected[f];
+	selected[f] = on ? [...list, ...values.filter((v) => !list.includes(v))] : list.filter((v) => !values.includes(v));
+	if (selected[f].length && !facetOrder.value.includes(f)) facetOrder.value = [...facetOrder.value, f];
+	if (!selected[f].length) facetOrder.value = facetOrder.value.filter((x) => x !== f);
 	if (f !== 'roll') pruneRolls();
 }
 
@@ -386,13 +405,14 @@ const strips = ref<
 		w: number;
 		h: number;
 		tail: boolean;
+		mono: boolean;
 		frames: { idx: number; x: number; y: number; n: number; stock: string }[];
 	}[]
 >([]);
 const heads = ref<{ key: string; x: number; y: number; w: number; eyebrow: string; label: string; meta: string }[]>([]);
-const canisters = ref<{ key: string; x: number; y: number; h: number; k: number; stock: string; stockLabel: string }[]>(
-	[]
-);
+const canisters = ref<
+	{ key: string; x: number; y: number; h: number; k: number; stock: string; stockLabel: string; stockBrand: string }[]
+>([]);
 const stickers = ref<
 	{ key: string; x: number; y: number; w: number; h: number; k: number; lines: string[]; fs: number; tilt: number }[]
 >([]);
@@ -470,6 +490,7 @@ function toLightbox(i: number) {
 		caption: p.c ?? '',
 		label: `${roll.title} — No. ${p.n}`,
 		fullUrl: bunnyUrl(scanPath(i), { width: 2000, format: 'webp', quality: 90 }),
+		mono: roll.mono,
 		thumbUrl: thumbUrl(i),
 		width: p.w,
 		height: p.h,
@@ -597,7 +618,7 @@ async function applyLayout(kind: Kind) {
 		frameGeo.value = { ...sheet.frame, rail: sheet.rail, tongue: sheet.tongue };
 		canisters.value = sheet.canisters.map((can, k) => {
 			const roll = rollById.get(can.run)!;
-			return { ...can, k, stock: roll.stock, stockLabel: roll.stockLabel };
+			return { ...can, k, stock: roll.stock, stockLabel: roll.stockLabel, stockBrand: roll.stockBrand };
 		});
 		stickers.value = sheet.stickers.map((tag, k) => {
 			const roll = rollById.get(tag.run)!;
@@ -605,6 +626,7 @@ async function applyLayout(kind: Kind) {
 		});
 		strips.value = sheet.strips.map((strip) => ({
 			...strip,
+			mono: rollById.get(strip.run)!.mono,
 			frames: strip.frames.map((fr) => ({
 				...fr,
 				n: props.photos[fr.idx].n,
@@ -1110,6 +1132,19 @@ onBeforeUnmount(() => {
 	--neg-base: #a85d27;
 	--neg-frame: #c27a3f;
 	--neg-ink: rgba(52, 22, 6, 0.8);
+	/* Black-and-white negatives: a clear gray base, frames inverted to gray. */
+	--negative-mono: invert(1) grayscale(1) contrast(0.88) brightness(1.04);
+}
+
+.film.is-negative .neg-strip.is-mono {
+	--neg-base: #a9a6a0;
+	--neg-frame: #c8c5bf;
+	--neg-ink: rgba(20, 20, 20, 0.75);
+}
+
+:root.theme-dark .film.is-negative .neg-strip.is-mono {
+	--neg-base: #7a7772;
+	--neg-frame: #9b9893;
 }
 
 :root.theme-dark .film.is-negative {
@@ -1426,6 +1461,10 @@ onBeforeUnmount(() => {
 	transition:
 		opacity 400ms ease,
 		filter 650ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.is-negative.is-grid .print.is-mono .print-body img {
+	filter: var(--negative-mono);
 }
 
 .is-negative.is-grid .print:hover .print-body img,

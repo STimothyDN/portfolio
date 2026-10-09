@@ -78,6 +78,36 @@ Folder tokens are terse (`minoltax700`). The site shows them through
 
 Rename something once there and every roll using it updates.
 
+Already named, ready for your next folders (use the token in the folder name):
+
+| Token | Shows as |
+| --- | --- |
+| `ricohxrm` | Ricoh XR-M |
+| `ilfocolor400` | Ilford Ilfocolor 400 Plus |
+| `delta400` | Ilford Delta 400 Collector's Edition |
+| `hp5` | Ilford HP5 Plus 400 |
+| `proimage100` | Kodak ProImage 100 |
+| `ektacolorpro400` | Kodak Ektacolor Pro 400 |
+| `kodacolor200` | Kodak Kodacolor 200 |
+| `fujisuperia` | Fujicolor Superia |
+| `samesamebutdifferent400` | Same Same But Different! 400 (Mr. Negative) |
+| `secretsauce100` | Secret Sauce 100 (Mr. Negative) |
+| `candido800` | Candido 800 |
+| `lomocolor92` | Color '92 (Lomography) |
+| `lomocolor92sunkissed` | Color '92 Sun-kissed (Lomography) |
+
+e.g. `20261101_ricohxrm_hp5_fotoshoppe_eno-river`.
+
+A brand normally comes from the first word of the name (with Fujicolor counted as
+Fujifilm, Lomo as Lomography). For stocks shown without their brand, the `brands`
+section of `film-labels.json` names it — that's what groups them under the right
+brand button and gives them the right canister color. A different spelling works too; it
+just gets a guessed name added to the file for you to fix.
+
+Black-and-white stocks (HP5, Delta, FP4, Pan F, Tri-X, T-Max…) are recognized from
+their display names: in the Negative view their strips show as gray B&W negatives
+rather than orange-masked color film.
+
 Along the bottom of the page each roll is a film canister labeled with its **film stock**
 (the display name above, fitted onto up to three lines), with the roll's **title** and
 date under the strip of film. Pick a filter or a roll and the frames file into strips of

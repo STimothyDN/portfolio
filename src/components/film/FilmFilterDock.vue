@@ -31,6 +31,21 @@
 				:aria-label="facet.title"
 			>
 				<p class="pop-title" aria-hidden="true">{{ facet.title }}</p>
+				<!-- Pick a whole brand at once (camera and film stock lists). -->
+				<div v-if="brandsOf(facet.key).length > 1" class="brands" role="group" :aria-label="`${facet.label} brands`">
+					<button
+						v-for="b in brandsOf(facet.key)"
+						:key="b.name"
+						type="button"
+						class="brand"
+						:style="brandColor(b.name)"
+						:aria-pressed="b.state"
+						:disabled="!b.values.length"
+						@click="emit('toggleMany', facet.key, b.values, b.state !== 'true')"
+					>
+						{{ b.name }}
+					</button>
+				</div>
 				<button
 					v-for="opt in options[facet.key]"
 					:key="opt.value"
@@ -71,6 +86,20 @@
 					:aria-labelledby="`film-all-${facet.key}`"
 				>
 					<p :id="`film-all-${facet.key}`" class="pop-title">{{ facet.title }}</p>
+					<div v-if="brandsOf(facet.key).length > 1" class="brands" role="group" :aria-label="`${facet.label} brands`">
+						<button
+							v-for="b in brandsOf(facet.key)"
+							:key="b.name"
+							type="button"
+							class="brand"
+							:style="brandColor(b.name)"
+							:aria-pressed="b.state"
+							:disabled="!b.values.length"
+							@click="emit('toggleMany', facet.key, b.values, b.state !== 'true')"
+						>
+							{{ b.name }}
+						</button>
+					</div>
 					<button
 						v-for="opt in options[facet.key]"
 						:key="opt.value"
@@ -135,6 +164,7 @@ const emit = defineEmits<{
 	clear: [];
 	toss: [];
 	negative: [];
+	toggleMany: [facet: FacetKey, values: string[], on: boolean];
 }>();
 
 type OpenList = FacetKey | 'all';
@@ -147,6 +177,53 @@ const setTrigger = (key: OpenList, el: unknown) => {
 };
 
 const activeCount = (key: FacetKey) => props.options[key]?.filter((o) => o.selected).length ?? 0;
+// Each brand's own color (OKLCH hue + chroma), softened to a pastel in CSS.
+const BRAND_COLORS: Record<string, [number, number]> = {
+	kodak: [88, 0.11],
+	fujifilm: [150, 0.09],
+	lucky: [25, 0.09],
+	ilford: [0, 0],
+	cinestill: [20, 0.08],
+	agfa: [255, 0.08],
+	lomography: [250, 0.08],
+	canon: [25, 0.09],
+	nikon: [95, 0.11],
+	minolta: [255, 0.08],
+	olympus: [265, 0.08],
+	ricoh: [20, 0.09],
+	pentax: [145, 0.08],
+	leica: [25, 0.09],
+	contax: [240, 0.05],
+	yashica: [230, 0.07],
+	konica: [235, 0.08],
+};
+
+function brandColor(name: string) {
+	const known = BRAND_COLORS[name.toLowerCase()];
+	const hue = known?.[0] ?? [...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 11);
+	return { '--h': hue, '--c': known?.[1] ?? 0.08 };
+}
+
+/** Brand buttons for a facet: which of its options are pickable, and whether
+ * all ('true'), some ('mixed') or none ('false') of them are selected. */
+function brandsOf(key: FacetKey) {
+	if (key !== 'camera' && key !== 'stock') return [];
+	const groups = new Map<string, FacetOption[]>();
+	for (const opt of props.options[key] ?? []) {
+		const brand = opt.brand ?? opt.label.trim().split(/\s+/)[0];
+		if (!groups.has(brand)) groups.set(brand, []);
+		groups.get(brand)!.push(opt);
+	}
+	return [...groups]
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([name, opts]) => {
+			const available = opts.filter((o) => o.selected || o.count > 0);
+			const on = available.filter((o) => o.selected).length;
+			const state = !on ? 'false' : on === available.length ? 'true' : 'mixed';
+			return { name, values: available.map((o) => o.value), state };
+		});
+}
+
 const totalActive = computed(() => props.facets.reduce((n, f) => n + activeCount(f.key), 0));
 
 function closeAndRefocus() {
@@ -302,6 +379,72 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 	letter-spacing: 0.1em;
 	font-variant-caps: all-small-caps;
 	color: var(--gray-300);
+}
+
+/* Brand shortcuts: a row of small pills under the list's title. */
+.brands {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	padding: 0 0.6rem 0.55rem;
+	margin-bottom: 0.3rem;
+	border-bottom: 1px solid var(--gray-800);
+}
+
+.brand {
+	/* Pastel tints of the brand's color (--h hue, --c chroma; set inline). */
+	--soft: oklch(94% calc(var(--c) * 0.55) var(--h));
+	--full: oklch(84% calc(var(--c) * 1.25) var(--h));
+	--edge: oklch(76% calc(var(--c) * 1.1) var(--h));
+	--ink: oklch(32% calc(var(--c) * 1.1) var(--h));
+	padding: 0.25rem 0.75rem;
+	border: 1px solid var(--edge);
+	border-radius: 999rem;
+	background: var(--soft);
+	color: var(--ink);
+	font: inherit;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	cursor: pointer;
+	transition:
+		background 150ms ease,
+		border-color 150ms ease,
+		filter 150ms ease;
+}
+
+:root.theme-dark .brand {
+	--soft: oklch(86% calc(var(--c) * 0.6) var(--h));
+	--full: oklch(78% calc(var(--c) * 1.3) var(--h));
+	--edge: oklch(70% calc(var(--c) * 1.2) var(--h));
+	--ink: oklch(24% var(--c) var(--h));
+}
+
+.brand:hover:not(:disabled) {
+	filter: brightness(0.96) saturate(1.15);
+}
+
+/* Some of the brand picked: half filled. */
+.brand[aria-pressed='mixed'] {
+	border-color: oklch(62% calc(var(--c) * 1.4) var(--h));
+	background: linear-gradient(135deg, var(--full) 50%, var(--soft) 50%);
+}
+
+/* All of it: filled, with a firmer edge. */
+.brand[aria-pressed='true'] {
+	border-color: oklch(58% calc(var(--c) * 1.5) var(--h));
+	background: var(--full);
+	box-shadow: inset 0 0 0 1px oklch(58% calc(var(--c) * 1.5) var(--h));
+}
+
+.brand:disabled {
+	opacity: 0.45;
+	filter: grayscale(0.7);
+	cursor: default;
+}
+
+.brand:focus-visible {
+	outline: 2px solid var(--accent-regular);
+	outline-offset: 2px;
 }
 
 .opt {

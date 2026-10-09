@@ -22,13 +22,19 @@
 				<button
 					type="button"
 					class="roll"
+					:class="{ 'is-mono': roll.mono }"
 					:style="{ '--i': i }"
 					:aria-pressed="selected.includes(roll.id)"
 					@click="emit('toggle', roll.id)"
 				>
 					<span class="roll-object" aria-hidden="true">
 						<!-- A 35mm canister, standing, labeled with the film stock it held… -->
-						<FilmCanister class="canister" :stock="roll.stock" :stock-label="roll.stockLabel" />
+						<FilmCanister
+							class="canister"
+							:stock="roll.stock"
+							:stock-label="roll.stockLabel"
+							:stock-brand="roll.stockBrand"
+						/>
 						<!-- …and its film pulled out through the felt lip: a few favorite
 						     frames, then the cut leader. -->
 						<span class="film">
@@ -316,6 +322,22 @@ function holdPlace(el: Element) {
 
 .is-negative .frame img {
 	filter: invert(1) sepia(0.55) saturate(1.7) hue-rotate(-14deg) brightness(0.9) contrast(0.92);
+}
+
+.is-negative .roll.is-mono {
+	--base: #a9a6a0;
+}
+
+:root.theme-dark .is-negative .roll.is-mono {
+	--base: #7a7772;
+}
+
+.is-negative .roll.is-mono .frame {
+	background: #c8c5bf;
+}
+
+.is-negative .roll.is-mono .frame img {
+	filter: invert(1) grayscale(1) contrast(0.88) brightness(1.04);
 }
 
 .is-negative .roll:hover .frame img,

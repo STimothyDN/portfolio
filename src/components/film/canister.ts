@@ -3,7 +3,7 @@ import type { FilmRollData } from './types';
 // Canister colors by film brand (read from the stock's display name), so a
 // row of rolls reads like a real drawer of them. Unknown brands get a stable hue.
 const BRANDS: [RegExp, string, string][] = [
-	[/kodak|portra|ektar|gold|ultramax|colorplus|tri-?x/i, '#f2b705', '#2a1a05'],
+	[/kodak|portra|ektar|gold|ultramax|colorplus|proimage|ektacolor|kodacolor|tri-?x/i, '#f2b705', '#2a1a05'],
 	[/fuji|superia|velvia|provia/i, '#1d8a4c', '#f4f1e8'],
 	[/lucky/i, '#c4262e', '#fbf3e6'],
 	[/ilford|hp5|delta|fp4/i, '#ece9e2', '#151515'],
@@ -12,8 +12,11 @@ const BRANDS: [RegExp, string, string][] = [
 ];
 
 /** Body color and label ink for a roll's film canister. */
-export function canisterColors(roll: Pick<FilmRollData, 'stock' | 'stockLabel'>): { can: string; ink: string } {
-	const brand = BRANDS.find(([re]) => re.test(roll.stockLabel));
+export function canisterColors(
+	roll: Pick<FilmRollData, 'stock' | 'stockLabel'> & { stockBrand?: string }
+): { can: string; ink: string } {
+	const name = `${roll.stockBrand ?? ''} ${roll.stockLabel}`;
+	const brand = BRANDS.find(([re]) => re.test(name));
 	if (brand) return { can: brand[1], ink: brand[2] };
 	const hue = [...roll.stock].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
 	return { can: `oklch(58% 0.12 ${hue})`, ink: '#f7f4ee' };
@@ -55,14 +58,14 @@ export function bestSplit(
 }
 
 /**
- * Lay the film stock's name out along the canister in up to three lines,
+ * Lay the film stock's name out along the canister in up to four lines,
  * picking whichever split prints largest. `fit` is the type size as a fraction
  * of the label's length (--label-room), so it holds at every canister size:
  * capped overall, by the longest line's length, and by the lines' combined
  * thickness across the body.
  */
 export function canLabel(name: string): { lines: string[]; fit: number } {
-	const { lines, score } = bestSplit(name, 3, (ls) => {
+	const { lines, score } = bestSplit(name, 4, (ls) => {
 		const longest = Math.max(...ls.map((l) => l.length));
 		return Math.min(0.17, 1 / (longest * 0.74), 0.44 / (ls.length * 1.08));
 	});

@@ -8,17 +8,30 @@
     "olympusinfinityjr": "Olympus Infinity Jr",
     "olympusinfinitytwin": "Olympus Infinity Twin",
     "olympusstylusepic": "Olympus Stylus Epic",
-    "ricohaf40": "Ricoh AF-40"
+    "ricohaf40": "Ricoh AF-40",
+    "ricohxrm": "Ricoh XR-M"
   },
   "stocks": {
+    "candido800": "Candido 800",
+    "delta400": "Ilford Delta 400 Collector's Edition",
+    "ektacolorpro400": "Kodak Ektacolor Pro 400",
     "fuji200": "Fujifilm 200",
     "fuji400": "Fujifilm 400",
+    "fujisuperia": "Fujicolor Superia",
     "fujisuperiaxtra400": "Fujicolor Superia X-Tra 400",
     "gold200": "Kodak Gold 200",
+    "hp5": "Ilford HP5 Plus 400",
+    "ilfocolor400": "Ilford Ilfocolor 400 Plus",
+    "kodacolor200": "Kodak Kodacolor 200",
+    "lomocolor92": "Color '92",
+    "lomocolor92sunkissed": "Color '92 Sun-kissed",
     "lucky200": "Lucky 200",
     "lucky400": "Lucky 400",
     "portra400": "Kodak Portra 400",
     "portra800": "Kodak Portra 800",
+    "proimage100": "Kodak ProImage 100",
+    "samesamebutdifferent400": "Same Same But Different! 400",
+    "secretsauce100": "Secret Sauce 100",
     "ultramax400": "Kodak UltraMax 400"
   },
   "labs": {
@@ -27,5 +40,11 @@
     "indiefilmlab": "Indie Film Lab",
     "seccarrboro": "Southeastern Camera Carrboro",
     "thedarkroom": "The Darkroom"
+  },
+  "brands": {
+    "lomocolor92": "Lomography",
+    "lomocolor92sunkissed": "Lomography",
+    "samesamebutdifferent400": "Mr. Negative",
+    "secretsauce100": "Mr. Negative"
   }
 }

@@ -4,7 +4,7 @@ import labels from '../data/film-labels.json';
 import type { FilmPhotoData, FilmRollData } from '../components/film/types';
 
 export type FilmRoll = CollectionEntry<'film'>;
-type LabelKind = keyof typeof labels;
+type LabelKind = 'cameras' | 'stocks' | 'labs';
 
 /**
  * Fallback display name for a folder token with no entry in film-labels.json:
@@ -22,8 +22,34 @@ export function humanizeToken(token: string): string {
 		.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Black-and-white stocks, by display name (their negatives carry no orange mask). */
+const MONOCHROME = /\b(hp5|fp4|delta|pan ?f|tri-?x|t-?max|kentmere|fomapan|acros|ortho|retro \d|xp2|double-x)\b/i;
+export const isMonochrome = (stockLabel: string) => MONOCHROME.test(stockLabel);
+
 export function filmLabel(kind: LabelKind, key: string): string {
 	return (labels[kind] as Record<string, string>)[key] ?? humanizeToken(key);
+}
+
+// A brand is the first word of the display name — with Fuji's product lines
+// counted as Fujifilm, Lomo as Lomography, and a few two-word brands — unless
+// film-labels.json names it outright (for stocks shown without their brand,
+// like Mr. Negative's or Lomography's).
+const BRAND_ALIASES: Record<string, string> = {
+	fuji: 'Fujifilm',
+	fujicolor: 'Fujifilm',
+	fujichrome: 'Fujifilm',
+	lomo: 'Lomography',
+};
+const MULTIWORD_BRANDS = ['Mr. Negative'];
+
+export function filmBrand(kind: 'cameras' | 'stocks', key: string): string {
+	const named = (labels.brands as Record<string, string> | undefined)?.[key];
+	if (named) return named;
+	const label = filmLabel(kind, key).trim();
+	const multi = MULTIWORD_BRANDS.find((b) => label.toLowerCase().startsWith(b.toLowerCase()));
+	if (multi) return multi;
+	const first = label.split(/\s+/)[0];
+	return BRAND_ALIASES[first.toLowerCase()] ?? first;
 }
 
 /** Every roll the site should show, newest development first. Demo rolls are dev-only. */
@@ -61,10 +87,13 @@ export function toFilmDeskData(rolls: FilmRoll[]): { rolls: FilmRollData[]; phot
 			year: String(data.developed.getUTCFullYear()),
 			camera: data.camera,
 			cameraLabel: filmLabel('cameras', data.camera),
+			cameraBrand: filmBrand('cameras', data.camera),
 			stock: data.stock,
 			stockLabel: filmLabel('stocks', data.stock),
+			stockBrand: filmBrand('stocks', data.stock),
 			lab: data.lab,
 			labLabel: filmLabel('labs', data.lab),
+			mono: isMonochrome(filmLabel('stocks', data.stock)),
 			description: data.description,
 			folder: rollFolder(roll),
 			count: data.photos.length,
