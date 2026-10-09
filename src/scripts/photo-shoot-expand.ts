@@ -1,9 +1,11 @@
-import { gsap, refreshMotion } from './motion';
+import { easing } from './ease';
 
 declare global {
 	interface Window {
 		__photoShootExpandController?: AbortController;
 		__photoShootExpandPageLoad?: boolean;
+		/** The stage root the controller is currently bound to. */
+		__photoShootExpandRoot?: HTMLElement;
 	}
 }
 
@@ -24,11 +26,15 @@ const prefersReducedMotion = () =>
 //      photography masthead — the two-tier sticky is driven by a sentinel
 //      IntersectionObserver offset by the masthead's condensed height.
 function initPhotoShootExpand() {
+	const root = document.querySelector<HTMLElement>('[data-photo-snap-root]');
+	// Queued on both after-swap and page-load (and the first load): bind once
+	// per page rather than tearing down and re-measuring a second time.
+	if (root && root === window.__photoShootExpandRoot && !window.__photoShootExpandController?.signal.aborted) return;
 	window.__photoShootExpandController?.abort();
+	window.__photoShootExpandRoot = undefined;
 
 	if (document.documentElement.dataset.section !== 'photography') return;
 
-	const root = document.querySelector<HTMLElement>('[data-photo-snap-root]');
 	const stage = document.querySelector<HTMLElement>('[data-photo-stage]');
 	const masthead = document.querySelector<HTMLElement>('[data-photo-title]');
 	const list = document.querySelector<HTMLElement>('[data-shoot-list]');
@@ -37,6 +43,7 @@ function initPhotoShootExpand() {
 
 	const controller = new AbortController();
 	window.__photoShootExpandController = controller;
+	window.__photoShootExpandRoot = root;
 	const { signal } = controller;
 
 	// See photo-section-snap.ts: <body> is the element that actually scrolls.
@@ -161,18 +168,16 @@ function initPhotoShootExpand() {
 		panel.querySelector<HTMLElement>('[data-panel-title]')?.focus({ preventScroll: true });
 		scrollToY(Math.max(stageTop(), pinPoint + 56), true);
 
-		// The reveal changed the document height under every ScrollTrigger.
-		refreshMotion();
 		// One-time editorial stagger on the freshly revealed grid.
 		if (!prefersReducedMotion()) {
-			const tiles = panel.querySelectorAll('[data-photo-grid-item]');
-			if (tiles.length) {
-				gsap.fromTo(
-					tiles,
-					{ opacity: 0 },
-					{ opacity: 1, duration: 0.6, ease: 'power2.out', stagger: { each: 0.045, from: 0 } }
-				);
-			}
+			panel.querySelectorAll('[data-photo-grid-item]').forEach((tile, i) =>
+				tile.animate([{ opacity: 0 }, { opacity: 1 }], {
+					duration: 600,
+					delay: i * 45,
+					easing: easing('power2.out'),
+					fill: 'backwards',
+				})
+			);
 		}
 	};
 
@@ -195,7 +200,6 @@ function initPhotoShootExpand() {
 		scrollToY(returnY, false);
 		returnFocus?.focus({ preventScroll: true });
 		returnFocus = null;
-		refreshMotion();
 	};
 
 	// Capture phase so this wins over Astro's ClientRouter link interception.

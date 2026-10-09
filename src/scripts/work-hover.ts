@@ -12,10 +12,13 @@
  * follower. On leave, both revert. Keyboard and touch never engage any of
  * this: they keep the static thumb and its build-time transition name.
  */
-import { gsap } from './motion';
+import { FollowGroup } from './follow';
 
 const GATE = '(min-width: 50rem) and (pointer: fine) and (prefers-reduced-motion: no-preference)';
 const FLOAT_Y_OFFSET = 28;
+
+let motion: FollowGroup | null = null;
+let settle = 0;
 
 function setup() {
 	const index = document.querySelector<HTMLElement>('.work-index');
@@ -29,20 +32,30 @@ function setup() {
 	// follower never pops in empty.
 	index.querySelectorAll<HTMLImageElement>('.thumb img').forEach((img) => (img.loading = 'eager'));
 
-	gsap.set(float, { xPercent: -50, yPercent: 0, scale: 0.9, opacity: 0, transformOrigin: '50% 0%' });
-	const xTo = gsap.quickTo(float, 'x', { duration: 0.45, ease: 'power3' });
-	const yTo = gsap.quickTo(float, 'y', { duration: 0.45, ease: 'power3' });
-	const rTo = gsap.quickTo(float, 'rotation', { duration: 0.5, ease: 'power2' });
-	let lastX: number | null = null;
-	let settle: gsap.core.Tween | null = null;
+	// Position chases the cursor; the tilt swings with horizontal speed and
+	// settles once the pointer rests. Everything lands in one transform write
+	// per frame, and the loop sleeps whenever nothing is moving.
+	float.style.transformOrigin = '50% 0%';
+	const group = new FollowGroup(() => {
+		float.style.transform = `translate(${x.current}px, ${y.current}px) translate(-50%, 0) rotate(${rotation.current}deg) scale(${scale.current})`;
+		float.style.opacity = String(opacity.current);
+	});
+	motion = group;
+	const x = group.value(0, 0.45, 'power3.out');
+	const y = group.value(0, 0.45, 'power3.out');
+	const rotation = group.value(0, 0.5, 'power2.out');
+	const scale = group.value(0.9, 0.35, 'power2.out');
+	const opacity = group.value(0, 0.35, 'power2.out');
+	scale.set(0.9); // paints the resting state before the first hover
 
+	let lastX: number | null = null;
 	index.addEventListener('pointermove', (e) => {
-		xTo(e.clientX);
-		yTo(e.clientY + FLOAT_Y_OFFSET);
+		x.to(e.clientX);
+		y.to(e.clientY + FLOAT_Y_OFFSET);
 		if (lastX !== null) {
-			rTo(gsap.utils.clamp(-7, 7, (e.clientX - lastX) * 0.4));
-			settle?.kill();
-			settle = gsap.delayedCall(0.12, () => rTo(0));
+			rotation.to(Math.min(7, Math.max(-7, (e.clientX - lastX) * 0.4)));
+			window.clearTimeout(settle);
+			settle = window.setTimeout(() => rotation.to(0), 120);
 		}
 		lastX = e.clientX;
 	});
@@ -76,13 +89,15 @@ function setup() {
 			});
 			thumb.style.viewTransitionName = 'none';
 			float.style.viewTransitionName = `work-image-${slug}`;
-			gsap.to(float, { opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out' });
+			opacity.to(1, 0.35);
+			scale.to(1, 0.35);
 		});
 
 		row.addEventListener('pointerleave', (e) => {
 			if (e.pointerType !== 'mouse') return;
 			clearActive();
-			gsap.to(float, { opacity: 0, scale: 0.9, duration: 0.25, ease: 'power2.in' });
+			opacity.to(0, 0.25, 'power2.in');
+			scale.to(0.9, 0.25, 'power2.in');
 		});
 	});
 }
@@ -90,3 +105,8 @@ function setup() {
 // Listeners live on elements that are replaced wholesale by each ClientRouter
 // swap, so re-running setup per page-load is the whole lifecycle.
 document.addEventListener('astro:page-load', setup);
+document.addEventListener('astro:before-swap', () => {
+	window.clearTimeout(settle);
+	motion?.halt();
+	motion = null;
+});

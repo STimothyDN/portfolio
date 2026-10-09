@@ -2,6 +2,8 @@ declare global {
 	interface Window {
 		__photoSectionSnapController?: AbortController;
 		__photoSectionSnapPageLoad?: boolean;
+		/** The snap root the controller is currently bound to. */
+		__photoSectionSnapRoot?: HTMLElement;
 	}
 }
 
@@ -100,17 +102,22 @@ function initNestedShoot(ctx: {
 }
 
 function initPhotoSectionSnap() {
+	const root = document.querySelector<HTMLElement>('[data-photo-snap-root]');
+	// Queued on both after-swap and page-load (and the first load): bind once
+	// per page rather than tearing down and re-measuring a second time.
+	if (root && root === window.__photoSectionSnapRoot && !window.__photoSectionSnapController?.signal.aborted) return;
 	window.__photoSectionSnapController?.abort();
+	window.__photoSectionSnapRoot = undefined;
 
 	if (document.documentElement.dataset.section !== 'photography') return;
 
-	const root = document.querySelector<HTMLElement>('[data-photo-snap-root]');
 	const stage = document.querySelector<HTMLElement>('[data-photo-stage]');
 	const title = document.querySelector<HTMLElement>('[data-photo-title]');
 	if (!root || !stage || !title) return;
 
 	const controller = new AbortController();
 	window.__photoSectionSnapController = controller;
+	window.__photoSectionSnapRoot = root;
 	const { signal } = controller;
 
 	// base.css gives html and body `height: 100%; overflow-x: hidden`, which

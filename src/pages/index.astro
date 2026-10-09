@@ -10,6 +10,27 @@ import Pill from '../components/Pill.astro';
 // Page section components
 import ContactCTA from '../components/ContactCTA.astro';
 import Skills from '../components/Skills.astro';
+
+import portraitSrc from '../assets/timothy.jpeg';
+import { responsive } from '../utils/images';
+
+// The portrait is the LCP image. The CSS frames it with object-fit: cover +
+// object-position: top at 5:4 (phones) and 3:4 (desktop), so ship exactly
+// those crops instead of the 3000px landscape original.
+const desktopCrop = { aspect: 3 / 4, position: 'top' };
+const phoneCrop = { aspect: 5 / 4, position: 'top' };
+const desktopWidths = [360, 480, 640, 800, 960, 1200];
+const phoneWidths = [360, 480, 640, 800, 960];
+const [desktopAvif, desktopWebp, phoneAvif, phoneWebp] = await Promise.all([
+	responsive(portraitSrc, { widths: desktopWidths, format: 'avif', crop: desktopCrop }),
+	responsive(portraitSrc, { widths: desktopWidths, format: 'webp', crop: desktopCrop }),
+	responsive(portraitSrc, { widths: phoneWidths, format: 'avif', crop: phoneCrop }),
+	responsive(portraitSrc, { widths: phoneWidths, format: 'webp', crop: phoneCrop }),
+]);
+// Rendered box widths: the 4fr hero column (capped by the 83rem wrapper) on
+// desktop; min(480px attr, container) on phones.
+const desktopSizes = '(min-width: 83rem) 456px, calc(40vw - 4.7rem)';
+const phoneSizes = '(min-width: 33rem) 480px, calc(100vw - 3rem)';
 ---
 
 <BaseLayout>
@@ -32,12 +53,21 @@ import Skills from '../components/Skills.astro';
 				</Hero>
 
 				<div class="portrait" data-animate="clip" data-parallax="0.07">
-					<img
-						alt="Headshot of Timothy Navarro smiling in a light blue collared shirt, in a bright columned hallway"
-						width="480"
-						height="620"
-						src="/assets/timothy.jpeg"
-					/>
+					<picture>
+						<source media="(min-width: 50em)" type="image/avif" srcset={desktopAvif.srcset} sizes={desktopSizes} />
+						<source media="(min-width: 50em)" type="image/webp" srcset={desktopWebp.srcset} sizes={desktopSizes} />
+						<source type="image/avif" srcset={phoneAvif.srcset} sizes={phoneSizes} />
+						<img
+							alt="Headshot of Timothy Navarro smiling in a light blue collared shirt, in a bright columned hallway"
+							width="480"
+							height="620"
+							src={phoneWebp.src}
+							srcset={phoneWebp.srcset}
+							sizes={phoneSizes}
+							fetchpriority="high"
+							decoding="async"
+						/>
+					</picture>
 				</div>
 			</header>
 

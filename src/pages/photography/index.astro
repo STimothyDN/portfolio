@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 import MediumToggle from '../../components/MediumToggle.astro';
 import FilmDesk from '../../components/film/FilmDesk.vue';
+import { packFilmPhotos } from '../../components/film/data';
 import { bunnyUrl } from '../../utils/bunny';
 import { getFilmRolls, rollFolder, toFilmDeskData } from '../../utils/film';
 
@@ -18,6 +19,68 @@ const formatDate = (date: Date) =>
 	description="Every film scan Timothy Navarro has, tossed onto one desk — sort them by camera, film stock, lab, year, or roll."
 	immersive
 >
+	{/*
+		Inline on purpose: if this page contributed any rules to the bundled CSS,
+		its stylesheet would differ from the FilmDesk island's own CSS chunk and
+		Astro would link both — shipping the whole desk stylesheet twice. Kept
+		out of the bundle, the two chunks are identical and collapse into one.
+		The desk needs JavaScript; without it, the <noscript> contact sheets
+		stand in (the scripting: none rule).
+	*/}
+	<style is:inline>
+		.film-page .film-empty {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 1.5rem;
+			min-height: 100svh;
+			padding: 6rem 1.5rem;
+			font-size: var(--text-lg);
+			font-style: italic;
+			color: var(--gray-300);
+			text-align: center;
+		}
+
+		@media (scripting: none) {
+			.film-page .film {
+				display: none;
+			}
+		}
+
+		.film-page .film-static {
+			padding-block: 8rem 4rem;
+		}
+
+		.film-page .film-static section + section {
+			margin-top: 3rem;
+		}
+
+		.film-page .film-static h2 {
+			font-size: var(--text-2xl);
+		}
+
+		.film-page .film-static-meta {
+			margin-top: 0.25rem;
+			font-size: var(--text-sm);
+			letter-spacing: 0.06em;
+			font-variant-caps: all-small-caps;
+			color: var(--gray-300);
+		}
+
+		.film-page .film-static-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+			gap: 1rem;
+			margin-top: 1.25rem;
+		}
+
+		.film-page .film-static-grid img {
+			width: 100%;
+			height: auto;
+		}
+	</style>
+
 	<!-- The whole page is the desk: rolls float along the top, controls along
 	     the bottom, and the site nav hovers over both. -->
 	<div class="film-page">
@@ -25,7 +88,7 @@ const formatDate = (date: Date) =>
 		{
 			rolls.length > 0 ? (
 				<>
-					<FilmDesk client:load rolls={desk.rolls} photos={desk.photos}>
+					<FilmDesk client:load rolls={desk.rolls} packedPhotos={packFilmPhotos(desk.photos)}>
 						<MediumToggle current="film" variant="dock" />
 					</FilmDesk>
 					<noscript>
@@ -64,58 +127,3 @@ const formatDate = (date: Date) =>
 		}
 	</div>
 </BaseLayout>
-
-<style>
-	.film-empty {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 1.5rem;
-		min-height: 100svh;
-		padding: 6rem 1.5rem;
-		font-size: var(--text-lg);
-		font-style: italic;
-		color: var(--gray-300);
-		text-align: center;
-	}
-
-	/* The desk needs JavaScript; without it, the <noscript> contact sheets stand in. */
-	@media (scripting: none) {
-		.film-page :global(.film) {
-			display: none;
-		}
-	}
-
-	.film-static {
-		padding-block: 8rem 4rem;
-	}
-
-	.film-static section + section {
-		margin-top: 3rem;
-	}
-
-	.film-static h2 {
-		font-size: var(--text-2xl);
-	}
-
-	.film-static-meta {
-		margin-top: 0.25rem;
-		font-size: var(--text-sm);
-		letter-spacing: 0.06em;
-		font-variant-caps: all-small-caps;
-		color: var(--gray-300);
-	}
-
-	.film-static-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-		gap: 1rem;
-		margin-top: 1.25rem;
-	}
-
-	.film-static-grid img {
-		width: 100%;
-		height: auto;
-	}
-</style>

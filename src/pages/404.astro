@@ -36,7 +36,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 </style>
 
 <script>
-	import { gsap } from '../scripts/motion';
+	import { FollowGroup } from '../scripts/follow';
 	import { spawnMeteor } from '../scripts/sky';
 
 	// The 404 glyphs shy away from the cursor — decorative, fine pointers only.
@@ -47,34 +47,44 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 		setTimeout(spawnMeteor, 600);
 		if (!window.matchMedia('(pointer: fine) and (prefers-reduced-motion: no-preference)').matches) return;
 
-		const glyphs = Array.from(code.querySelectorAll<HTMLElement>('.glyph')).map((el) => ({
-			el,
-			xTo: gsap.quickTo(el, 'x', { duration: 0.6, ease: 'power3' }),
-			yTo: gsap.quickTo(el, 'y', { duration: 0.6, ease: 'power3' }),
-		}));
+		const glyphs = Array.from(code.querySelectorAll<HTMLElement>('.glyph')).map((el) => {
+			const group = new FollowGroup(() => (el.style.translate = `${x.current}px ${y.current}px`));
+			const x = group.value(0, 0.6, 'power3.out');
+			const y = group.value(0, 0.6, 'power3.out');
+			return { el, group, x, y };
+		});
 
 		// Document-level listener: released on the next ClientRouter swap.
 		const ac = new AbortController();
-		document.addEventListener('astro:before-swap', () => ac.abort(), { once: true });
-		document.addEventListener('pointermove', (e) => {
-			for (const g of glyphs) {
-				const r = g.el.getBoundingClientRect();
-				const cx = r.x + r.width / 2;
-				const cy = r.y + r.height / 2;
-				const dx = cx - e.clientX;
-				const dy = cy - e.clientY;
-				const dist = Math.hypot(dx, dy);
-				const radius = 220;
-				if (dist < radius && dist > 0) {
-					const push = (1 - dist / radius) * 48;
-					g.xTo((dx / dist) * push);
-					g.yTo((dy / dist) * push);
-				} else {
-					g.xTo(0);
-					g.yTo(0);
+		document.addEventListener(
+			'astro:before-swap',
+			() => {
+				ac.abort();
+				glyphs.forEach((g) => g.group.halt());
+			},
+			{ once: true }
+		);
+		document.addEventListener(
+			'pointermove',
+			(e) => {
+				for (const g of glyphs) {
+					const r = g.el.getBoundingClientRect();
+					const dx = r.x + r.width / 2 - e.clientX;
+					const dy = r.y + r.height / 2 - e.clientY;
+					const dist = Math.hypot(dx, dy);
+					const radius = 220;
+					if (dist < radius && dist > 0) {
+						const push = (1 - dist / radius) * 48;
+						g.x.to((dx / dist) * push);
+						g.y.to((dy / dist) * push);
+					} else {
+						g.x.to(0);
+						g.y.to(0);
+					}
 				}
-			}
-		}, { signal: ac.signal });
+			},
+			{ signal: ac.signal }
+		);
 	}
 
 	document.addEventListener('astro:page-load', setup);

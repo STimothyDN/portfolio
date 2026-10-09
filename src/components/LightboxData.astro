@@ -1,0 +1,25 @@
+---
+/*
+ * The photo lightbox's data for this page, embedded once as inert JSON.
+ * PhotoLightbox.vue reads it lazily on first open, so the island hydrates with
+ * no props at all — passing the same data as island props cost ~3× the bytes
+ * (Astro wraps every value and HTML-escapes every quote) and had to be parsed
+ * up front at hydration whether or not a photo was ever opened.
+ */
+import type { CollectionEntry } from 'astro:content';
+
+import { LIGHTBOX_DATA_ID, type PackedLightboxSets, packLightboxPhotos } from '../utils/lightbox';
+
+interface Props {
+	shoots: CollectionEntry<'photography'>[];
+}
+
+const { shoots } = Astro.props;
+const sets: PackedLightboxSets = Object.fromEntries(
+	shoots.map((shoot) => [shoot.id, packLightboxPhotos(shoot.data.photos)])
+);
+// `<` can't appear raw inside a script element (it could close it early).
+const json = JSON.stringify(sets).replace(/</g, '\\u003c');
+---
+
+<script type="application/json" id={LIGHTBOX_DATA_ID} set:html={json} />

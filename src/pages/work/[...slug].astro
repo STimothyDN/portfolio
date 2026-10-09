@@ -7,6 +7,7 @@ import ContactCTA from '../../components/ContactCTA.astro';
 import Hero from '../../components/Hero.astro';
 import Icon from '../../components/Icon.astro';
 import Pill from '../../components/Pill.astro';
+import { WORK_IMAGE_SIZES, workImage } from '../../utils/images';
 
 interface Props {
 	entry: CollectionEntry<'work'>;
@@ -26,6 +27,8 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content } = await entry.render();
 const year = entry.data.publishDate.getFullYear();
+// Same variants as the work index thumb, so the morph lands on a cached file.
+const featured = await workImage(entry.data.img);
 ---
 
 <BaseLayout title={entry.data.title} description={entry.data.description}>
@@ -60,7 +63,16 @@ const year = entry.data.publishDate.getFullYear();
 								    transition:name element itself would corrupt the
 								    view-transition morph geometry. */}
 								<div class="featured" data-parallax="0.05">
-									<img src={entry.data.img} alt={entry.data.img_alt || ''} transition:name={`work-image-${entry.slug}`} />
+									<img
+										src={featured.src}
+										srcset={featured.srcset}
+										sizes={WORK_IMAGE_SIZES}
+										width={featured.width}
+										height={featured.height}
+										alt={entry.data.img_alt || ''}
+										fetchpriority="high"
+										transition:name={`work-image-${entry.slug}`}
+									/>
 								</div>
 							</a>
 						)}

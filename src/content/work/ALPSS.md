@@ -1,7 +1,7 @@
 ---
 title: RTI ALPSS Electricity Model
 publishDate: 2020-03-02 00:00:00
-img: /assets/alpss.png
+img: ../../assets/work/alpss.png
 img_alt: ALPSS website
 link: https://rti-alpss.org/
 description: |

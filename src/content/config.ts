@@ -44,15 +44,18 @@ const filmPhotoSchema = z.object({
 
 export const collections = {
 	work: defineCollection({
-		schema: z.object({
-			title: z.string(),
-			description: z.string(),
-			publishDate: z.coerce.date(),
-			link: z.string(),
-			tags: z.array(z.string()),
-			img: z.string(),
-			img_alt: z.string().optional(),
-		}),
+		// `img` is resolved relative to the entry (src/assets/work/…) so Astro can
+		// emit responsive, re-encoded variants instead of shipping the raw capture.
+		schema: ({ image }) =>
+			z.object({
+				title: z.string(),
+				description: z.string(),
+				publishDate: z.coerce.date(),
+				link: z.string(),
+				tags: z.array(z.string()),
+				img: image(),
+				img_alt: z.string().optional(),
+			}),
 	}),
 	blog: defineCollection({
 		schema: z.object({

@@ -189,6 +189,7 @@ import '@fontsource/permanent-marker/400.css';
 import FilmCanister from './FilmCanister.vue';
 import FilmRollStrip from './FilmRollStrip.vue';
 import { bestSplit } from './canister';
+import { unpackFilmPhotos } from './data';
 import { bunnyUrl } from '../../utils/bunny';
 import {
 	clamp,
@@ -205,7 +206,10 @@ import {
 } from './layout';
 import type { FacetKey, FacetOption, FilmPhotoData, FilmRollData, RollsState } from './types';
 
-const props = defineProps<{ rolls: FilmRollData[]; photos: FilmPhotoData[] }>();
+// Every frame on every roll, packed into one string by the page (data.ts) —
+// static for the island's lifetime, so a plain array, not reactive state.
+const props = defineProps<{ rolls: FilmRollData[]; packedPhotos: string }>();
+const photos: FilmPhotoData[] = unpackFilmPhotos(props.packedPhotos);
 
 /* ── Facets ─────────────────────────────────────────────────────────── */
 
@@ -226,7 +230,7 @@ const FACET_NOUN: Record<FacetKey, string> = {
 };
 
 // Every frame inherits its roll's metadata — the folder name is the record.
-const facetOf = props.photos.map((p) => {
+const facetOf = photos.map((p) => {
 	const roll = props.rolls[p.r];
 	return { roll: roll.id, camera: roll.camera, stock: roll.stock, lab: roll.lab, year: roll.year } as Record<
 		FacetKey,
@@ -277,7 +281,7 @@ const mode = computed<'pile' | 'grid'>(() => (hasFilters.value ? 'grid' : 'pile'
 const matches = (i: number, except?: FacetKey) =>
 	facetOrder.value.every((f) => f === except || selected[f].includes(facetOf[i][f]));
 
-const filtered = computed(() => props.photos.map((_, i) => i).filter((i) => matches(i)));
+const filtered = computed(() => photos.map((_, i) => i).filter((i) => matches(i)));
 
 const groups = computed(() => {
 	const f = facetOrder.value[0];
@@ -297,7 +301,7 @@ const options = computed(() => {
 	const out = {} as Record<FacetKey, FacetOption[]>;
 	for (const f of ALL_FACETS) {
 		const counts = new Map<string, number>();
-		props.photos.forEach((_, i) => {
+		photos.forEach((_, i) => {
 			if (matches(i, f)) counts.set(facetOf[i][f], (counts.get(facetOf[i][f]) ?? 0) + 1);
 		});
 		out[f] = universe[f].map((value) => ({
@@ -358,7 +362,7 @@ function clearAll() {
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const status = computed(() => {
-	const total = props.photos.length;
+	const total = photos.length;
 	if (!hasFilters.value) return plural(total, 'frame');
 	return `${filtered.value.length} of ${plural(total, 'frame')} · by ${FACET_NOUN[facetOrder.value[0]]}`;
 });
@@ -464,7 +468,7 @@ const setPrintEl = (i: number, el: unknown) => {
 };
 
 const aspectOf = (i: number) => {
-	const p = props.photos[i];
+	const p = photos[i];
 	return p.w && p.h ? p.w / p.h : 1.5;
 };
 const sizeOf = (i: number) => printSize(aspectOf(i), printLong.value);
@@ -473,7 +477,7 @@ const sizeOf = (i: number) => printSize(aspectOf(i), printLong.value);
 // re-downloads, and shared with the lightbox's blur-up placeholder.
 let thumbLong = 480;
 const THUMB_STEPS = [360, 480, 600, 720];
-const scanPath = (i: number) => `${props.rolls[props.photos[i].r].folder}/${props.photos[i].f}`;
+const scanPath = (i: number) => `${props.rolls[photos[i].r].folder}/${photos[i].f}`;
 function thumbUrl(i: number) {
 	const a = aspectOf(i);
 	const width = a >= 1 ? thumbLong : Math.round((thumbLong * a) / 40) * 40;
@@ -489,13 +493,13 @@ const fullDate = (iso: string) =>
 	});
 
 function printLabel(i: number) {
-	const p = props.photos[i];
+	const p = photos[i];
 	const roll = props.rolls[p.r];
 	return `${p.c ? `${p.c}. ` : ''}Frame ${p.n} of ${roll.title} — ${roll.cameraLabel}, ${roll.stockLabel}`;
 }
 
 function toLightbox(i: number) {
-	const p = props.photos[i];
+	const p = photos[i];
 	const roll = props.rolls[p.r];
 	return {
 		filename: p.f,
@@ -554,14 +558,14 @@ let zTop = 0;
 function buildPile() {
 	const rand = mulberry32((Math.random() * 2 ** 32) >>> 0);
 	const area = pileArea();
-	const all = props.photos.map((_, i) => i);
+	const all = photos.map((_, i) => i);
 	const picked = weightedSample(
 		all,
-		(i) => priorityWeight(props.photos[i].p),
+		(i) => priorityWeight(photos[i].p),
 		pileCapacity(area, printLong.value),
 		rand
 	);
-	const stacked = stackOrder(picked, (i) => props.photos[i].p, rand);
+	const stacked = stackOrder(picked, (i) => photos[i].p, rand);
 	const slots = layoutPile(stacked.map(sizeOf), area, rand);
 	pile = stacked.map((i, k) => ({ i, slot: slots[k], z: k + 1 }));
 	zTop = pile.length;
@@ -620,7 +624,7 @@ async function applyLayout(kind: Kind) {
 			top: geo.navH + 28,
 			bottom: geo.bottomH + 40,
 			maxContent: 1280,
-			runOf: (i) => props.rolls[props.photos[i].r].id,
+			runOf: (i) => props.rolls[photos[i].r].id,
 			headings: facetOrder.value[0] !== 'roll',
 		});
 		vertical.value = sheet.vertical;
@@ -641,8 +645,8 @@ async function applyLayout(kind: Kind) {
 			mono: rollById.get(strip.run)!.mono,
 			frames: strip.frames.map((fr) => ({
 				...fr,
-				n: props.photos[fr.idx].n,
-				stock: props.rolls[props.photos[fr.idx].r].stockLabel.toUpperCase(),
+				n: photos[fr.idx].n,
+				stock: props.rolls[photos[fr.idx].r].stockLabel.toUpperCase(),
 			})),
 		}));
 		order = groups.value.flatMap((g) => g.items);
@@ -840,7 +844,7 @@ const topOfPile = (n = 24) => pile.slice(-n).map((e) => e.i);
 /** Heading for one group: what it is, its name, and how much is in it. */
 function groupInfo(f: FacetKey, key: string) {
 	const items = groups.value.find((g) => g.key === key)?.items ?? [];
-	const rollsIn = new Set(items.map((i) => props.photos[i].r)).size;
+	const rollsIn = new Set(items.map((i) => photos[i].r)).size;
 	return {
 		eyebrow: FILTER_FACETS.find((x) => x.key === f)?.title ?? '',
 		label: labelOf[f].get(key) ?? key,

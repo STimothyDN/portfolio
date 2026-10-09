@@ -1,6 +1,8 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 
+import { WORK_IMAGE_SIZES, workImage } from '../utils/images';
+
 interface Props {
 	project: CollectionEntry<'work'>;
 	eager?: boolean;
@@ -9,6 +11,7 @@ interface Props {
 const { project, eager = false } = Astro.props;
 const { data, slug } = project;
 const year = data.publishDate.getFullYear();
+const img = await workImage(data.img);
 ---
 
 <article class="row" data-slug={slug}>
@@ -16,7 +19,11 @@ const year = data.publishDate.getFullYear();
 	<h2 class="title"><a href={`/work/${slug}`} transition:name={`work-title-${slug}`}>{data.title}</a></h2>
 	<div class="thumb">
 		<img
-			src={data.img}
+			src={img.src}
+			srcset={img.srcset}
+			sizes={WORK_IMAGE_SIZES}
+			width={img.width}
+			height={img.height}
 			alt={data.img_alt || ''}
 			loading={eager ? 'eager' : 'lazy'}
 			fetchpriority={eager ? 'high' : undefined}

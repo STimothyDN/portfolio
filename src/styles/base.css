@@ -130,38 +130,84 @@ h2 {
  * Entrance pre-hide.
  * `html.anim-ready` is set before first paint by the inline script in
  * MainHead.astro — only when JS is running and motion is allowed. These rules
- * mirror the initial states motion.ts applies per preset, so the load-in
- * animation starts from an empty page instead of flashing the fully-rendered
- * HTML for a frame. No-JS / reduced-motion visitors never get the class, so
- * they always see fully-visible content. gsap's inline styles override these
- * the instant it runs, and stay at the revealed values afterward.
+ * hold each preset's starting state until motion.ts marks the element
+ * [data-revealed], in the same frame its entrance animation starts (the
+ * animation's backwards fill takes over from here). No-JS / reduced-motion
+ * visitors never get the class, so they always see fully-visible content.
  * ============================================================ */
 @media (prefers-reduced-motion: no-preference) {
-	html.anim-ready :is([data-animate='fade-up'], [data-animate='fade'], [data-animate='scale'], [data-animate='clip']) {
+	html.anim-ready
+		:is([data-animate='fade-up'], [data-animate='fade'], [data-animate='scale'], [data-animate='clip']):not(
+			[data-revealed]
+		) {
 		opacity: 0;
 	}
 
-	html.anim-ready [data-animate='clip'] {
+	html.anim-ready [data-animate='clip']:not([data-revealed]) {
 		clip-path: inset(12% 12% 12% 12%);
 	}
 
 	/* mask-lines: hide the whole heading (not the movers via transform — a
-	 * stalled transform could leave text shifted *and* visible). motion.ts
-	 * parks the movers below the clip, then reveals this container. */
-	html.anim-ready [data-animate='mask-lines'] {
+	 * stalled transform could leave text shifted *and* visible). The movers'
+	 * entrance holds them below the clip from the frame this lifts. */
+	html.anim-ready [data-animate='mask-lines']:not([data-revealed]) {
 		opacity: 0;
 	}
 
 	/* work-row: hairline draws in (scaleX), content lifts (opacity). */
-	html.anim-ready [data-animate='work-row'] .hairline {
-		transform: scaleX(0);
+	html.anim-ready [data-animate='work-row']:not([data-revealed]) .hairline {
+		scale: 0 1;
 	}
-	html.anim-ready [data-animate='work-row'] :is(.title, .thumb) {
+	html.anim-ready [data-animate='work-row']:not([data-revealed]) :is(.title, .thumb) {
 		opacity: 0;
 	}
 
-	html.anim-ready [data-animate-group] > *,
-	html.anim-ready [data-animate-body] > * {
+	html.anim-ready [data-animate-group]:not([data-revealed]) > *,
+	html.anim-ready [data-animate-body] > :not([data-revealed]) {
 		opacity: 0;
+	}
+
+	/* ============================================================
+	 * Scroll-linked motion on the compositor (no scroll listeners).
+	 * motion.ts writes each element's --parallax strength and falls back to a
+	 * rAF scroll handler where scroll timelines aren't supported. <body> is
+	 * the scroll container, so view() resolves to it and it names --page.
+	 * ============================================================ */
+	@supports (animation-timeline: view()) {
+		/* Scrubbed y-parallax: +strength·120px as the element's top enters at
+		 * the bottom of the viewport → −strength·120px as its bottom leaves the top. */
+		html.anim-ready:not([data-section='photography']) [data-parallax] {
+			animation: motion-parallax linear both;
+			animation-timeline: view();
+			animation-range: cover 0% cover 100%;
+		}
+
+		/* Reading progress across the whole page. */
+		html.anim-ready body {
+			scroll-timeline: --page block;
+		}
+
+		html.anim-ready [data-scroll-progress] {
+			animation: motion-progress linear both;
+			animation-timeline: --page;
+		}
+	}
+}
+
+@keyframes motion-parallax {
+	from {
+		translate: 0 calc(var(--parallax, 0) * 120px);
+	}
+	to {
+		translate: 0 calc(var(--parallax, 0) * -120px);
+	}
+}
+
+@keyframes motion-progress {
+	from {
+		transform: scaleX(0);
+	}
+	to {
+		transform: scaleX(1);
 	}
 }

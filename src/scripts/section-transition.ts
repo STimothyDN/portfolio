@@ -2,16 +2,33 @@ const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: r
 const isPhoto = (url: URL) => url.pathname === '/photography' || url.pathname.startsWith('/photography/');
 const crossesBoundary = (from: URL, to: URL) => isPhoto(from) !== isPhoto(to);
 
-// Motion is only needed once a boundary is crossed, but the fetch starts now so
-// the chunk is warm before the first transition. If it fails to load, every
-// animation degrades to an instant no-op instead of breaking navigation.
-type Animate = (el: Element, keyframes: any, options?: any) => { finished: Promise<unknown> };
-const animateReady: Promise<Animate> = import('motion')
-	.then((m) => m.animate as Animate)
-	.catch(() => () => ({ finished: Promise.resolve() }));
-const getAnimate = () => animateReady;
+// Native Web Animations (compositor-driven; no library to fetch before the
+// first transition) with the semantics these sequences were written against:
+// durations in seconds, eases as CSS keywords or cubic-bezier tuples, and each
+// animation's last frame committed to inline style when it finishes, so later
+// inline writes and animations pick up from where it ended.
+type Ease = string | [number, number, number, number];
+function animate(el: Element, keyframes: PropertyIndexedKeyframes, { duration, ease = 'ease' }: { duration: number; ease?: Ease }) {
+	const animation = el.animate(keyframes, {
+		duration: duration * 1000,
+		easing: Array.isArray(ease) ? `cubic-bezier(${ease.join(', ')})` : ease,
+		fill: 'forwards',
+	});
+	animation.finished.then(
+		() => {
+			try {
+				animation.commitStyles();
+				animation.cancel();
+			} catch {
+				/* not rendered right now — the forwards fill keeps the end state */
+			}
+		},
+		() => {}
+	);
+	return animation;
+}
 
-const waitFor = (anim: any) => anim.finished;
+const waitFor = (anim: Animation) => anim.finished;
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 const nextFrame = () => new Promise(r => requestAnimationFrame(r));
 
@@ -89,7 +106,6 @@ function setFlashWhite({ overlay, base, camera, burst }: FlashParts) {
 
 async function flashClose() {
 	try {
-		const animate = await getAnimate();
 		const parts = flashParts();
 		if (!parts) return;
 		const { overlay, base, tint, bloom, grain, camera, burst, bulbGlow } = parts;
@@ -175,7 +191,6 @@ async function flashOpen() {
 	const { overlay, base, tint, bloom, grain } = parts;
 
 	try {
-		const animate = await getAnimate();
 
 		// Hold pure white while the new page settles underneath: fonts, then
 		// any above-the-fold imagery, then a beat of blank paper.
@@ -295,7 +310,6 @@ async function blinkContent(els: (HTMLElement | null)[], count: number, onMs = 2
 
 async function dslrClose() {
 	try {
-		const animate = await getAnimate();
 		const parts = ensureDslrOverlay(document, 'hidden');
 		if (!parts) return;
 		const { modal, blackout, crt, panel, text, icon, barFill } = parts;
@@ -322,7 +336,6 @@ async function dslrClose() {
 }
 
 async function dslrOpen() {
-	const animate = await getAnimate();
 	const modal = document.querySelector<HTMLElement>('.dslr-shutdown');
 	const blackout = document.querySelector<HTMLElement>('.dslr-shutdown__blackout');
 	const crt = document.querySelector<HTMLElement>('.dslr-shutdown__crt');

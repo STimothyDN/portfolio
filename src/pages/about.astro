@@ -3,6 +3,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 import ContactCTA from '../components/ContactCTA.astro';
 import Hero from '../components/Hero.astro';
+
+import atWorkSrc from '../assets/at-work.jpg';
+import { responsive } from '../utils/images';
+
+const photoWidths = [480, 640, 800, 1024, 1280, 1600];
+const [photoAvif, photoWebp] = await Promise.all([
+	responsive(atWorkSrc, { widths: photoWidths, format: 'avif' }),
+	responsive(atWorkSrc, { widths: photoWidths, format: 'webp' }),
+]);
+// The hero spans the 60% middle column of the 83rem wrapper on desktop.
+const photoSizes = '(min-width: 83rem) 768px, (min-width: 50em) calc(60vw - 1.8rem), calc(100vw - 3rem)';
 ---
 
 <BaseLayout title="About | Timothy Navarro" description="About Timothy Navarro">
@@ -13,12 +24,19 @@ import Hero from '../components/Hero.astro';
 				tagline="Thanks for stopping by. Read below to learn more about myself and my background."
 			>
 				<div class="about-photo" data-animate="clip" data-parallax="0.05">
-					<img
-						width="1553"
-						height="873"
-						src="/assets/at-work.jpg"
-						alt="Timothy Navarro at work"
-					/>
+					<picture>
+						<source type="image/avif" srcset={photoAvif.srcset} sizes={photoSizes} />
+						<img
+							width={photoWebp.width}
+							height={photoWebp.height}
+							src={photoWebp.src}
+							srcset={photoWebp.srcset}
+							sizes={photoSizes}
+							alt="Timothy Navarro at work"
+							fetchpriority="high"
+							decoding="async"
+						/>
+					</picture>
 				</div>
 			</Hero>
 

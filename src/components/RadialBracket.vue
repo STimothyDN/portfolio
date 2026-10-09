@@ -9,8 +9,15 @@
   
   <script setup>
   import { ref, onMounted } from 'vue';
-  import * as d3 from 'd3';
-  
+  // Per-module imports: the `d3` umbrella doesn't declare itself side-effect
+  // free, so `import * as d3` bundled all of d3 (~280KB) for these four.
+  import { range } from 'd3-array';
+  import { schemeCategory10 } from 'd3-scale-chromatic';
+  import { select } from 'd3-selection';
+  import { arc } from 'd3-shape';
+
+  const d3 = { arc, range, schemeCategory10, select };
+
   const props = defineProps({
     size: { type: Number, default: 800 }
   });

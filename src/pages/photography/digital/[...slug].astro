@@ -4,10 +4,10 @@ import { type CollectionEntry, getCollection } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 
 import ContactCTA from '../../../components/ContactCTA.astro';
+import LightboxData from '../../../components/LightboxData.astro';
 import PhotoParentBar from '../../../components/PhotoParentBar.astro';
 import PhotoGrid from '../../../components/PhotoGrid.astro';
 import PhotoLightbox from '../../../components/PhotoLightbox.vue';
-import { toLightboxPhotos } from '../../../utils/lightbox';
 
 interface Props {
 	entry: CollectionEntry<'photography'>;
@@ -29,8 +29,6 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 	day: 'numeric',
 	timeZone: 'UTC',
 });
-
-const lightboxPhotos = toLightboxPhotos(id, data.photos);
 ---
 
 <BaseLayout title={data.title} description={data.description ?? `Photos from ${data.title}`}>
@@ -61,7 +59,8 @@ const lightboxPhotos = toLightboxPhotos(id, data.photos);
 				</div>
 				<div class="wrapper stage-body">
 					<PhotoGrid shootSlug={id} photos={data.photos} />
-					<PhotoLightbox client:load photos={lightboxPhotos} shootSlug={id} />
+					<LightboxData shoots={[entry]} />
+					<PhotoLightbox client:idle />
 				</div>
 			</main>
 		</div>

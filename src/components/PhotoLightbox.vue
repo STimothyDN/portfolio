@@ -26,7 +26,7 @@
 				</div>
 
 				<button ref="closeButtonRef" type="button" class="control close" @click="close" aria-label="Close">
-					<svg viewBox="0 0 256 256" class="icon" v-html="iconPaths.close"></svg>
+					<svg viewBox="0 0 256 256" class="icon" v-html="icons.close"></svg>
 				</button>
 
 				<button
@@ -39,14 +39,14 @@
 					@click="toggleInfo"
 					aria-label="Toggle photo info"
 				>
-					<svg viewBox="0 0 256 256" class="icon" v-html="iconPaths.info"></svg>
+					<svg viewBox="0 0 256 256" class="icon" v-html="icons.info"></svg>
 				</button>
 
 				<button v-if="hasSiblings" type="button" class="control nav prev" @click="prev" aria-label="Previous photo">
-					<svg viewBox="0 0 256 256" class="icon" v-html="iconPaths['caret-left']"></svg>
+					<svg viewBox="0 0 256 256" class="icon" v-html="icons.caretLeft"></svg>
 				</button>
 				<button v-if="hasSiblings" type="button" class="control nav next" @click="next" aria-label="Next photo">
-					<svg viewBox="0 0 256 256" class="icon" v-html="iconPaths['caret-right']"></svg>
+					<svg viewBox="0 0 256 256" class="icon" v-html="icons.caretRight"></svg>
 				</button>
 
 				<div class="stage" @click.self="close" @touchstart="onTouchStart" @touchend="onTouchEnd">
@@ -154,19 +154,34 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import { iconPaths } from './IconPaths';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
+import { caretLeft, caretRight, close as closeIcon, info } from './IconPaths';
+import { LIGHTBOX_DATA_ID, unpackLightboxPhotos } from '../utils/lightbox';
 
-const props = defineProps({
-	// Single-shoot mode (static shoot pages): one photo list.
-	photos: { type: Array, default: () => [] },
-	// Multi-shoot mode (photography index): slug → photo list. One lightbox
-	// instance serves every inline shoot panel; open-lightbox events carry the
-	// slug that picks the active set.
-	photoSets: { type: Object, default: null },
-	// In single-shoot mode, ignore events tagged for another shoot.
-	shootSlug: { type: String, default: '' },
-});
+const icons = { close: closeIcon, info, caretLeft, caretRight };
+
+// Shoot photo lists come from the page's embedded JSON (LightboxData.astro),
+// read on first open: a shoot page carries its own shoot, the photography
+// index every inline panel's. open-lightbox events name the shoot by slug, so
+// one lightbox serves them all (a slug the page doesn't carry is ignored).
+// The film desk instead passes its own ad-hoc list with each event.
+let pageSets;
+const unpackedSets = new Map();
+function photosFor(slug) {
+	if (!slug) return null;
+	if (pageSets === undefined) {
+		try {
+			pageSets = JSON.parse(document.getElementById(LIGHTBOX_DATA_ID)?.textContent || '{}');
+		} catch {
+			pageSets = {};
+		}
+	}
+	if (!unpackedSets.has(slug)) {
+		const packed = pageSets[slug];
+		unpackedSets.set(slug, packed ? unpackLightboxPhotos(slug, packed) : null);
+	}
+	return unpackedSets.get(slug);
+}
 
 const isOpen = ref(false);
 const currentIndex = ref(0);
@@ -176,7 +191,8 @@ const direction = ref('next');
 const loadedSrc = ref('');
 const closeButtonRef = ref(null);
 const overlayRef = ref(null);
-const activeSet = ref(null);
+// Photo records are immutable — no need for deep reactivity on hundreds of them.
+const activeSet = shallowRef(null);
 // Scan each frame in from its negative (the film desk's negative view).
 const scanMode = ref(false);
 let lastFocusedElement = null;
@@ -187,7 +203,7 @@ const canIdleHide =
 	typeof window !== 'undefined' &&
 	window.matchMedia('(pointer: fine) and (prefers-reduced-motion: no-preference)').matches;
 
-const list = computed(() => activeSet.value ?? props.photos);
+const list = computed(() => activeSet.value ?? []);
 const current = computed(() => list.value[currentIndex.value]);
 const hasInfo = computed(() =>
 	Boolean(current.value?.exif || current.value?.location || current.value?.details?.length)
@@ -350,14 +366,10 @@ function resolveAndOpen(detail) {
 		open(detail.index ?? 0);
 		return true;
 	}
+	const set = photosFor(detail?.shootSlug);
+	if (!set) return false;
 	scanMode.value = false;
-	if (props.photoSets) {
-		const set = detail?.shootSlug ? props.photoSets[detail.shootSlug] : null;
-		if (!set) return false;
-		activeSet.value = set;
-	} else if (props.shootSlug && detail?.shootSlug && detail.shootSlug !== props.shootSlug) {
-		return false;
-	}
+	activeSet.value = set;
 	open(detail?.index ?? 0);
 	return true;
 }

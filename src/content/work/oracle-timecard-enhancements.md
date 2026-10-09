@@ -1,7 +1,7 @@
 ---
 title: Oracle Timecard Enhancements
 publishDate: 2025-07-15 00:00:00
-img: /assets/oracle-timecard-enhancements.jpg
+img: ../../assets/work/oracle-timecard-enhancements.jpg
 img_alt: Oracle Timecard Enhancements Landing Page
 link: https://github.com/STimothyDN/oracle-timecard-enhancements
 description: |

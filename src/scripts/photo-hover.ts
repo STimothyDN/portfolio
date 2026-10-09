@@ -8,12 +8,30 @@
  * sweeps across the list from thrashing the stage, and with no row hovered
  * the stage rests dimmed on the last shoot shown. Touch, reduced-motion, and
  * no-JS users keep the static thumbnail in each row.
+ *
+ * The wipe and drift are Web Animations (compositor-driven); the plate's
+ * parallax is a pointer follower.
  */
-import { gsap } from './motion';
+import { easing } from './ease';
+import { FollowGroup } from './follow';
 
 const GATE = '(min-width: 50rem) and (pointer: fine) and (prefers-reduced-motion: no-preference)';
 const DWELL_MS = 90;
 const IDLE_OPACITY = 0.55;
+
+/** Freeze an element's running animations where they are (gsap.killTweensOf semantics). */
+function settle(el: Element) {
+	for (const animation of el.getAnimations()) {
+		try {
+			animation.commitStyles();
+		} catch {
+			/* not rendered: nothing on screen to freeze */
+		}
+		animation.cancel();
+	}
+}
+
+let teardown: (() => void) | null = null;
 
 function setup() {
 	const list = document.querySelector<HTMLElement>('[data-shoot-list]');
@@ -36,13 +54,15 @@ function setup() {
 
 	let front = -1; // buffer currently on top (-1 until first show)
 	let shownRow = -1; // row index currently on the stage
-	let drift: gsap.core.Tween | null = null;
 
 	// Very slow push-in on the resting image so the stage never feels frozen.
-	const startDrift = (img: HTMLImageElement) => {
-		drift?.kill();
-		drift = gsap.to(img, { scale: 1.13, duration: 11, ease: 'sine.inOut', yoyo: true, repeat: -1 });
-	};
+	const startDrift = (img: HTMLImageElement) =>
+		img.animate([{ scale: '1.13' }], {
+			duration: 11000,
+			easing: easing('sine.inOut'),
+			iterations: Infinity,
+			direction: 'alternate',
+		});
 
 	const show = (i: number) => {
 		if (i === shownRow) return;
@@ -59,35 +79,52 @@ function setup() {
 
 		incoming.src = thumb.currentSrc || thumb.src;
 		const swap = () => {
-			drift?.kill();
-			gsap.killTweensOf(bufs);
+			bufs.forEach(settle);
 			// The previous image becomes the base layer; square up any clip a
-			// killed mid-wipe tween may have left on it.
-			if (outgoing) gsap.set(outgoing, { zIndex: 1, clipPath: 'inset(0% 0% 0% 0%)' });
-			gsap.set(incoming, { zIndex: 2, opacity: 1 });
-			gsap.fromTo(
-				incoming,
-				{ clipPath: down ? 'inset(0% 0% 100% 0%)' : 'inset(100% 0% 0% 0%)', scale: 1.14 },
-				{
-					clipPath: 'inset(0% 0% 0% 0%)',
-					scale: 1.06,
-					duration: 0.55,
-					ease: 'power3.out',
-					onComplete: () => {
-						if (outgoing) gsap.set(outgoing, { opacity: 0 });
-						startDrift(incoming);
-					},
-				}
+			// cut-short wipe may have left on it.
+			if (outgoing) {
+				outgoing.style.zIndex = '1';
+				outgoing.style.clipPath = 'inset(0% 0% 0% 0%)';
+			}
+			incoming.style.zIndex = '2';
+			incoming.style.opacity = '1';
+			const wipe = incoming.animate(
+				[
+					{ clipPath: down ? 'inset(0% 0% 100% 0%)' : 'inset(100% 0% 0% 0%)', scale: '1.14' },
+					{ clipPath: 'inset(0% 0% 0% 0%)', scale: '1.06' },
+				],
+				{ duration: 550, easing: easing('power3.out'), fill: 'forwards' }
+			);
+			wipe.finished.then(
+				() => {
+					wipe.commitStyles();
+					wipe.cancel();
+					if (outgoing) outgoing.style.opacity = '0';
+					startDrift(incoming);
+				},
+				() => {} // cut short by the next swap
 			);
 			// The base layer eases away underneath instead of sitting still.
-			if (outgoing) gsap.to(outgoing, { scale: 1.1, duration: 0.55, ease: 'power2.out' });
+			outgoing?.animate([{ scale: '1.1' }], { duration: 550, easing: easing('power2.out'), fill: 'forwards' });
 		};
 		(incoming.decode?.() ?? Promise.resolve()).then(swap, swap);
 
 		if (indexEl) {
 			indexEl.textContent = String(i + 1).padStart(2, '0');
-			gsap.fromTo(indexEl, { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' });
+			indexEl.animate(
+				[
+					{ translate: '0 8px', opacity: 0 },
+					{ translate: '0 0', opacity: 1 },
+				],
+				{ duration: 350, easing: easing('power2.out') }
+			);
 		}
+	};
+
+	// Stage dimming is a plain CSS transition from wherever it currently is.
+	const fadeStage = (opacity: number, seconds: number) => {
+		stage.style.transition = `opacity ${seconds}s ${easing('power2.out')}`;
+		stage.style.opacity = String(opacity);
 	};
 
 	// Hover with intent: a row has to hold the cursor briefly before it takes
@@ -111,33 +148,46 @@ function setup() {
 		const row = (e.target as HTMLElement).closest?.('.shoot-row');
 		const i = row ? rows.indexOf(row as HTMLElement) : -1;
 		if (i >= 0) {
-			gsap.to(stage, { opacity: 1, duration: 0.4, ease: 'power2.out' });
+			fadeStage(1, 0.4);
 			show(i);
 		}
 	});
 
 	// Damped micro-parallax: the plate leans a few pixels toward the cursor.
-	const px = gsap.quickTo(parallax, 'x', { duration: 0.8, ease: 'power3' });
-	const py = gsap.quickTo(parallax, 'y', { duration: 0.8, ease: 'power3' });
+	const lean = new FollowGroup(() => (parallax.style.translate = `${px.current}px ${py.current}px`));
+	const px = lean.value(0, 0.8, 'power3.out');
+	const py = lean.value(0, 0.8, 'power3.out');
 	list.addEventListener('pointermove', (e) => {
-		px((e.clientX / window.innerWidth - 0.5) * 16);
-		py((e.clientY / window.innerHeight - 0.5) * 12);
+		px.to((e.clientX / window.innerWidth - 0.5) * 16);
+		py.to((e.clientY / window.innerHeight - 0.5) * 12);
 	});
 
 	// Off the list the stage keeps the last shoot, dimmed to recede.
 	list.addEventListener('pointerenter', (e) => {
 		if (e.pointerType !== 'mouse') return;
-		gsap.to(stage, { opacity: 1, duration: 0.4, ease: 'power2.out' });
+		fadeStage(1, 0.4);
 	});
 	list.addEventListener('pointerleave', (e) => {
 		if (e.pointerType !== 'mouse') return;
 		window.clearTimeout(dwell);
-		gsap.to(stage, { opacity: IDLE_OPACITY, duration: 0.6, ease: 'power2.out' });
+		fadeStage(IDLE_OPACITY, 0.6);
 	});
 
 	// Open on the first shoot so the stage is never an empty frame.
-	gsap.set(stage, { opacity: IDLE_OPACITY });
+	stage.style.opacity = String(IDLE_OPACITY);
 	show(0);
+
+	// The drift loops forever: stop it (and the parallax follower) when the
+	// page is swapped out, or it keeps running against a detached image.
+	teardown = () => {
+		window.clearTimeout(dwell);
+		lean.halt();
+		bufs.forEach((buf) => buf.getAnimations().forEach((a) => a.cancel()));
+	};
 }
 
 document.addEventListener('astro:page-load', setup);
+document.addEventListener('astro:before-swap', () => {
+	teardown?.();
+	teardown = null;
+});

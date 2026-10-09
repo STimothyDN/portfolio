@@ -10,6 +10,14 @@
  * 6. Replace any `fill="#000000"` attributes with `stroke="none"`
  *    (or add `stroke="none"` on shapes with no `fill` or `stroke` specified).
  */
+
+// The photo lightbox's controls, also exported on their own so client code
+// can import just these and let the rest of the registry tree-shake away.
+export const caretLeft = `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M160 208 80 128 160 48"/>`;
+export const caretRight = `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M96 48 176 128 96 208"/>`;
+export const close = `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="m56 56 144 144M200 56 56 200"/>`;
+export const info = `<circle cx="128" cy="128" r="96" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M128 116v56"/><circle cx="128" cy="80" r="12" stroke="none"/>`;
+
 export const iconPaths = {
 	'cook': '<path d="M88,48V16a8,8,0,0,1,16,0V48a8,8,0,0,1-16,0Zm40,8a8,8,0,0,0,8-8V16a8,8,0,0,0-16,0V48A8,8,0,0,0,128,56Zm32,0a8,8,0,0,0,8-8V16a8,8,0,0,0-16,0V48A8,8,0,0,0,160,56Zm92.8,46.4L224,124v60a32,32,0,0,1-32,32H64a32,32,0,0,1-32-32V124L3.2,102.4a8,8,0,0,1,9.6-12.8L32,104V88A16,16,0,0,1,48,72H208a16,16,0,0,1,16,16v16l19.2-14.4a8,8,0,0,1,9.6,12.8ZM208,88H48v96a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16Z"></path>',
 	'producer': '<path d="M136,120v96a8,8,0,0,1-16,0V120a8,8,0,0,1,16,0Zm64,72a8,8,0,0,0-8,8v16a8,8,0,0,0,16,0V200A8,8,0,0,0,200,192Zm24-32H208V40a8,8,0,0,0-16,0V160H176a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16ZM56,160a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V168A8,8,0,0,0,56,160Zm24-32H64V40a8,8,0,0,0-16,0v88H32a8,8,0,0,0,0,16H80a8,8,0,0,0,0-16Zm72-48H136V40a8,8,0,0,0-16,0V80H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16Z"></path>',
@@ -19,10 +27,10 @@ export const iconPaths = {
 	'paper-plane-tilt': `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M210.3 35.9 23.9 88.4a8 8 0 0 0-1.2 15l85.6 40.5a7.8 7.8 0 0 1 3.8 3.8l40.5 85.6a8 8 0 0 0 15-1.2l52.5-186.4a7.9 7.9 0 0 0-9.8-9.8Zm-99.4 109.2 45.2-45.2"/>`,
 	'arrow-right': `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M40 128h176m-72-72 72 72-72 72"/>`,
 	'arrow-left': `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M216 128H40m72-72-72 72 72 72"/>`,
-	'caret-left': `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M160 208 80 128 160 48"/>`,
-	'caret-right': `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M96 48 176 128 96 208"/>`,
-	close: `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="m56 56 144 144M200 56 56 200"/>`,
-	info: `<circle cx="128" cy="128" r="96" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M128 116v56"/><circle cx="128" cy="80" r="12" stroke="none"/>`,
+	'caret-left': caretLeft,
+	'caret-right': caretRight,
+	close,
+	info,
 	camera: `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="M32 72h48l16-24h64l16 24h48a16 16 0 0 1 16 16v112a16 16 0 0 1-16 16H32a16 16 0 0 1-16-16V88a16 16 0 0 1 16-16Z"/><circle cx="128" cy="144" r="44" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/>`,
 	code: `<path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="m64 88-48 40 48 40m128-80 48 40-48 40M160 40 96 216"/>`,
 	'microphone-stage': `<circle cx="168" cy="88" r="64" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16"/><path fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" d="m213.3 133.3-90.6-90.6M100 156l-12 12m16.8-70.1L28.1 202.5a7.9 7.9 0 0 0 .8 10.4l14.2 14.2a7.9 7.9 0 0 0 10.4.8l104.6-76.7"/>`,

@@ -1,246 +1,276 @@
 /**
- * Shared motion system — GSAP + ScrollTrigger behind a declarative API.
+ * Shared motion system — declarative entrances on IntersectionObserver + the
+ * Web Animations API, scroll-linked effects on CSS scroll-driven animations.
+ * No animation library ships with it: entrances run on the compositor (so
+ * they stay smooth while the main thread is busy hydrating or decoding), and
+ * parallax/progress need no scroll listeners at all where scroll timelines
+ * are supported.
  *
  * Components opt in with markup only:
- *   data-animate="fade-up | fade | scale | clip | mask-lines" → entrance on scroll
+ *   data-animate="fade-up | fade | scale | clip | mask-lines | work-row" → entrance on scroll
  *   data-animate-delay="0.3"                            → entrance delay (seconds)
  *   data-line (inside mask-lines)                       → one masked line/word per wrapper
- *                                                         (CSS owns display; JS only transforms)
+ *                                                         (CSS owns display; JS only animates)
  *   data-animate-group [data-stagger="0.08"]            → staggered child entrances
+ *   data-animate-body                                   → each direct child fades up on its own
  *   data-parallax="0.15"                                → scrubbed y-parallax
+ *   data-scroll-progress                                → reading-progress bar over the page
  *
  * Rules the rest of the site depends on:
- * - Initial "hidden" states are set here in JS, never in CSS, so no-JS,
- *   reduced-motion, and crawlers always see content.
- * - Everything lives inside gsap.matchMedia('prefers-reduced-motion:
- *   no-preference'); under reduced motion nothing is ever hidden.
- * - The per-page gsap.context is reverted on astro:before-swap BEFORE the
- *   View Transition snapshot is taken — otherwise mid-tween inline styles
- *   freeze into the outgoing page's snapshot.
- * - No ScrollTrigger pinning anywhere: pin spacers corrupt the root
- *   view-transition snapshot during the swap.
- * - The photography section gets the restrained editorial set: fade-only,
- *   longer durations, no parallax.
+ * - Hidden pre-states live in base.css behind `html.anim-ready` (set before
+ *   first paint, only when JS runs and motion is allowed) and stop applying
+ *   once an element is marked [data-revealed] — in the same frame its entrance
+ *   starts, with `fill: backwards` holding the first keyframe through any
+ *   delay. No-JS, reduced-motion and crawlers always see content.
+ * - Entrances animate the individual `translate` / `scale` properties, never
+ *   `transform`, so they compose with parallax and component CSS. Finished
+ *   animations leave no inline styles behind.
+ * - <body> is the scroll container (base.css). IntersectionObserver doesn't
+ *   care, and the CSS view()/scroll timelines resolve to it.
+ * - No pinning anywhere: pin spacers corrupt view-transition snapshots.
+ * - The photography section gets the restrained editorial set: every preset
+ *   collapses to a fade (plus the `.rule` hairline draw), and no parallax.
  */
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { easing, type EaseName } from './ease';
 
-gsap.registerPlugin(ScrollTrigger);
-
-export { gsap, ScrollTrigger };
-
-/** Re-measure triggers after layout-changing DOM work (image decode, shoot-panel expansion). */
-export function refreshMotion() {
-	ScrollTrigger.refresh();
+declare global {
+	interface Window {
+		/** Read by MainHead's failsafe: motion loaded, keep the pre-hide. */
+		__motionReady?: boolean;
+	}
 }
 
-const isPhotography = () => document.documentElement.dataset.section === 'photography';
+window.__motionReady = true;
 
-const ENTER = { start: 'top 88%' } as const;
+const isPhotography = () => document.documentElement.dataset.section === 'photography';
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const motionAllowed = () =>
+	!reducedMotion.matches && document.documentElement.classList.contains('anim-ready');
+
+/** One entrance step. `fill: backwards` holds frame 0 through the delay. */
+function play(el: Element, frames: Keyframe[], duration: number, ease: EaseName, delay = 0) {
+	return el.animate(frames, {
+		duration: duration * 1000,
+		delay: delay * 1000,
+		easing: easing(ease),
+		fill: 'backwards',
+	});
+}
+
+const FADE: Keyframe[] = [{ opacity: 0 }, { opacity: 1 }];
+const rise = (px: number): Keyframe[] => [
+	{ opacity: 0, translate: `0 ${px}px` },
+	{ opacity: 1, translate: '0 0' },
+];
+const DRAW: Keyframe[] = [{ scale: '0 1' }, { scale: '1 1' }];
+
+const delayOf = (el: HTMLElement) => parseFloat(el.dataset.animateDelay ?? '') || 0;
+
+/** mask-lines wrappers clip their word until revealed; then hover effects
+ * (the brand swap's falling glyph) may overflow the word box. */
+const unclip = (el: HTMLElement) =>
+	el.querySelectorAll<HTMLElement>('[data-line]').forEach((line) => (line.style.overflow = 'visible'));
 
 function entrance(el: HTMLElement, preset: string, photo: boolean) {
-	const delay = parseFloat(el.dataset.animateDelay ?? '0');
-	const trigger = { scrollTrigger: { trigger: el, ...ENTER, once: true } } as const;
+	const delay = delayOf(el);
 
 	// Editorial restraint: every preset collapses to a slow fade. The one
-	// flourish: a child `.rule` hairline draws in alongside the fade.
+	// flourish: a child `.rule` hairline draws in alongside it.
 	if (photo) {
-		const rule = el.querySelector<HTMLElement>('.rule');
-		const tl = gsap.timeline({ delay, ...trigger });
-		gsap.set(el, { opacity: 0 });
-		tl.to(el, { opacity: 1, duration: 0.6, ease: 'power2.out' }, 0);
-		if (rule) {
-			gsap.set(rule, { scaleX: 0, transformOrigin: 'left center' });
-			tl.to(rule, { scaleX: 1, duration: 0.9, ease: 'power2.out' }, 0.15);
-		}
+		play(el, FADE, 0.6, 'power2.out', delay);
+		const rule = el.querySelector('.rule');
+		if (rule) play(rule, DRAW, 0.9, 'power2.out', delay + 0.15);
 		return;
 	}
 
 	switch (preset) {
 		case 'fade':
-			gsap.set(el, { opacity: 0 });
-			gsap.to(el, { opacity: 1, duration: 0.8, ease: 'power2.out', delay, ...trigger });
+			play(el, FADE, 0.8, 'power2.out', delay);
 			break;
 		case 'scale':
-			gsap.set(el, { opacity: 0, scale: 0.94 });
-			gsap.to(el, { opacity: 1, scale: 1, duration: 0.9, ease: 'power3.out', delay, ...trigger });
+			play(el, [{ opacity: 0, scale: '0.94' }, { opacity: 1, scale: '1' }], 0.9, 'power3.out', delay);
 			break;
 		case 'clip':
-			gsap.set(el, { clipPath: 'inset(12% 12% 12% 12%)', opacity: 0, scale: 1.08 });
-			gsap.to(el, {
-				clipPath: 'inset(0% 0% 0% 0%)',
-				opacity: 1,
-				scale: 1,
-				duration: 1.2,
-				ease: 'power4.out',
-				delay,
-				...trigger,
-			});
+			play(
+				el,
+				[
+					{ clipPath: 'inset(12% 12% 12% 12%)', opacity: 0, scale: '1.08' },
+					{ clipPath: 'inset(0% 0% 0% 0%)', opacity: 1, scale: '1' },
+				],
+				1.2,
+				'power4.out',
+				delay
+			);
 			break;
 		case 'work-row': {
 			// Editorial index row: the top hairline draws in while the content
 			// lifts up with a small internal stagger (see WorkIndexRow.astro).
-			const hairline = el.querySelector<HTMLElement>('.hairline');
-			const bits = el.querySelectorAll<HTMLElement>('.title, .thumb');
-			const tl = gsap.timeline({
-				delay,
-				scrollTrigger: { trigger: el, ...ENTER, once: true },
-			});
-			if (hairline) {
-				gsap.set(hairline, { scaleX: 0 });
-				tl.to(hairline, { scaleX: 1, duration: 0.9, ease: 'power2.out' }, 0);
-			}
-			if (bits.length) {
-				gsap.set(bits, { opacity: 0, y: 18 });
-				tl.to(bits, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', stagger: 0.06 }, 0.1);
-			}
+			const hairline = el.querySelector('.hairline');
+			if (hairline) play(hairline, DRAW, 0.9, 'power2.out', delay);
+			el.querySelectorAll('.title, .thumb').forEach((bit, i) =>
+				play(bit, rise(18), 0.7, 'power3.out', delay + 0.1 + i * 0.06)
+			);
 			break;
 		}
 		case 'mask-lines': {
 			// Markup contract: each [data-line] wrapper masks one line/word; its
-			// first element child is the moving part. The component's CSS owns
-			// display (inline-block for word wrappers) and overflow clipping.
-			const lines = Array.from(el.querySelectorAll<HTMLElement>('[data-line]'));
-			const movers = lines
-				.map((line) => line.firstElementChild as HTMLElement | null)
-				.filter((m): m is HTMLElement => !!m);
-			if (!movers.length) {
-				// No movers to animate — make sure the anti-flash opacity is cleared.
-				gsap.set(el, { opacity: 1 });
-				break;
-			}
-			// Park the movers below the clip FIRST, then reveal the container
-			// (base.css hides it pre-JS to avoid a flash). Same frame → no flash.
-			gsap.set(movers, { yPercent: 112 });
-			gsap.set(el, { opacity: 1 });
-			gsap.to(movers, {
-				yPercent: 0,
-				duration: 1.1,
-				ease: 'expo.out',
-				stagger: 0.12,
-				delay,
-				// Once revealed, drop the clip so hover effects (e.g. the brand
-				// swap's falling glyph) can overflow the word box.
-				onComplete: () => gsap.set(lines, { overflow: 'visible' }),
-				...trigger,
-			});
+			// first element child is the moving part.
+			const movers = [...el.querySelectorAll('[data-line]')].flatMap((line) => line.firstElementChild ?? []);
+			const steps = movers.map((mover, i) =>
+				play(mover, [{ translate: '0 112%' }, { translate: '0 0' }], 1.1, 'expo.out', delay + i * 0.12)
+			);
+			const last = steps.at(-1);
+			if (last) last.finished.then(() => unclip(el), () => {});
+			else unclip(el);
 			break;
 		}
 		case 'fade-up':
 		default:
-			gsap.set(el, { opacity: 0, y: 24 });
-			gsap.to(el, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out', delay, ...trigger });
+			play(el, rise(24), 0.9, 'power3.out', delay);
 	}
 }
 
 function group(el: HTMLElement, photo: boolean) {
-	const children = Array.from(el.children) as HTMLElement[];
-	if (!children.length) return;
-	const stagger = parseFloat(el.dataset.stagger ?? '0.08');
-	const delay = parseFloat(el.dataset.animateDelay ?? '0');
-	if (photo) {
-		gsap.set(children, { opacity: 0 });
-		gsap.to(children, {
-			opacity: 1,
-			duration: 0.6,
-			ease: 'power2.out',
-			stagger,
-			delay,
-			scrollTrigger: { trigger: el, ...ENTER, once: true },
-		});
-		return;
-	}
-	gsap.set(children, { opacity: 0, y: 20 });
-	gsap.to(children, {
-		opacity: 1,
-		y: 0,
-		duration: 0.8,
-		ease: 'power3.out',
-		stagger,
-		delay,
-		scrollTrigger: { trigger: el, ...ENTER, once: true },
-	});
-}
-
-function parallax(el: HTMLElement) {
-	const strength = parseFloat(el.dataset.parallax ?? '0.15');
-	gsap.fromTo(
-		el,
-		{ y: () => strength * 120 },
-		{
-			y: () => strength * -120,
-			ease: 'none',
-			scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: true },
-		}
+	const stagger = parseFloat(el.dataset.stagger ?? '') || 0.08;
+	const delay = delayOf(el);
+	[...el.children].forEach((child, i) =>
+		photo
+			? play(child, FADE, 0.6, 'power2.out', delay + i * stagger)
+			: play(child, rise(20), 0.8, 'power3.out', delay + i * stagger)
 	);
 }
 
-function setup() {
-	const photo = isPhotography();
-	document.querySelectorAll<HTMLElement>('[data-animate]').forEach((el) => {
-		entrance(el, el.dataset.animate || 'fade-up', photo);
-	});
-	document.querySelectorAll<HTMLElement>('[data-animate-group]').forEach((el) => group(el, photo));
-	// Long-form bodies (markdown content): each direct child fades up on its
-	// own trigger so a tall article reveals progressively.
-	document.querySelectorAll<HTMLElement>('[data-animate-body] > *').forEach((child) => {
-		gsap.set(child, { opacity: 0, y: photo ? 0 : 16 });
-		gsap.to(child, {
-			opacity: 1,
-			y: 0,
-			duration: photo ? 0.6 : 0.7,
-			ease: 'power2.out',
-			scrollTrigger: { trigger: child, start: 'top 92%', once: true },
-		});
-	});
-	if (!photo) {
-		document.querySelectorAll<HTMLElement>('[data-parallax]').forEach(parallax);
+/* ── Triggers ──────────────────────────────────────────────────────────── */
+
+type Reveal = (animate: boolean) => void;
+const reveals = new Map<Element, Reveal>();
+
+const onIntersect: IntersectionObserverCallback = (entries, observer) => {
+	for (const entry of entries) {
+		const line = entry.rootBounds?.bottom ?? innerHeight * 0.88;
+		// Still below the trigger line: keep waiting.
+		if (!entry.isIntersecting && entry.boundingClientRect.top >= line) continue;
+		observer.unobserve(entry.target);
+		const reveal = reveals.get(entry.target);
+		reveals.delete(entry.target);
+		// Already scrolled past (a restored scroll position) or not rendered at
+		// all: nobody can see an entrance, so just show it.
+		reveal?.(entry.isIntersecting);
 	}
-	// Reading-progress hairline (blog posts): scrubbed across the full page.
-	// (.backgrounds spans the whole document; body itself is the scroller.)
-	const progress = document.querySelector<HTMLElement>('[data-scroll-progress]');
-	const pageRoot = document.querySelector<HTMLElement>('.backgrounds');
-	if (progress && pageRoot) {
-		gsap.to(progress, {
-			scaleX: 1,
-			ease: 'none',
-			scrollTrigger: { trigger: pageRoot, start: 'top top', end: 'bottom bottom', scrub: true },
-		});
-	}
+};
+
+let enterAt88: IntersectionObserver | undefined; // 'top 88%' — element top crosses 88% of the viewport
+let enterAt92: IntersectionObserver | undefined; // 'top 92%' — long-form bodies, a touch earlier
+
+function watch(observer: IntersectionObserver, el: HTMLElement, onEnter: () => void, onSkip?: () => void) {
+	reveals.set(el, (animate) => {
+		el.dataset.revealed = '';
+		if (animate) onEnter();
+		else onSkip?.();
+	});
+	observer.observe(el);
 }
 
-let mm: gsap.MatchMedia | null = null;
+/* ── Scroll-linked: parallax + reading progress ───────────────────────── */
+
+// CSS scroll timelines (base.css) do the work where supported; this is the
+// fallback: one rAF-throttled listener on the body scroller.
+const scrollTimelines = CSS.supports('animation-timeline: view()');
+
+function scrollLinked(photo: boolean, signal: AbortSignal) {
+	const parallax = photo ? [] : [...document.querySelectorAll<HTMLElement>('[data-parallax]')];
+	const items = parallax.map((el) => {
+		const strength = parseFloat(el.dataset.parallax ?? '');
+		const s = Number.isFinite(strength) ? strength : 0.15;
+		el.style.setProperty('--parallax', String(s));
+		return { el, strength: s, top: 0, height: 0 };
+	});
+	const progress = document.querySelector<HTMLElement>('[data-scroll-progress]');
+	if (scrollTimelines || (!items.length && !progress)) return;
+
+	const scroller = document.body;
+	const measure = () => {
+		// Layout position, not the parallaxed one.
+		for (const it of items) it.el.style.translate = '';
+		const scrollTop = scroller.scrollTop;
+		for (const it of items) {
+			const r = it.el.getBoundingClientRect();
+			it.top = r.top + scrollTop;
+			it.height = r.height;
+		}
+	};
+	let frame = 0;
+	const update = () => {
+		frame = 0;
+		const scrollTop = scroller.scrollTop;
+		const vh = innerHeight;
+		for (const it of items) {
+			// 0 when its top meets the viewport bottom, 1 when its bottom leaves the top.
+			const p = Math.min(1, Math.max(0, (scrollTop + vh - it.top) / (vh + it.height)));
+			it.el.style.translate = `0 ${(it.strength * 120 * (1 - 2 * p)).toFixed(2)}px`;
+		}
+		if (progress) {
+			const max = scroller.scrollHeight - scroller.clientHeight;
+			progress.style.transform = `scaleX(${max > 0 ? scrollTop / max : 0})`;
+		}
+	};
+	const queue = () => (frame ||= requestAnimationFrame(update));
+	const remeasure = () => {
+		measure();
+		queue();
+	};
+	scroller.addEventListener('scroll', queue, { passive: true, signal });
+	window.addEventListener('resize', remeasure, { signal });
+	// Late image decodes shift layout.
+	if (document.readyState !== 'complete') window.addEventListener('load', remeasure, { once: true, signal });
+	signal.addEventListener('abort', () => cancelAnimationFrame(frame), { once: true });
+	remeasure();
+}
+
+/* ── Lifecycle ─────────────────────────────────────────────────────────── */
+
+let controller: AbortController | null = null;
 
 function init() {
 	teardown();
-	// base.css gives html/body `height: 100%`, so the BODY element is the scroll
-	// container (photo-section-snap.ts depends on this) — ScrollTrigger's default
-	// window scroller never sees scroll. Re-point it at the fresh body every
-	// navigation (ClientRouter replaces <body> wholesale).
-	ScrollTrigger.defaults({ scroller: document.body });
-	mm = gsap.matchMedia();
-	mm.add('(prefers-reduced-motion: no-preference)', () => {
-		const ctx = gsap.context(setup);
-		// matchMedia calls this cleanup when the condition flips (e.g. the user
-		// enables reduced motion mid-session) — revert restores content.
-		return () => ctx.revert();
+	if (!motionAllowed()) return;
+	controller = new AbortController();
+	const photo = isPhotography();
+
+	enterAt88 ??= new IntersectionObserver(onIntersect, { rootMargin: '0px 0px -12% 0px' });
+	enterAt92 ??= new IntersectionObserver(onIntersect, { rootMargin: '0px 0px -8% 0px' });
+
+	document.querySelectorAll<HTMLElement>('[data-animate]').forEach((el) => {
+		const preset = el.dataset.animate || 'fade-up';
+		const skip = preset === 'mask-lines' && !photo ? () => unclip(el) : undefined;
+		watch(enterAt88!, el, () => entrance(el, preset, photo), skip);
 	});
+	document
+		.querySelectorAll<HTMLElement>('[data-animate-group]')
+		.forEach((el) => watch(enterAt88!, el, () => group(el, photo)));
+	// Long-form bodies (markdown content): each direct child fades up on its
+	// own trigger so a tall article reveals progressively.
+	document
+		.querySelectorAll<HTMLElement>('[data-animate-body] > *')
+		.forEach((child) =>
+			watch(enterAt92!, child, () => play(child, photo ? FADE : rise(16), photo ? 0.6 : 0.7, 'power2.out'))
+		);
+
+	scrollLinked(photo, controller.signal);
 }
 
 function teardown() {
-	mm?.revert();
-	mm = null;
-	ScrollTrigger.getAll().forEach((t) => t.kill());
-}
-
-if (import.meta.env.DEV) {
-	// Debug handle for inspecting trigger state from the console in dev.
-	(window as unknown as Record<string, unknown>).__motion = { gsap, ScrollTrigger };
+	controller?.abort();
+	controller = null;
+	enterAt88?.disconnect();
+	enterAt92?.disconnect();
+	reveals.clear();
 }
 
 // Fires on first load and after every ClientRouter navigation.
 document.addEventListener('astro:page-load', init);
-// Revert inline styles before the View Transition snapshots the outgoing page.
+// The outgoing page's observers and listeners are dead weight after the swap.
 document.addEventListener('astro:before-swap', teardown);
-// Late image decodes shift layout; re-measure once everything has arrived.
-window.addEventListener('load', () => ScrollTrigger.refresh());
+// Turning on reduced motion mid-session: base.css drops every pre-hide on its
+// own; stop starting new entrances (and resume if it's turned back off).
+reducedMotion.addEventListener('change', init);

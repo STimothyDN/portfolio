@@ -1,7 +1,7 @@
 ---
 title: FourTwentyEight
 publishDate: 2019-12-01 00:00:00
-img: /assets/fourtwentyeight.png
+img: ../../assets/work/fourtwentyeight.png
 img_alt: Application Start Up Page
 link: https://github.com/STimothyDN/FourTwentyEight
 description: |

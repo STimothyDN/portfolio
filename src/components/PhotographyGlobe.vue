@@ -11,9 +11,19 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import * as THREE from 'three';
 
+import { bunnyUrl } from '../utils/bunny';
+
+/** `images` are `shoot/filename` paths; the preview URL is built on hover. */
 type GlobePin = { lat: number; lon: number; name?: string; images: string[] };
 
-const props = defineProps<{ pins: GlobePin[] }>();
+// Packed by the page as [lat, lon, name, images] rows (see digital/index.astro).
+const props = defineProps<{ packedPins: string }>();
+const pins: GlobePin[] = (JSON.parse(props.packedPins) as [number, number, string, string[]][]).map(
+	([lat, lon, name, images]) => ({ lat, lon, name: name || undefined, images })
+);
+
+const whenIdle = (cb: () => void) =>
+	'requestIdleCallback' in window ? requestIdleCallback(cb, { timeout: 2500 }) : window.setTimeout(cb, 200);
 
 const hostRef = ref<HTMLDivElement | null>(null);
 const tipRef = ref<HTMLElement | null>(null);
@@ -92,6 +102,7 @@ class GlobeController {
 	private last = 0;
 	private running = false;
 	private visible = true;
+	private disposed = false;
 	private hostW = 1;
 	private hostH = 1;
 
@@ -150,6 +161,7 @@ class GlobeController {
 
 	private initRenderer() {
 		const canvas = document.createElement('canvas');
+		canvas.addEventListener('webglcontextrestored', this.onContextRestored);
 		this.host.appendChild(canvas);
 		const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 		renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -246,26 +258,32 @@ class GlobeController {
 		this.tiltGroup.add(mesh);
 	}
 
+	private textureBase() {
+		return `${import.meta.env.BASE_URL.replace(/\/$/, '')}/globe`;
+	}
+
 	private loadTextures() {
 		const manager = new THREE.LoadingManager();
 		manager.onLoad = () => {
+			if (this.disposed) return;
 			// fade the canvas in once everything is ready, hiding the texture pop
 			this.host.classList.add('is-ready');
 			this.renderOnce();
+			// Desktop zooms in, so it needs the sharp 8K map; touch devices never
+			// zoom (and want a lighter payload), so they keep the 2K one. The globe
+			// comes up on the 2K map either way — ~1.3MB of textures instead of
+			// ~5.3MB — and the 8K streams in behind it.
+			if (this.canHover) this.upgradeDayMap();
 		};
 		const loader = new THREE.TextureLoader(manager);
-		const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+		const base = this.textureBase();
 
-		// Desktop zooms in, so it needs the sharp 8K map; touch devices never zoom
-		// (and want a lighter payload), so they get the 2K one. three.js clamps the
-		// 8K down automatically on GPUs whose max texture size is smaller.
-		const dayFile = this.canHover ? 'earth-day-8k.jpg' : 'earth-day-2k.jpg';
-		const day = loader.load(`${base}/globe/${dayFile}`);
+		const day = loader.load(`${base}/earth-day-2k.jpg`);
 		day.colorSpace = THREE.SRGBColorSpace;
 		day.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-		const normal = loader.load(`${base}/globe/earth-normal.jpg`);
-		const specular = loader.load(`${base}/globe/earth-specular.jpg`);
-		const clouds = loader.load(`${base}/globe/clouds.png`);
+		const normal = loader.load(`${base}/earth-normal.jpg`);
+		const specular = loader.load(`${base}/earth-specular.jpg`);
+		const clouds = loader.load(`${base}/clouds.png`);
 		clouds.colorSpace = THREE.SRGBColorSpace;
 
 		this.textures.push(day, normal, specular, clouds);
@@ -282,6 +300,61 @@ class GlobeController {
 		cloudMat.alphaMap = clouds;
 		cloudMat.needsUpdate = true;
 	}
+
+	/**
+	 * Swap the 8K day map in under the running globe. It's decoded off the main
+	 * thread (ImageBitmap) and uploaded to the GPU in an idle callback, so the
+	 * ~130MB texture never lands mid-interaction or on a frame that's drawing.
+	 * three.js clamps it on GPUs whose max texture size is smaller.
+	 */
+	private upgradeDayMap() {
+		const url = `${this.textureBase()}/earth-day-8k.jpg`;
+		const install = (tex: THREE.Texture) => {
+			if (this.disposed) return tex.dispose();
+			tex.colorSpace = THREE.SRGBColorSpace;
+			tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+			whenIdle(() => {
+				if (this.disposed) return tex.dispose();
+				this.renderer.initTexture(tex);
+				const mat = this.earthMesh.material as THREE.MeshPhongMaterial;
+				const previous = mat.map;
+				mat.map = tex; // same map slot, so the compiled program is reused
+				this.textures = this.textures.filter((t) => t !== previous).concat(tex);
+				previous?.dispose();
+				if (!this.running) this.renderOnce();
+			});
+		};
+		const viaImageElement = () => new THREE.TextureLoader().load(url, install);
+
+		if (typeof createImageBitmap !== 'function') return viaImageElement();
+		// ImageBitmaps ignore WebGL's flipY, so flip while decoding instead.
+		const loader = new THREE.ImageBitmapLoader().setOptions({ imageOrientation: 'flipY' });
+		loader.load(
+			url,
+			(bitmap) => {
+				const tex = new THREE.Texture(bitmap);
+				tex.flipY = false;
+				tex.needsUpdate = true;
+				// Once it's on the GPU, release the decoded copy (unlike an <img>'s,
+				// an ImageBitmap's memory is never discarded on its own). A lost and
+				// restored context can't re-upload it, so onContextRestored refetches.
+				tex.onUpdate = () => {
+					bitmap.close();
+					this.dayMapReleased = true;
+				};
+				install(tex);
+			},
+			undefined,
+			viaImageElement
+		);
+	}
+
+	private dayMapReleased = false;
+	private onContextRestored = () => {
+		if (!this.dayMapReleased) return;
+		this.dayMapReleased = false;
+		this.upgradeDayMap();
+	};
 
 	private buildPins() {
 		const pinsGroup = new THREE.Group();
@@ -449,7 +522,8 @@ class GlobeController {
 		}
 		const imgs = this.pinImages[idx];
 		if (imgs && imgs.length && this.tipImg) {
-			this.tipImg.src = imgs[Math.floor(Math.random() * imgs.length)];
+			const sample = imgs[Math.floor(Math.random() * imgs.length)];
+			this.tipImg.src = bunnyUrl(`photography/${sample}`, { width: 440, format: 'webp', quality: 72 });
 		}
 		if (this.tipCap) this.tipCap.textContent = this.pins[idx]?.name ?? '';
 		this.tipEl.classList.add('is-visible');
@@ -532,6 +606,7 @@ class GlobeController {
 
 	/* ---- teardown ---------------------------------------------------- */
 	dispose() {
+		this.disposed = true;
 		this.stop();
 		this.ro?.disconnect();
 		this.io?.disconnect();
@@ -549,7 +624,7 @@ class GlobeController {
 function boot() {
 	if (!hostRef.value || controller) return;
 	try {
-		controller = new GlobeController(hostRef.value, props.pins, {
+		controller = new GlobeController(hostRef.value, pins, {
 			el: tipRef.value,
 			img: tipImgRef.value,
 			cap: tipCapRef.value,

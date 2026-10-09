@@ -3,19 +3,22 @@ import '../styles/app.css';
 
 // Self-hosted variable fonts (font-display: swap; downloads only when a
 // palette actually uses the face). Space theme: Bricolage Grotesque (display,
-// opsz axis) + Instrument Sans (body). Editorial: Fraunces (full axes —
-// opsz/SOFT/WONK drive the photography masthead) + Newsreader.
+// opsz axis) + Instrument Sans (body). Editorial: Fraunces + Newsreader.
+// Only the italic Fraunces mastheads use the SOFT/WONK axes, so the upright
+// face ships the wght+opsz cut — pixel-identical for every upright use and
+// ~45% lighter than the full-axes file.
 import '@fontsource-variable/bricolage-grotesque/opsz.css';
 import '@fontsource-variable/instrument-sans';
 import '@fontsource-variable/instrument-sans/wght-italic.css';
-import '@fontsource-variable/fraunces/full.css';
+import '@fontsource-variable/fraunces/opsz.css';
 import '@fontsource-variable/fraunces/full-italic.css';
 import '@fontsource-variable/newsreader/opsz.css';
 import '@fontsource-variable/newsreader/opsz-italic.css';
 
-// Hashed URLs for preloading the above-the-fold faces per section.
+// Hashed URLs for preloading the above-the-fold faces per route.
 import bricolageUrl from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-opsz-normal.woff2?url';
 import instrumentUrl from '@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2?url';
+import frauncesUrl from '@fontsource-variable/fraunces/files/fraunces-latin-opsz-normal.woff2?url';
 import frauncesItalicUrl from '@fontsource-variable/fraunces/files/fraunces-latin-full-italic.woff2?url';
 import newsreaderUrl from '@fontsource-variable/newsreader/files/newsreader-latin-opsz-normal.woff2?url';
 
@@ -32,10 +35,16 @@ const {
 } = Astro.props;
 
 // Same section computation as BaseLayout: the editorial faces are only
-// above-the-fold inside /photography.
+// above-the-fold inside /photography. There, the film desk and the digital
+// index lead with upright Fraunces (nav, mastheads, canister labels); a shoot
+// page's masthead is the italic cut.
 const path = Astro.url.pathname;
 const isPhotography = path === '/photography' || path.startsWith('/photography/');
-const preloadFonts = isPhotography ? [frauncesItalicUrl, newsreaderUrl] : [bricolageUrl, instrumentUrl];
+const isShootPage = /^\/photography\/digital\/[^/]+\/?$/.test(path);
+const preloadFonts = !isPhotography
+	? [bricolageUrl, instrumentUrl]
+	: [isShootPage ? frauncesItalicUrl : frauncesUrl, newsreaderUrl];
+const cdnOrigin = import.meta.env.PUBLIC_BUNNY_CDN_URL;
 ---
 
 <meta charset="UTF-8" />
@@ -46,6 +55,9 @@ const preloadFonts = isPhotography ? [frauncesItalicUrl, newsreaderUrl] : [brico
 
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 {preloadFonts.map((href) => <link rel="preload" as="font" type="font/woff2" href={href} crossorigin />)}
+{/* Every photography image comes off the Bunny pull zone; warm the
+    connection before the first <img> or client-built URL asks for it. */}
+{isPhotography && cdnOrigin && <link rel="preconnect" href={cdnOrigin} />}
 
 <ClientRouter />
 
@@ -97,5 +109,10 @@ const preloadFonts = isPhotography ? [frauncesItalicUrl, newsreaderUrl] : [brico
 	if (!window.__animReadySwap) {
 		window.__animReadySwap = true;
 		document.addEventListener('astro:after-swap', applyAnimReady);
+		// Failsafe: if motion.ts never arrives (network error, blocked script),
+		// don't leave pre-hidden content invisible — show it without motion.
+		setTimeout(() => {
+			if (!window.__motionReady) document.documentElement.classList.remove('anim-ready');
+		}, 4000);
 	}
 </script>
