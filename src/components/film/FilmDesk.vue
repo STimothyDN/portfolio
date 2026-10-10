@@ -12,6 +12,7 @@
 		     without tabbing through every print. -->
 		<div ref="bottomRef" class="film-bottom">
 			<FilmRollStrip
+				ref="rollStripRef"
 				:rolls="rolls"
 				:selected="selected.roll"
 				:counts="rollCounts"
@@ -136,9 +137,13 @@
 				<span class="group-meta">{{ head.meta }}</span>
 			</h3>
 
+			<!-- A print's markup only depends on the print size and whether it's
+			     in the pile (eager image); memoizing on those keeps state flips
+			     like `dragging` from re-diffing hundreds of filed prints. -->
 			<button
 				v-for="i in rendered"
 				:key="i"
+				v-memo="[printLong, pileSet.has(i)]"
 				:ref="(el) => setPrintEl(i, el)"
 				type="button"
 				class="print"
@@ -400,6 +405,7 @@ const rootRef = ref<HTMLElement | null>(null);
 const deskRef = ref<HTMLElement | null>(null);
 const glowRef = ref<HTMLElement | null>(null);
 const bottomRef = ref<HTMLElement | null>(null);
+const rollStripRef = ref<InstanceType<typeof FilmRollStrip> | null>(null);
 
 const printLong = ref(200);
 const deskHeight = ref(0);
@@ -478,19 +484,36 @@ const sizeOf = (i: number) => printSize(aspectOf(i), printLong.value);
 let thumbLong = 480;
 const THUMB_STEPS = [360, 480, 600, 720];
 const scanPath = (i: number) => `${props.rolls[photos[i].r].folder}/${photos[i].f}`;
+
+// Per-photo derivations never change once thumbLong is set (at mount, before
+// any print renders), so each is built at most once: hundreds of prints
+// render, and a click in the strips hands the lightbox the whole filed desk.
+const thumbUrls = new Map<number, string>();
 function thumbUrl(i: number) {
-	const a = aspectOf(i);
-	const width = a >= 1 ? thumbLong : Math.round((thumbLong * a) / 40) * 40;
-	return bunnyUrl(scanPath(i), { width, format: 'webp', quality: 72 });
+	let url = thumbUrls.get(i);
+	if (!url) {
+		const a = aspectOf(i);
+		const width = a >= 1 ? thumbLong : Math.round((thumbLong * a) / 40) * 40;
+		url = bunnyUrl(scanPath(i), { width, format: 'webp', quality: 72 });
+		thumbUrls.set(i, url);
+	}
+	return url;
 }
 
-const fullDate = (iso: string) =>
-	new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric',
-		timeZone: 'UTC',
-	});
+const fullDates = new Map<string, string>();
+const fullDate = (iso: string) => {
+	let label = fullDates.get(iso);
+	if (!label) {
+		label = new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', {
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric',
+			timeZone: 'UTC',
+		});
+		fullDates.set(iso, label);
+	}
+	return label;
+};
 
 function printLabel(i: number) {
 	const p = photos[i];
@@ -498,13 +521,21 @@ function printLabel(i: number) {
 	return `${p.c ? `${p.c}. ` : ''}Frame ${p.n} of ${roll.title} — ${roll.cameraLabel}, ${roll.stockLabel}`;
 }
 
-function toLightbox(i: number) {
+type LightboxRecord = ReturnType<typeof buildLightboxRecord>;
+const lightboxRecords = new Map<number, LightboxRecord>();
+const toLightbox = (i: number) => {
+	let record = lightboxRecords.get(i);
+	if (!record) lightboxRecords.set(i, (record = buildLightboxRecord(i)));
+	return record;
+};
+
+function buildLightboxRecord(i: number) {
 	const p = photos[i];
 	const roll = props.rolls[p.r];
 	return {
 		filename: p.f,
 		caption: p.c ?? '',
-		label: `${roll.title} — No. ${p.n}`,
+		label: `${roll.title} — Frame ${p.n}`,
 		fullUrl: bunnyUrl(scanPath(i), { width: 2000, format: 'webp', quality: 90 }),
 		mono: roll.mono,
 		thumbUrl: thumbUrl(i),
@@ -544,6 +575,17 @@ function measure() {
 }
 
 const pileArea = () => ({ w: geo.W, h: geo.H - geo.top - geo.bottom });
+
+/**
+ * The slice of the desk on screen, in desk coordinates — widened up to the
+ * desk's top when scrolled down, since re-filing a deep grid scrolls back to
+ * its top while the prints are moving (see the layoutKey watcher).
+ */
+function viewBand() {
+	const top = -deskRef.value!.getBoundingClientRect().top;
+	const scrolled = scrollTopOf();
+	return { top: scrolled > 8 ? top - scrolled : top, bottom: top + window.innerHeight };
+}
 
 /* ── The pile ───────────────────────────────────────────────────────── */
 
@@ -695,6 +737,19 @@ async function applyLayout(kind: Kind) {
 	}
 
 	// shift: re-file the desk. Staying prints glide; newcomers arrive; the rest go.
+	// A print whose whole move happens off screen can't be seen moving, so it
+	// jumps straight to where it's going: re-filing a big desk only tweens the
+	// few dozen prints in (or passing through) view, not every frame on it.
+	const band = viewBand();
+	const unseen = (i: number, from: number, to: number, scale: number) => {
+		const size = sizeOf(i);
+		const reach = (Math.hypot(size.w, size.h) / 2) * Math.max(1, scale) + 60;
+		return Math.max(from, to) + reach < band.top || Math.min(from, to) - reach > band.bottom;
+	};
+	const place = (el: HTMLElement, t: Target) => {
+		gsap.killTweensOf(el);
+		gsap.set(el, { xPercent: -50, yPercent: -50, x: t.x, y: t.y, rotation: t.r, scale: t.s, opacity: 1, zIndex: t.z * 2 });
+	};
 	const each = Math.min(0.012, 0.45 / Math.max(1, order.length));
 	order.forEach((i, k) => {
 		const el = els.get(i);
@@ -703,6 +758,8 @@ async function applyLayout(kind: Kind) {
 		if (!before.has(i)) {
 			if (mode.value === 'pile') {
 				tossIn(el, t, k, order.length, reduce);
+			} else if (unseen(i, t.y, t.y + 40, t.s)) {
+				place(el, t);
 			} else {
 				gsap.set(el, {
 					xPercent: -50,
@@ -726,6 +783,8 @@ async function applyLayout(kind: Kind) {
 			}
 			return;
 		}
+		const fromY = Number(gsap.getProperty(el, 'y'));
+		if (unseen(i, fromY, t.y, Math.max(t.s, Number(gsap.getProperty(el, 'scale'))))) return place(el, t);
 		// Returning to the pile restacks immediately so prints land in order.
 		if (mode.value === 'pile') gsap.set(el, { zIndex: t.z * 2 });
 		gsap.to(el, {
@@ -747,6 +806,11 @@ async function applyLayout(kind: Kind) {
 	leaving.forEach((i) => {
 		const el = els.get(i);
 		if (!el) return drop(i);
+		const fromY = Number(gsap.getProperty(el, 'y'));
+		if (unseen(i, fromY, fromY + 36, Number(gsap.getProperty(el, 'scale')))) {
+			gsap.killTweensOf(el);
+			return drop(i);
+		}
 		gsap.to(el, {
 			opacity: 0,
 			y: `+=${reduce ? 0 : 36}`,
@@ -1045,15 +1109,29 @@ function onPrintClick(i: number) {
 		return;
 	}
 	// A print picked off the pile opens on its own; once a roll or filter has
-	// filed the desk into strips, the lightbox steps through those frames.
-	const list = mode.value === 'pile' ? [i] : groups.value.flatMap((g) => g.items);
+	// filed the desk into strips, the lightbox steps through those frames. A
+	// print still on its way out of a re-file isn't in them: it opens alone.
+	const filed = mode.value === 'pile' ? [i] : groups.value.flatMap((g) => g.items);
+	const list = filed.includes(i) ? filed : [i];
 	// From a strip of negatives, the lightbox scans the frame into a positive.
 	const scan = negative.value && mode.value === 'grid';
+	// A print viewed on its own can take you to the rest of its roll.
+	const action = list.length === 1 ? { label: 'View entire roll', run: () => viewRoll(photos[i].r) } : undefined;
 	window.dispatchEvent(
 		new CustomEvent('open-lightbox', {
-			detail: { photos: list.map(toLightbox), index: list.indexOf(i), negative: scan },
+			detail: { photos: list.map(toLightbox), index: list.indexOf(i), negative: scan, action },
 		})
 	);
+}
+
+/** Lay out just this roll on the desk, whatever was filed before, and bring
+ * it into view in the roll row. */
+async function viewRoll(r: number) {
+	const id = props.rolls[r].id;
+	clearAll();
+	pickRoll(id);
+	await nextTick(); // the row has re-rendered (and re-shown any filtered-out rolls)
+	rollStripRef.value?.reveal(id);
 }
 
 /* ── Lifecycle ──────────────────────────────────────────────────────── */
@@ -1129,6 +1207,8 @@ onMounted(async () => {
 	lastVH = window.innerHeight;
 	const dpr = Math.min(window.devicePixelRatio || 1, 2);
 	thumbLong = THUMB_STEPS.find((s) => s >= printLong.value * dpr) ?? THUMB_STEPS[THUMB_STEPS.length - 1];
+	thumbUrls.clear();
+	lightboxRecords.clear();
 
 	if (mode.value === 'pile') {
 		buildPile();
@@ -1302,6 +1382,12 @@ onBeforeUnmount(() => {
 	cursor: grab;
 	touch-action: pan-y pinch-zoom;
 	-webkit-tap-highlight-color: transparent;
+	/* No standing will-change: a filed desk can hold hundreds of prints, and a
+	   compositor layer each is a lot of GPU memory. Tweens promote prints for
+	   their duration (GSAP force3D: auto); a print being dragged opts in below. */
+}
+
+.print.is-lifted {
 	will-change: transform;
 }
 
@@ -1561,6 +1647,9 @@ onBeforeUnmount(() => {
 	left: 0;
 	opacity: 0;
 	pointer-events: none;
+	/* It follows its print every frame; on its own layer the 30px blur is
+	   rasterized once and moved, not repainted each frame. */
+	will-change: transform;
 }
 
 .glow-light {

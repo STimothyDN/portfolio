@@ -30,14 +30,15 @@ const section =
 		<MainHead title={title} description={description} />
 	</head>
 	<body>
-		<!--
-			The canvas element renders ambient sky effects: clouds in light mode and
-			stars/meteors in dark mode. The page content is wrapped in .content so it appears above.
-			The canvas is intentionally NOT persisted: it belongs to each page, and the
-			sky renderer re-binds to the fresh one after every ClientRouter swap.
-		-->
+		{/*
+			The canvas renders ambient sky effects: clouds in light mode and
+			stars/meteors in dark mode (src/scripts/sky, drawn off the main thread
+			where supported). Page content is wrapped in .content so it appears
+			above. Persisted across ClientRouter swaps: the sky carries over between
+			pages, and its control is handed to the drawing worker only once.
+		*/}
 		<div class="stack backgrounds">
-			<canvas class="twinkling-stars"></canvas>
+			<canvas class="twinkling-stars" transition:persist="sky"></canvas>
 			<div class="content">
 				<Nav floating={immersive} />
 				<slot />

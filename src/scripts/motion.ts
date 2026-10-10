@@ -57,9 +57,14 @@ function play(el: Element, frames: Keyframe[], duration: number, ease: EaseName,
 	});
 }
 
-const FADE: Keyframe[] = [{ opacity: 0 }, { opacity: 1 }];
+// Entrances start a hair above fully transparent: an element painted at
+// opacity 0 isn't a Largest Contentful Paint candidate, and a compositor-run
+// fade never repaints it, so LCP would only register when the fade ends
+// (~1.2s late). At 0.001 the reveal frame counts — invisibly.
+const HIDDEN = 0.001;
+const FADE: Keyframe[] = [{ opacity: HIDDEN }, { opacity: 1 }];
 const rise = (px: number): Keyframe[] => [
-	{ opacity: 0, translate: `0 ${px}px` },
+	{ opacity: HIDDEN, translate: `0 ${px}px` },
 	{ opacity: 1, translate: '0 0' },
 ];
 const DRAW: Keyframe[] = [{ scale: '0 1' }, { scale: '1 1' }];
@@ -88,13 +93,13 @@ function entrance(el: HTMLElement, preset: string, photo: boolean) {
 			play(el, FADE, 0.8, 'power2.out', delay);
 			break;
 		case 'scale':
-			play(el, [{ opacity: 0, scale: '0.94' }, { opacity: 1, scale: '1' }], 0.9, 'power3.out', delay);
+			play(el, [{ opacity: HIDDEN, scale: '0.94' }, { opacity: 1, scale: '1' }], 0.9, 'power3.out', delay);
 			break;
 		case 'clip':
 			play(
 				el,
 				[
-					{ clipPath: 'inset(12% 12% 12% 12%)', opacity: 0, scale: '1.08' },
+					{ clipPath: 'inset(12% 12% 12% 12%)', opacity: HIDDEN, scale: '1.08' },
 					{ clipPath: 'inset(0% 0% 0% 0%)', opacity: 1, scale: '1' },
 				],
 				1.2,

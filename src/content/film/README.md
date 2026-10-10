@@ -147,7 +147,7 @@ scans default to 3). You can also edit `priority` in the JSON at any time.
       "width": 3089,                // auto-filled; used for the print's shape
       "height": 2048,
       "priority": 5,                // 1–5, see above
-      "caption": "…"                // optional; otherwise "Downtown Durham — No. 12"
+      "caption": "…"                // optional; otherwise "Downtown Durham — Frame 12"
     }
   ]
 }

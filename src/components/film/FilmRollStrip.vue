@@ -99,7 +99,7 @@
 					<circle cx="128" cy="128" r="40" />
 					<path d="M128 88V40h56M184 40v28" />
 				</svg>
-				<span class="when-open">Rewind</span>
+				<span class="when-open">Rewind film</span>
 				<span class="when-rewound">Put away film</span>
 				<span class="when-away">Pull out film</span>
 				<svg class="chevron" viewBox="0 0 256 256" aria-hidden="true"><path d="m48 96 80 80 80-80" /></svg>
@@ -208,6 +208,30 @@ function holdPlace(el: Element) {
 	li.style.width = `${place.width}px`;
 }
 
+/** The row's right edge fades out under its mask (4rem). */
+const FADE_PX = 64;
+
+/**
+ * Bring a roll picked from elsewhere (the lightbox's "View entire roll") into
+ * view in the row. Scrolls only the row itself, only if the roll isn't fully
+ * visible already, and lands on the roll's own snap position so the row's
+ * scroll snapping doesn't nudge it afterwards.
+ */
+function reveal(id: string) {
+	const ul = listRef.value?.$el as HTMLElement | undefined;
+	const li = ul?.querySelector<HTMLElement>(`li[data-roll="${CSS.escape(id)}"]`);
+	if (!ul || !li) return;
+	// The row's side padding is the gutter its snap positions are inset by.
+	const gutter = parseFloat(getComputedStyle(ul).paddingLeft) || 0;
+	const start = li.offsetLeft;
+	const end = start + li.offsetWidth;
+	if (start >= ul.scrollLeft + gutter && end <= ul.scrollLeft + ul.clientWidth - FADE_PX) return;
+	const left = Math.max(0, Math.min(start - gutter, ul.scrollWidth - ul.clientWidth));
+	const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	ul.scrollTo({ left, behavior: reduce ? 'auto' : 'smooth' });
+}
+
+defineExpose({ reveal });
 </script>
 
 <style scoped>

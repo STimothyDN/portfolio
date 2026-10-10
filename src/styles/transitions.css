@@ -384,7 +384,18 @@
 }
 
 /* ------------------------------------------------------------------
- * 5. REDUCED MOTION
+ * 5. NO NAMED ELEMENTS DURING A CROSSING
+ *    Section crossings skip the view transition, but a presented frame
+ *    of its captured tree would lift every named element above these
+ *    overlays. section-transition.ts sets this once the overlay is up.
+ * ------------------------------------------------------------------ */
+
+html.section-crossing * {
+	view-transition-name: none !important;
+}
+
+/* ------------------------------------------------------------------
+ * 6. REDUCED MOTION
  * ------------------------------------------------------------------ */
 
 @media (prefers-reduced-motion: reduce) {

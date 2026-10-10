@@ -85,34 +85,46 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 
 <script>
 	class MenuButton extends HTMLElement {
+		private readonly query = window.matchMedia('(min-width: 50em)');
+		private readonly btn: HTMLButtonElement;
+		private readonly menu: HTMLElement;
+
 		constructor() {
 			super();
 
 			// Inject menu toggle button when JS runs.
 			this.appendChild(this.querySelector('template')!.content.cloneNode(true));
-			const btn = this.querySelector('button')!;
+			this.btn = this.querySelector('button')!;
 
 			// Hide menu (shown by default to support no-JS browsers).
-			const menu = document.getElementById('menu-content')!;
-			menu.hidden = true;
-
-			/** Set whether the menu is currently expanded or collapsed. */
-			const setExpanded = (expand: boolean) => {
-				btn.setAttribute('aria-expanded', expand ? 'true' : 'false');
-				menu.hidden = !expand;
-			};
+			this.menu = document.getElementById('menu-content')!;
+			this.menu.hidden = true;
 
 			// Toggle menu visibility when the menu button is clicked.
-			btn.addEventListener('click', () => setExpanded(menu.hidden));
+			this.btn.addEventListener('click', () => this.setExpanded(this.menu.hidden));
+		}
 
-			// Hide menu button for large screens.
-			const handleViewports = (e: MediaQueryList | MediaQueryListEvent) => {
-				setExpanded(e.matches);
-				btn.hidden = e.matches;
-			};
-			const mediaQueries = window.matchMedia('(min-width: 50em)');
-			handleViewports(mediaQueries);
-			mediaQueries.addEventListener('change', handleViewports);
+		/** Set whether the menu is currently expanded or collapsed. */
+		private setExpanded(expand: boolean) {
+			this.btn.setAttribute('aria-expanded', expand ? 'true' : 'false');
+			this.menu.hidden = !expand;
+		}
+
+		// Hide menu button for large screens.
+		private handleViewports = (e: MediaQueryList | MediaQueryListEvent) => {
+			this.setExpanded(e.matches);
+			this.btn.hidden = e.matches;
+		};
+
+		connectedCallback() {
+			this.handleViewports(this.query);
+			this.query.addEventListener('change', this.handleViewports);
+		}
+
+		// ClientRouter replaces the nav on every navigation; release the query
+		// listener with it, or every visited page's nav stays reachable.
+		disconnectedCallback() {
+			this.query.removeEventListener('change', this.handleViewports);
 		}
 	}
 	customElements.define('menu-button', MenuButton);

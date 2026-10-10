@@ -3,17 +3,15 @@ const isPhoto = (url: URL) => url.pathname === '/photography' || url.pathname.st
 const crossesBoundary = (from: URL, to: URL) => isPhoto(from) !== isPhoto(to);
 
 // Native Web Animations (compositor-driven; no library to fetch before the
-// first transition) with the semantics these sequences were written against:
-// durations in seconds, eases as CSS keywords or cubic-bezier tuples, and each
-// animation's last frame committed to inline style when it finishes, so later
-// inline writes and animations pick up from where it ended.
+// first transition) with the semantics these sequences were tuned under
+// (motion's animate): durations in seconds, eases as CSS keywords or
+// cubic-bezier tuples applied to *each segment* between evenly spaced
+// keyframes, and each animation's last frame committed to inline style when
+// it finishes, so later inline writes and animations pick up from there.
 type Ease = string | [number, number, number, number];
 function animate(el: Element, keyframes: PropertyIndexedKeyframes, { duration, ease = 'ease' }: { duration: number; ease?: Ease }) {
-	const animation = el.animate(keyframes, {
-		duration: duration * 1000,
-		easing: Array.isArray(ease) ? `cubic-bezier(${ease.join(', ')})` : ease,
-		fill: 'forwards',
-	});
+	const easing = Array.isArray(ease) ? `cubic-bezier(${ease.join(', ')})` : ease;
+	const animation = el.animate({ ...keyframes, easing }, { duration: duration * 1000, fill: 'forwards' });
 	animation.finished.then(
 		() => {
 			try {
@@ -202,15 +200,15 @@ async function flashOpen() {
 
 		// Develop. One continuous pass: the white base thins on a slow-in /
 		// slow-out curve while a warm chemical tint swells and recedes and
-		// film grain surfaces then dissolves. Offsets shape the curve; the
-		// per-segment ease just smooths the joins.
+		// film grain surfaces then dissolves. Evenly spaced keyframes shape
+		// the curve; the per-segment ease just smooths the joins.
 		const DEVELOP = 2.6;
 		if (bloom) bloom.style.opacity = '0';
 		if (grain)
 			void waitFor(
 				animate(
 					grain,
-					{ opacity: [0, 0.12, 0.09, 0], offset: [0, 0.18, 0.7, 1] },
+					{ opacity: [0, 0.12, 0.09, 0] },
 					{ duration: DEVELOP, ease: 'ease-in-out' }
 				)
 			);
@@ -218,7 +216,7 @@ async function flashOpen() {
 			void waitFor(
 				animate(
 					tint,
-					{ opacity: [0, 0.55, 0], offset: [0, 0.45, 1] },
+					{ opacity: [0, 0.55, 0] },
 					{ duration: DEVELOP, ease: 'ease-in-out' }
 				)
 			);
@@ -226,7 +224,7 @@ async function flashOpen() {
 			await waitFor(
 				animate(
 					base,
-					{ opacity: [1, 0.96, 0.72, 0.28, 0.08, 0], offset: [0, 0.22, 0.5, 0.72, 0.88, 1] },
+					{ opacity: [1, 0.96, 0.72, 0.28, 0.08, 0] },
 					{ duration: DEVELOP, ease: 'ease-in-out' }
 				)
 			);
@@ -404,6 +402,12 @@ function register() {
 			} else {
 				await Promise.all([loading, dslrClose()]);
 			}
+			// The overlay now covers the screen and Astro is about to start the
+			// view transition we skip in before-swap. Chrome can still present a
+			// frame of its captured tree, where every named element (nav links,
+			// titles, the work follower…) is lifted above the page — above these
+			// overlays — so un-name everything for the crossing (transitions.css).
+			document.documentElement.classList.add('section-crossing');
 		};
 	});
 
@@ -419,6 +423,7 @@ function register() {
 	});
 
 	document.addEventListener('astro:after-swap', () => {
+		document.documentElement.classList.remove('section-crossing');
 		if (pending) {
 			opening = pending;
 			pending = null;

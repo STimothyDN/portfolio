@@ -1,5 +1,8 @@
 <template>
-	<Teleport to="body">
+	<!-- Client-only: hydrating a server-rendered Teleport makes Vue match its
+	     empty placeholder against <body>'s own children, and on a mismatch it
+	     deletes the page wrapper. The viewer only ever opens after mount. -->
+	<Teleport v-if="mounted" to="body">
 		<Transition name="lightbox">
 			<div
 				v-if="isOpen"
@@ -85,12 +88,17 @@
 								</div>
 							</Transition>
 						</div>
-						<figcaption class="plate-line">
+						<figcaption class="plate-line" :class="{ 'has-action': action && !hasSiblings }">
 							<span v-if="current?.caption || current?.label" class="plate-caption">{{
 								current.caption || current.label
 							}}</span>
 							<span v-else class="plate-caption plate-caption--empty">Untitled</span>
 							<span v-if="hasSiblings" class="plate-counter">{{ pad(currentIndex + 1) }} — {{ pad(list.length) }}</span>
+							<!-- A lone photo can offer a way onward (the film desk: its whole roll). -->
+							<button v-else-if="action" type="button" class="plate-action" @click="runAction">
+								<span class="plate-action-label">{{ action.label }}</span>
+								<span class="plate-action-arrow" aria-hidden="true">→</span>
+							</button>
 						</figcaption>
 					</figure>
 				</div>
@@ -183,6 +191,7 @@ function photosFor(slug) {
 	return unpackedSets.get(slug);
 }
 
+const mounted = ref(false);
 const isOpen = ref(false);
 const currentIndex = ref(0);
 const showInfo = ref(false);
@@ -193,6 +202,7 @@ const closeButtonRef = ref(null);
 const overlayRef = ref(null);
 // Photo records are immutable — no need for deep reactivity on hundreds of them.
 const activeSet = shallowRef(null);
+const action = shallowRef(null);
 // Scan each frame in from its negative (the film desk's negative view).
 const scanMode = ref(false);
 let lastFocusedElement = null;
@@ -357,10 +367,12 @@ function onTouchEnd(e) {
 }
 
 function resolveAndOpen(detail) {
-	// Ad-hoc list (the film desk): whatever is on the desk right now.
+	// Ad-hoc list (the film desk): whatever is on the desk right now, plus an
+	// optional { label, run } way onward from a lone photo.
 	if (Array.isArray(detail?.photos)) {
 		if (!detail.photos.length) return false;
 		activeSet.value = detail.photos;
+		action.value = detail.action ?? null;
 		scanMode.value =
 			Boolean(detail.negative) && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		open(detail.index ?? 0);
@@ -369,9 +381,18 @@ function resolveAndOpen(detail) {
 	const set = photosFor(detail?.shootSlug);
 	if (!set) return false;
 	scanMode.value = false;
+	action.value = null;
 	activeSet.value = set;
 	open(detail?.index ?? 0);
 	return true;
+}
+
+// Leave the viewer first (focus returns to the photo's trigger), then hand
+// over to whoever offered the action.
+function runAction() {
+	const run = action.value?.run;
+	close();
+	run?.();
 }
 
 function onOpenLightbox(e) {
@@ -379,6 +400,7 @@ function onOpenLightbox(e) {
 }
 
 onMounted(() => {
+	mounted.value = true;
 	window.addEventListener('keydown', onKeydown);
 	window.addEventListener('open-lightbox', onOpenLightbox);
 	// A tile clicked before this island hydrated buffers its request
@@ -527,6 +549,66 @@ onBeforeUnmount(() => {
 	font-variant-caps: all-small-caps;
 	letter-spacing: 0.14em;
 	color: rgba(243, 239, 233, 0.55);
+}
+
+/* The way onward sits where the counter would, flush with the print's right
+ * edge: this line doesn't widen the frame (width 0, then 100% of it), and
+ * when a long caption leaves no room the action drops to its own line. */
+.plate-line.has-action {
+	flex-wrap: wrap;
+	row-gap: 0.35rem;
+	width: 0;
+	min-width: 100%;
+}
+
+.plate-action {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.4em;
+	margin-left: auto;
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	font-size: var(--text-sm, 0.875rem);
+	font-variant-caps: all-small-caps;
+	letter-spacing: 0.14em;
+	white-space: nowrap;
+	color: rgba(243, 239, 233, 0.78);
+	cursor: pointer;
+	transition: color 0.2s ease;
+}
+
+.plate-action-label {
+	text-decoration: 1px solid underline;
+	text-decoration-color: rgba(243, 239, 233, 0.3);
+	text-underline-offset: 0.3em;
+	transition: text-decoration-color 0.2s ease;
+}
+
+.plate-action:hover,
+.plate-action:focus-visible {
+	color: #f3efe9;
+}
+
+.plate-action:hover .plate-action-label,
+.plate-action:focus-visible .plate-action-label {
+	text-decoration-color: currentColor;
+}
+
+.plate-action:focus-visible {
+	outline: 2px solid rgba(243, 239, 233, 0.9);
+	outline-offset: 4px;
+	border-radius: 2px;
+}
+
+.plate-action-arrow {
+	transition: translate 0.2s ease;
+}
+
+.plate-action:hover .plate-action-arrow {
+	translate: 0.2em 0;
 }
 
 /* ── Controls: frosted glass, asleep when the cursor is ── */
@@ -892,6 +974,10 @@ onBeforeUnmount(() => {
 	.rail-enter-active,
 	.rail-leave-active {
 		transition: none;
+	}
+
+	.plate-action:hover .plate-action-arrow {
+		translate: none;
 	}
 }
 
