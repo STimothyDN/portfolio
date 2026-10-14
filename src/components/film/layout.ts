@@ -72,6 +72,39 @@ export function printLongFor(deskW: number, areaH: number): number {
 	return Math.round(clamp(fit, 118, 250));
 }
 
+/** The least desk the pile gets, in print areas — about what a big monitor shows. */
+const DESK_PRINTS = 50;
+/** Where smaller screens start: a little zoomed out, so the pile's edges are in sight. */
+const HOME_ZOOM = 0.85;
+
+export interface DeskWorld extends Size {
+	/** Long edge of a print, in desk px. */
+	long: number;
+	/** Zooms (screen px per desk px): the whole desk, where the view starts, and closest in. */
+	fit: number;
+	home: number;
+	max: number;
+}
+
+/**
+ * The pile's desk, for a screen whose free band (between the floating chrome)
+ * is `band`. Prints keep the size they'd have on this screen, but the desk
+ * never holds fewer than DESK_PRINTS of them: on a big monitor that's simply
+ * the screen, while on a laptop or phone the desk runs off the edges and the
+ * view zooms and pans over it. Same proportions as the band, so zooming all
+ * the way out fills it.
+ */
+export function deskWorld(band: Size): DeskWorld {
+	const long = printLongFor(band.w, band.h);
+	const need = DESK_PRINTS * long * long * 0.667;
+	const s = Math.max(1, Math.sqrt(need / (band.w * band.h)));
+	const fit = 1 / s;
+	const home = Math.max(fit, s > 1 ? HOME_ZOOM : 1);
+	// Close enough that a print nearly fills the short side of the screen.
+	const max = clamp((0.9 * Math.min(band.w, band.h)) / long, home * 1.5, 2.5);
+	return { w: band.w * s, h: band.h * s, long, fit, home, max };
+}
+
 /** How many prints the pile holds: enough to cover the desk about twice. */
 export function pileCapacity(area: Size, long: number): number {
 	const printArea = long * long * 0.667;

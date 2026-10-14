@@ -37,8 +37,33 @@
 			>
 				<slot />
 			</FilmFilterDock>
+
+			<!-- Zoom for the pile: on smaller screens the desk runs off the edges. -->
+			<Transition name="zoom">
+				<div v-if="live && mode === 'pile'" class="zoom" role="group" aria-label="Zoom the desk">
+					<button type="button" class="zoom-btn" :disabled="zoomAt === 'max'" aria-label="Zoom in" @click="zoomBy(1.5)">
+						<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M128 64v128M64 128h128" /></svg>
+					</button>
+					<button type="button" class="zoom-btn" :disabled="zoomAt === 'fit'" aria-label="Zoom out" @click="zoomBy(1 / 1.5)">
+						<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M64 128h128" /></svg>
+					</button>
+					<button
+						type="button"
+						class="zoom-btn"
+						:disabled="zoomAt === 'fit'"
+						aria-label="Show the whole desk"
+						@click="zoomToFit"
+					>
+						<svg viewBox="0 0 256 256" aria-hidden="true">
+							<path d="M160 48h48v48M96 208H48v-48M208 160v48h-48M48 96V48h48" />
+						</svg>
+					</button>
+				</div>
+			</Transition>
 		</div>
 
+		<!-- In the pile, the desk is a surface to explore: drag (or scroll) to pan,
+		     pinch (or ctrl-scroll) to zoom; touch picks a print up on a long press. -->
 		<div
 			ref="deskRef"
 			class="desk"
@@ -46,136 +71,142 @@
 			:style="deskStyle"
 			role="region"
 			aria-label="Film prints"
+			@pointerdown="onDeskDown"
+			@pointermove="onDeskMove"
+			@pointerup="onDeskUp"
+			@pointercancel="onDeskUp"
+			@dblclick="onDeskDblClick"
+			@contextmenu="onContextMenu"
 		>
-			<div ref="glowRef" class="glow" aria-hidden="true"><span class="glow-light"></span></div>
+			<!-- The camera: panned and scaled over the pile, identity once filed. -->
+			<div ref="worldRef" class="desk-world">
+				<div ref="glowRef" class="glow" aria-hidden="true"><span class="glow-light"></span></div>
 
-			<!-- Organized view: each roll is cut into strips of negatives, with the
-			     prints settling into their frames (they're positioned separately).
-			     A roll's first strip spools out of its canister; its last runs on
-			     into a blank leader and the cut tongue. -->
-			<TransitionGroup name="neg">
-				<div
-					v-for="(strip, k) in strips"
-					:key="strip.key"
-					class="neg-strip"
-					:class="{ 'is-tail': strip.tail, 'is-mono': strip.mono }"
-					:style="{
-						left: `${strip.x}px`,
-						top: `${strip.y}px`,
-						width: `${strip.w}px`,
-						height: `${strip.h}px`,
-						'--k': k,
-					}"
-					aria-hidden="true"
-				>
-					<template v-for="f in strip.frames" :key="f.idx">
-						<span class="neg-window" :style="{ left: `${f.x}px`, top: `${f.y}px` }"></span>
-						<span class="neg-edge" :style="vertical ? { top: `${f.y}px` } : { left: `${f.x}px` }">
-							<span class="neg-stock">{{ f.stock }}</span>
-							<span class="neg-num">{{ f.n }}</span>
-							<span class="neg-num neg-num--half">▸ {{ f.n }}A</span>
-						</span>
-					</template>
-					<svg v-if="strip.tail && !vertical" class="neg-tongue" viewBox="0 0 40 100" preserveAspectRatio="none">
-						<path d="M0 0 H8 C16 0 15 46 26 46 H35 Q40 46 40 52 V100 H0 Z" />
-					</svg>
-					<svg v-if="strip.tail && vertical" class="neg-tongue" viewBox="0 0 100 40" preserveAspectRatio="none">
-						<path d="M0 0 H100 V35 Q100 40 95 40 H58 Q54 40 54 36 V26 C54 18 20 10 0 8 Z" />
-					</svg>
-				</div>
-			</TransitionGroup>
+				<!-- Organized view: each roll is cut into strips of negatives, with the
+				     prints settling into their frames (they're positioned separately).
+				     A roll's first strip spools out of its canister; its last runs on
+				     into a blank leader and the cut tongue. -->
+				<TransitionGroup name="neg">
+					<div
+						v-for="(strip, k) in strips"
+						:key="strip.key"
+						class="neg-strip"
+						:class="{ 'is-tail': strip.tail, 'is-mono': strip.mono }"
+						:style="{
+							left: `${strip.x}px`,
+							top: `${strip.y}px`,
+							width: `${strip.w}px`,
+							height: `${strip.h}px`,
+							'--k': k,
+						}"
+						aria-hidden="true"
+					>
+						<template v-for="f in strip.frames" :key="f.idx">
+							<span class="neg-window" :style="{ left: `${f.x}px`, top: `${f.y}px` }"></span>
+							<span class="neg-edge" :style="vertical ? { top: `${f.y}px` } : { left: `${f.x}px` }">
+								<span class="neg-stock">{{ f.stock }}</span>
+								<span class="neg-num">{{ f.n }}</span>
+								<span class="neg-num neg-num--half">▸ {{ f.n }}A</span>
+							</span>
+						</template>
+						<svg v-if="strip.tail && !vertical" class="neg-tongue" viewBox="0 0 40 100" preserveAspectRatio="none">
+							<path d="M0 0 H8 C16 0 15 46 26 46 H35 Q40 46 40 52 V100 H0 Z" />
+						</svg>
+						<svg v-if="strip.tail && vertical" class="neg-tongue" viewBox="0 0 100 40" preserveAspectRatio="none">
+							<path d="M0 0 H100 V35 Q100 40 95 40 H58 Q54 40 54 36 V26 C54 18 20 10 0 8 Z" />
+						</svg>
+					</div>
+				</TransitionGroup>
 
-			<TransitionGroup name="neg">
-				<FilmCanister
-					v-for="can in canisters"
-					:key="can.key"
-					class="desk-can"
-					:class="{ 'is-lying': vertical }"
-					:stock="can.stock"
-					:stock-label="can.stockLabel"
-					:stock-brand="can.stockBrand"
-					:style="{
-						left: `${can.x - (can.h * 0.43) / 2}px`,
-						top: `${can.y - can.h / 2}px`,
-						'--can-h': `${can.h}px`,
-						'--k': can.k,
-					}"
-				/>
-			</TransitionGroup>
-
-			<!-- The lab's sticker on each leader, the roll's name written on in marker. -->
-			<TransitionGroup name="neg">
-				<p
-					v-for="tag in stickers"
-					:key="tag.key"
-					class="lab-sticker"
-					:style="{
-						left: `${tag.x}px`,
-						top: `${tag.y}px`,
-						width: `${tag.w}px`,
-						height: `${tag.h}px`,
-						'--tilt': `${tag.tilt}deg`,
-						'--fs': `${tag.fs}px`,
-						'--k': tag.k,
-					}"
-				>
-					<span v-for="(line, n) in tag.lines" :key="n">{{ line }}</span>
-				</p>
-			</TransitionGroup>
-
-			<!-- A quiet heading per group (camera, film, lab or year) — none when
-			     grouped by roll, since each roll's sticker names it. -->
-			<h3
-				v-for="head in heads"
-				:key="head.key"
-				class="group-head"
-				:style="{ left: `${head.x}px`, width: `${head.w}px`, transform: `translateY(${head.y}px)` }"
-			>
-				<span class="group-eyebrow">{{ head.eyebrow }}</span>
-				<span class="group-title">{{ head.label }}</span>
-				<span class="group-rule" aria-hidden="true"></span>
-				<span class="group-meta">{{ head.meta }}</span>
-			</h3>
-
-			<!-- A print's markup only depends on the print size and whether it's
-			     in the pile (eager image); memoizing on those keeps state flips
-			     like `dragging` from re-diffing hundreds of filed prints. -->
-			<button
-				v-for="i in rendered"
-				:key="i"
-				v-memo="[printLong, pileSet.has(i)]"
-				:ref="(el) => setPrintEl(i, el)"
-				type="button"
-				class="print"
-				:class="{ 'is-mono': rolls[photos[i].r].mono }"
-				:style="{ width: `${sizeOf(i).w}px`, height: `${sizeOf(i).h}px` }"
-				:aria-label="printLabel(i)"
-				@click="onPrintClick(i)"
-				@pointerdown="onPointerDown($event, i)"
-				@pointermove="onPointerMove($event, i)"
-				@pointerup="onPointerUp($event, i)"
-				@pointercancel="onPointerUp($event, i)"
-				@pointerenter="onPointerEnter($event, i)"
-				@pointerleave="onPointerLeave(i)"
-				@focus="onFocus(i)"
-				@blur="hideGlow(i)"
-			>
-				<span class="print-lift" aria-hidden="true"></span>
-				<span class="print-body">
-					<img
-						:src="thumbUrl(i)"
-						alt=""
-						draggable="false"
-						:loading="pileSet.has(i) ? 'eager' : 'lazy'"
-						decoding="async"
-						@load="($event.target as HTMLImageElement).classList.add('is-loaded')"
+				<TransitionGroup name="neg">
+					<FilmCanister
+						v-for="can in canisters"
+						:key="can.key"
+						class="desk-can"
+						:class="{ 'is-lying': vertical }"
+						:stock="can.stock"
+						:stock-label="can.stockLabel"
+						:stock-brand="can.stockBrand"
+						:style="{
+							left: `${can.x - (can.h * 0.43) / 2}px`,
+							top: `${can.y - can.h / 2}px`,
+							'--can-h': `${can.h}px`,
+							'--k': can.k,
+						}"
 					/>
-				</span>
-			</button>
+				</TransitionGroup>
 
-			<p v-if="live && mode === 'grid' && !filtered.length" class="desk-empty">
-				Nothing on the desk matches that combination.
-			</p>
+				<!-- The lab's sticker on each leader, the roll's name written on in marker. -->
+				<TransitionGroup name="neg">
+					<p
+						v-for="tag in stickers"
+						:key="tag.key"
+						class="lab-sticker"
+						:style="{
+							left: `${tag.x}px`,
+							top: `${tag.y}px`,
+							width: `${tag.w}px`,
+							height: `${tag.h}px`,
+							'--tilt': `${tag.tilt}deg`,
+							'--fs': `${tag.fs}px`,
+							'--k': tag.k,
+						}"
+					>
+						<span v-for="(line, n) in tag.lines" :key="n">{{ line }}</span>
+					</p>
+				</TransitionGroup>
+
+				<!-- A quiet heading per group (camera, film, lab or year) — none when
+				     grouped by roll, since each roll's sticker names it. -->
+				<h3
+					v-for="head in heads"
+					:key="head.key"
+					class="group-head"
+					:style="{ left: `${head.x}px`, width: `${head.w}px`, transform: `translateY(${head.y}px)` }"
+				>
+					<span class="group-eyebrow">{{ head.eyebrow }}</span>
+					<span class="group-title">{{ head.label }}</span>
+					<span class="group-rule" aria-hidden="true"></span>
+					<span class="group-meta">{{ head.meta }}</span>
+				</h3>
+
+				<!-- A print's markup only depends on the print size and whether it's
+				     in the pile (eager image); memoizing on those keeps state flips
+				     like `dragging` from re-diffing hundreds of filed prints. -->
+				<button
+					v-for="i in rendered"
+					:key="i"
+					v-memo="[printLong, pileSet.has(i), sharp.get(i)]"
+					:ref="(el) => setPrintEl(i, el)"
+					type="button"
+					class="print"
+					:class="{ 'is-mono': rolls[photos[i].r].mono }"
+					:style="{ width: `${sizeOf(i).w}px`, height: `${sizeOf(i).h}px` }"
+					:data-i="i"
+					:aria-label="printLabel(i)"
+					@click="onPrintClick(i)"
+					@pointerenter="onPointerEnter($event, i)"
+					@pointerleave="onPointerLeave(i)"
+					@focus="onFocus(i)"
+					@blur="hideGlow(i)"
+				>
+					<span class="print-lift" aria-hidden="true"></span>
+					<span class="print-body">
+						<img
+							:src="printSrc(i)"
+							alt=""
+							draggable="false"
+							:loading="pileSet.has(i) ? 'eager' : 'lazy'"
+							decoding="async"
+							@load="($event.target as HTMLImageElement).classList.add('is-loaded')"
+						/>
+					</span>
+				</button>
+
+				<p v-if="live && mode === 'grid' && !filtered.length" class="desk-empty">
+					Nothing on the desk matches that combination.
+				</p>
+			</div>
 		</div>
 
 
@@ -198,15 +229,16 @@ import { unpackFilmPhotos } from './data';
 import { bunnyUrl } from '../../utils/bunny';
 import {
 	clamp,
+	deskWorld,
 	layoutStrips,
 	layoutPile,
 	mulberry32,
 	pileCapacity,
-	printLongFor,
 	printSize,
 	priorityWeight,
 	stackOrder,
 	weightedSample,
+	type DeskWorld,
 	type PileSlot,
 } from './layout';
 import type { FacetKey, FacetOption, FilmPhotoData, FilmRollData, RollsState } from './types';
@@ -403,6 +435,7 @@ function readUrl() {
 const live = ref(false);
 const rootRef = ref<HTMLElement | null>(null);
 const deskRef = ref<HTMLElement | null>(null);
+const worldRef = ref<HTMLElement | null>(null);
 const glowRef = ref<HTMLElement | null>(null);
 const bottomRef = ref<HTMLElement | null>(null);
 const rollStripRef = ref<InstanceType<typeof FilmRollStrip> | null>(null);
@@ -491,14 +524,24 @@ const scanPath = (i: number) => `${props.rolls[photos[i].r].folder}/${photos[i].
 const thumbUrls = new Map<number, string>();
 function thumbUrl(i: number) {
 	let url = thumbUrls.get(i);
-	if (!url) {
-		const a = aspectOf(i);
-		const width = a >= 1 ? thumbLong : Math.round((thumbLong * a) / 40) * 40;
-		url = bunnyUrl(scanPath(i), { width, format: 'webp', quality: 72 });
-		thumbUrls.set(i, url);
-	}
+	if (!url) thumbUrls.set(i, (url = scanUrl(i, thumbLong)));
 	return url;
 }
+
+function scanUrl(i: number, long: number) {
+	const a = aspectOf(i);
+	const width = a >= 1 ? long : Math.round((long * a) / 40) * 40;
+	return bunnyUrl(scanPath(i), { width, format: 'webp', quality: 72 });
+}
+
+// Zoomed in past what the thumbnails hold, the prints in view swap to sharper
+// scans (photo index → long edge). Only ever upgrades; see sharpen().
+const SHARP_STEPS = [600, 720, 960, 1200];
+const sharp = shallowRef(new Map<number, number>());
+const printSrc = (i: number) => {
+	const long = sharp.value.get(i);
+	return long ? scanUrl(i, long) : thumbUrl(i);
+};
 
 const fullDates = new Map<string, string>();
 const fullDate = (iso: string) => {
@@ -559,6 +602,8 @@ const scrollTopOf = () => document.body.scrollTop + window.scrollY;
 // W: desk width. H: pile-mode desk height (the whole screen). navH/bottomH:
 // the floating chrome; top/bottom: how far the pile keeps clear of it.
 const geo = { W: 0, H: 0, top: 0, bottom: 0, navH: 0, bottomH: 0 };
+// The pile's own desk, in desk px — larger than the screen on smaller ones.
+let world: DeskWorld = { w: 0, h: 0, long: 200, fit: 1, home: 1, max: 2 };
 
 function measure() {
 	const desk = deskRef.value!;
@@ -571,10 +616,12 @@ function measure() {
 	// one surface fading out beneath the controls.
 	geo.top = geo.navH * 0.8;
 	geo.bottom = geo.bottomH * 0.6;
-	printLong.value = printLongFor(geo.W, geo.H - geo.top - geo.bottom);
+	world = deskWorld({ w: geo.W, h: bandH() });
+	printLong.value = world.long;
 }
 
-const pileArea = () => ({ w: geo.W, h: geo.H - geo.top - geo.bottom });
+/** Height of the free band between the floating chrome, where the pile sits. */
+const bandH = () => geo.H - geo.top - geo.bottom;
 
 /**
  * The slice of the desk on screen, in desk coordinates — widened up to the
@@ -585,6 +632,177 @@ function viewBand() {
 	const top = -deskRef.value!.getBoundingClientRect().top;
 	const scrolled = scrollTopOf();
 	return { top: scrolled > 8 ? top - scrolled : top, bottom: top + window.innerHeight };
+}
+
+/* ── Camera (pile only) ─────────────────────────────────────────────── */
+
+// screen = world × z + (x, y), relative to the desk's top-left. Once the desk
+// is filed into strips it's the identity, and the page scrolls as usual.
+interface Cam {
+	x: number;
+	y: number;
+	z: number;
+}
+type Point = { x: number; y: number };
+const IDENTITY: Cam = { x: 0, y: 0, z: 1 };
+const cam: Cam = { ...IDENTITY };
+let camTween: gsap.core.Tween | null = null;
+let camGoal: Cam | null = null;
+// Once someone has moved the view, layouts keep it rather than going home.
+let camTouched = false;
+let pileCam: Cam | null = null;
+const zoomAt = ref<'fit' | 'max' | null>('fit');
+
+function renderCam() {
+	const el = worldRef.value;
+	if (!el) return;
+	const still = cam.x === 0 && cam.y === 0 && cam.z === 1;
+	el.style.transform = still ? '' : `translate(${cam.x}px, ${cam.y}px) scale(${cam.z})`;
+}
+
+/** Where the camera may sit at zoom z: the desk covers the free band, or is centered in it. */
+function camBounds(z: number) {
+	const ww = world.w * z;
+	const wh = world.h * z;
+	const bh = bandH();
+	const x = ww <= geo.W + 0.5 ? [(geo.W - ww) / 2, (geo.W - ww) / 2] : [geo.W - ww, 0];
+	const y = wh <= bh + 0.5 ? [geo.top + (bh - wh) / 2, geo.top + (bh - wh) / 2] : [geo.top + bh - wh, geo.top];
+	return { x0: x[0], x1: x[1], y0: y[0], y1: y[1] };
+}
+
+const clampZoom = (z: number) => clamp(z, world.fit, world.max);
+
+function clampCam(c: Cam): Cam {
+	const z = clampZoom(c.z);
+	const b = camBounds(z);
+	return { z, x: clamp(c.x, b.x0, b.x1), y: clamp(c.y, b.y0, b.y1) };
+}
+
+/** Past an edge the desk still follows the finger, but reluctantly. */
+const rubber = (v: number, lo: number, hi: number) => (v < lo ? lo + (v - lo) * 0.3 : v > hi ? hi + (v - hi) * 0.3 : v);
+
+/** The view at zoom z that keeps screen point (px, py) over the same spot on the desk. */
+function zoomedAbout(px: number, py: number, z: number, from: Cam = cam): Cam {
+	return { z, x: px - ((px - from.x) / from.z) * z, y: py - ((py - from.y) / from.z) * z };
+}
+
+function homeCam(): Cam {
+	const z = world.home;
+	return clampCam({ z, x: (geo.W - world.w * z) / 2, y: geo.top + (bandH() - world.h * z) / 2 });
+}
+
+const toWorld = (p: Point) => ({ x: (p.x - cam.x) / cam.z, y: (p.y - cam.y) / cam.z });
+
+// While the view moves, the desk is one composited layer; once it rests the
+// layer goes, so the prints re-rasterize crisp at the new zoom.
+let settleTimer = 0;
+function moving() {
+	window.clearTimeout(settleTimer);
+	worldRef.value?.classList.add('is-moving');
+}
+
+function settleCam() {
+	const pile = mode.value === 'pile';
+	zoomAt.value = cam.z <= world.fit + 1e-3 ? 'fit' : cam.z >= world.max - 1e-3 ? 'max' : null;
+	// A data attribute, not a bound class: Vue would overwrite a hand-set class.
+	const desk = deskRef.value;
+	if (desk && desk.dataset.pan !== 'active') desk.dataset.pan = pile && cam.z > world.fit + 1e-3 ? 'can' : '';
+	window.clearTimeout(settleTimer);
+	settleTimer = window.setTimeout(() => {
+		worldRef.value?.classList.remove('is-moving');
+		if (pile) sharpen();
+	}, 150);
+}
+
+function moveCam(to: Cam, duration = 0.5, ease = 'power3.out') {
+	camTween?.kill();
+	camTween = null;
+	camGoal = to;
+	if (!duration || prefersReducedMotion()) {
+		Object.assign(cam, to);
+		camGoal = null;
+		renderCam();
+		settleCam();
+		return;
+	}
+	moving();
+	camTween = gsap.to(cam, {
+		...to,
+		duration,
+		ease,
+		onUpdate: renderCam,
+		onComplete: () => {
+			camTween = null;
+			camGoal = null;
+			settleCam();
+		},
+	});
+}
+
+/** Stop a glide where it is (a finger caught the desk). */
+function stopCam() {
+	camTween?.kill();
+	camTween = null;
+	camGoal = null;
+}
+
+/** Back inside the bounds, if a stopped glide or a pinch left it outside. */
+function settleInto() {
+	const to = clampCam(cam);
+	if (Math.abs(to.x - cam.x) + Math.abs(to.y - cam.y) + Math.abs(to.z - cam.z) * 100 > 0.5) moveCam(to, 0.4);
+	else settleCam();
+}
+
+function zoomBy(f: number) {
+	if (mode.value !== 'pile') return;
+	camTouched = true;
+	const from = camGoal ?? cam;
+	moveCam(clampCam(zoomedAbout(geo.W / 2, geo.top + bandH() / 2, clampZoom(from.z * f), from)), 0.45);
+}
+
+/** The whole desk in view — with the rolls tucked away, so there's room for all of it. */
+function zoomToFit() {
+	if (mode.value !== 'pile') return;
+	camTouched = true;
+	moveCam(clampCam({ x: 0, y: 0, z: world.fit }), 0.6);
+	// The chrome shrinking re-lays the desk out (watchChrome), and a view at
+	// fit stays at fit — so it settles on the larger band once they're away.
+	rollsState.value = 'away';
+}
+
+/** Pan just enough to bring a print fully into view (keyboard focus lands on it). */
+function revealPrint(i: number) {
+	const t = targets.get(i);
+	if (mode.value !== 'pile' || !t) return;
+	const size = sizeOf(i);
+	const r = (Math.hypot(size.w, size.h) / 2) * cam.z;
+	const sx = t.x * cam.z + cam.x;
+	const sy = t.y * cam.z + cam.y;
+	const m = 16;
+	const top = geo.top + m;
+	const bottom = geo.H - geo.bottom - m;
+	const dx = sx - r < m ? m - (sx - r) : sx + r > geo.W - m ? geo.W - m - (sx + r) : 0;
+	const dy = sy - r < top ? top - (sy - r) : sy + r > bottom ? bottom - (sy + r) : 0;
+	if (dx || dy) moveCam(clampCam({ z: cam.z, x: cam.x + dx, y: cam.y + dy }), 0.45);
+}
+
+/** Swap the prints in view to sharper scans when zoomed past their thumbnails. */
+function sharpen() {
+	const dpr = Math.min(window.devicePixelRatio || 1, 2);
+	const need = printLong.value * cam.z * dpr;
+	if (need <= thumbLong * 1.15) return;
+	const long = SHARP_STEPS.find((s) => s >= need) ?? SHARP_STEPS[SHARP_STEPS.length - 1];
+	let next: Map<number, number> | null = null;
+	for (const e of pile) {
+		const t = targets.get(e.i);
+		if (!t || (sharp.value.get(e.i) ?? thumbLong) >= long) continue;
+		const r = (printLong.value / 2) * cam.z;
+		const sx = t.x * cam.z + cam.x;
+		const sy = t.y * cam.z + cam.y;
+		if (sx + r < 0 || sx - r > geo.W || sy + r < 0 || sy - r > geo.H) continue;
+		(next ??= new Map(sharp.value)).set(e.i, long);
+	}
+	if (next) sharp.value = next;
 }
 
 /* ── The pile ───────────────────────────────────────────────────────── */
@@ -599,7 +817,7 @@ let zTop = 0;
 
 function buildPile() {
 	const rand = mulberry32((Math.random() * 2 ** 32) >>> 0);
-	const area = pileArea();
+	const area = world;
 	const all = photos.map((_, i) => i);
 	const picked = weightedSample(
 		all,
@@ -639,29 +857,41 @@ interface Target {
 let targets = new Map<number, Target>();
 let gen = 0;
 let ready = false;
+/** The mode the desk was last laid out in (pile prints sit in camera space). */
+let laidOut: 'pile' | 'grid' | null = null;
 
 type Kind = 'toss' | 'shift' | 'instant';
 
 async function applyLayout(kind: Kind) {
 	if (!deskRef.value) return; // unmounted mid-await (navigated away)
 	const my = ++gen;
+	const fitBefore = world.fit;
 	measure();
 
 	const next = new Map<number, Target>();
 	let order: number[];
+	let goal: Cam;
+	const from = laidOut;
+	laidOut = mode.value;
 	if (mode.value === 'pile') {
 		if (!pile.length) buildPile();
-		const area = pileArea();
 		deskHeight.value = geo.H;
 		strips.value = [];
 		canisters.value = [];
 		stickers.value = [];
 		heads.value = [];
 		for (const e of pile) {
-			next.set(e.i, { x: e.slot.u * area.w, y: geo.top + e.slot.v * area.h, r: e.slot.r, s: 1, z: e.z });
+			next.set(e.i, { x: e.slot.u * world.w, y: e.slot.v * world.h, r: e.slot.r, s: 1, z: e.z });
 		}
 		order = [...pile].sort((a, b) => b.z - a.z).map((e) => e.i);
+		// Back from the strips, the view returns to wherever it was left.
+		const kept = from === 'grid' ? pileCam : (camGoal ?? cam);
+		// Zoomed all the way out, it stays all the way out on a resized desk.
+		const atFit = from === 'pile' && kept && kept.z <= fitBefore + 1e-3;
+		goal = !camTouched || !kept ? homeCam() : clampCam(atFit ? { ...kept, z: world.fit } : kept);
 	} else {
+		if (from === 'pile') pileCam = { ...(camGoal ?? cam) };
+		goal = IDENTITY;
 		const sheet = layoutStrips(groups.value, geo.W, {
 			top: geo.navH + 28,
 			bottom: geo.bottomH + 40,
@@ -716,6 +946,8 @@ async function applyLayout(kind: Kind) {
 
 	hideGlow();
 	const reduce = prefersReducedMotion();
+	if (kind === 'shift') moveCam(goal, 0.85, 'power3.inOut');
+	else moveCam(goal, 0);
 
 	if (kind === 'instant') {
 		for (const [i, t] of next) {
@@ -740,6 +972,8 @@ async function applyLayout(kind: Kind) {
 	// A print whose whole move happens off screen can't be seen moving, so it
 	// jumps straight to where it's going: re-filing a big desk only tweens the
 	// few dozen prints in (or passing through) view, not every frame on it.
+	// (Pile prints sit in camera space, which this doesn't follow, and there
+	// are only a few dozen of them: they always move.)
 	const band = viewBand();
 	const unseen = (i: number, from: number, to: number, scale: number) => {
 		const size = sizeOf(i);
@@ -784,7 +1018,8 @@ async function applyLayout(kind: Kind) {
 			return;
 		}
 		const fromY = Number(gsap.getProperty(el, 'y'));
-		if (unseen(i, fromY, t.y, Math.max(t.s, Number(gsap.getProperty(el, 'scale'))))) return place(el, t);
+		const scale = Math.max(t.s, Number(gsap.getProperty(el, 'scale')));
+		if (from === 'grid' && mode.value === 'grid' && unseen(i, fromY, t.y, scale)) return place(el, t);
 		// Returning to the pile restacks immediately so prints land in order.
 		if (mode.value === 'pile') gsap.set(el, { zIndex: t.z * 2 });
 		gsap.to(el, {
@@ -807,7 +1042,7 @@ async function applyLayout(kind: Kind) {
 		const el = els.get(i);
 		if (!el) return drop(i);
 		const fromY = Number(gsap.getProperty(el, 'y'));
-		if (unseen(i, fromY, fromY + 36, Number(gsap.getProperty(el, 'scale')))) {
+		if (from === 'grid' && unseen(i, fromY, fromY + 36, Number(gsap.getProperty(el, 'scale')))) {
 			gsap.killTweensOf(el);
 			return drop(i);
 		}
@@ -841,9 +1076,9 @@ function tossIn(el: HTMLElement, t: Target, k: number, n: number, reduce: boolea
 		gsap.to(el, { opacity: 1, duration: 0.4, delay: Math.min(k * 0.01, 0.4) });
 		return;
 	}
-	const size = { w: el.offsetWidth, h: el.offsetHeight };
-	const fromX = geo.W * (0.5 + (Math.random() - 0.5) * 0.8);
-	const fromY = deskHeight.value + size.h * (0.8 + Math.random() * 0.6);
+	// Thrown from below the screen's bottom edge, wherever the view is on the desk.
+	const fromX = (geo.W * (0.5 + (Math.random() - 0.5) * 0.8) - cam.x) / cam.z;
+	const fromY = (geo.H - cam.y) / cam.z + el.offsetHeight * (0.8 + Math.random() * 0.6);
 	const dx = t.x - fromX;
 	const dy = t.y - fromY;
 	const len = Math.hypot(dx, dy) || 1;
@@ -878,13 +1113,16 @@ async function retoss() {
 	const my = ++gen;
 	const reduce = prefersReducedMotion();
 	hideGlow();
+	// A fresh pile starts from the usual view.
+	camTouched = false;
+	moveCam(homeCam(), 0.6, 'power2.inOut');
 	// Sweep the old pile off the bottom edge, then throw a fresh one.
 	if (!reduce) {
 		rendered.value.forEach((i, k) => {
 			const el = els.get(i);
 			if (!el) return;
 			gsap.to(el, {
-				y: `+=${geo.H * 0.6}`,
+				y: `+=${(geo.H * 0.6) / cam.z}`,
 				rotation: `+=${(Math.random() - 0.5) * 50}`,
 				opacity: 0,
 				duration: 0.45,
@@ -975,18 +1213,19 @@ function hideGlow(i?: number) {
 }
 
 function onPointerEnter(e: PointerEvent, i: number) {
-	if (e.pointerType === 'mouse' && !drag) showGlow(i);
+	if (e.pointerType === 'mouse' && !gesture) showGlow(i);
 }
 
 function onPointerLeave(i: number) {
 	if (!drag) hideGlow(i);
 }
 
-/** Keyboard focus lifts the print to the top of the pile so it's actually visible. */
+/** Keyboard focus lifts the print to the top of the pile (and into view) so it's actually visible. */
 function onFocus(i: number) {
 	const el = els.get(i);
 	if (!el?.matches(':focus-visible')) return;
 	raise(i);
+	revealPrint(i);
 	showGlow(i);
 }
 
@@ -1001,20 +1240,24 @@ function raise(i: number) {
 	gsap.set(el, { zIndex: entry.z * 2 });
 }
 
-/* ── Dragging (pile only) ───────────────────────────────────────────── */
+/* ── Handling the pile: dragging prints, panning and zooming the desk ── */
+
+// Mouse and pen: drag a print to move it, drag the desk to pan, scroll to pan,
+// pinch or ctrl-scroll to zoom. Touch: a swipe pans wherever it starts (the
+// pile covers most of a phone), a long press picks a print up, and two
+// fingers pinch. Filed into strips, none of this applies: the page scrolls.
 
 interface Drag {
 	i: number;
 	el: HTMLElement;
 	pointerId: number;
-	startX: number;
-	startY: number;
-	x0: number;
-	y0: number;
+	/** The print's center relative to the pointer, in desk px. */
+	offX: number;
+	offY: number;
 	r0: number;
-	moved: boolean;
-	lastX: number;
-	lastY: number;
+	/** Pointer position (desk-relative screen px) and velocity (px/s). */
+	px: number;
+	py: number;
 	lastT: number;
 	vx: number;
 	vy: number;
@@ -1023,84 +1266,364 @@ interface Drag {
 let drag: Drag | null = null;
 let suppressClick = false;
 
-function onPointerDown(e: PointerEvent, i: number) {
+type Gesture =
+	| { kind: 'press'; id: number; touch: boolean; x0: number; y0: number; i: number; timer: number }
+	| { kind: 'pan'; id: number; x0: number; y0: number; cam0: Cam; lastX: number; lastY: number; lastT: number; vx: number; vy: number }
+	| { kind: 'pinch'; d0: number; m0: Point; m: Point; cam0: Cam }
+	| { kind: 'print' };
+let gesture: Gesture | null = null;
+/** Pointers down on the pile, by id (desk-relative positions). */
+const pointers = new Map<number, Point>();
+let lastPointerType = '';
+
+const LONG_PRESS = 380;
+
+function deskPoint(e: { clientX: number; clientY: number }): Point {
+	const r = deskRef.value!.getBoundingClientRect();
+	return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+const canPan = () => cam.z > world.fit + 1e-3;
+
+function capture(el: Element | null | undefined, id: number) {
+	try {
+		el?.setPointerCapture(id);
+	} catch {
+		/* the pointer is already gone */
+	}
+}
+
+function onDeskDown(e: PointerEvent) {
 	suppressClick = false;
-	if (mode.value !== 'pile' || e.button !== 0 || !e.isPrimary) return;
+	if (mode.value !== 'pile' || !ready) return;
+	if (e.pointerType === 'mouse' && e.button !== 0) return;
+	lastPointerType = e.pointerType;
+	const p = deskPoint(e);
+	pointers.set(e.pointerId, p);
+	if (pointers.size === 2 && e.pointerType === 'touch') return startPinch();
+	if (pointers.size > 1 || gesture) return;
+	stopCam();
+	const printEl = (e.target as Element).closest<HTMLElement>('.print');
+	const i = printEl ? Number(printEl.dataset.i) : -1;
+	const touch = e.pointerType === 'touch';
+	gesture = { kind: 'press', id: e.pointerId, touch, x0: p.x, y0: p.y, i, timer: 0 };
+	if (touch && i >= 0) gesture.timer = window.setTimeout(() => startDrag(i, e.pointerId, p, true), LONG_PRESS);
+}
+
+function onDeskMove(e: PointerEvent) {
+	if (!pointers.has(e.pointerId)) return;
+	const p = deskPoint(e);
+	pointers.set(e.pointerId, p);
+	const g = gesture;
+	if (!g) return;
+	if (g.kind === 'pinch') return pinchMove(g);
+	if (g.kind === 'print') return dragMove(e.pointerId, p);
+	if (g.id !== e.pointerId) return;
+	if (g.kind === 'press') {
+		if (Math.hypot(p.x - g.x0, p.y - g.y0) < (g.touch ? 8 : 5)) return;
+		window.clearTimeout(g.timer);
+		if (!g.touch && g.i >= 0) {
+			startDrag(g.i, g.id, { x: g.x0, y: g.y0 });
+			return dragMove(e.pointerId, p);
+		}
+		if (!canPan()) {
+			gesture = null;
+			return;
+		}
+		startPan(g.id, { x: g.x0, y: g.y0 });
+	}
+	if (gesture?.kind === 'pan') panMove(gesture, p);
+}
+
+function onDeskUp(e: PointerEvent) {
+	if (!pointers.delete(e.pointerId)) return;
+	const g = gesture;
+	// Swallow the click that ends a drag or pan — but not one that never comes
+	// (a pan released over the bare desk), or a later keypress would be lost.
+	if (suppressClick) window.setTimeout(() => (suppressClick = false), 350);
+	if (!g) return;
+	if (g.kind === 'press' && g.id === e.pointerId) {
+		window.clearTimeout(g.timer);
+		gesture = null;
+		settleInto(); // a tap that caught a glide mid-way; the click opens the print
+	} else if (g.kind === 'pan' && g.id === e.pointerId) {
+		gesture = null;
+		endPan(g, e.type === 'pointercancel');
+	} else if (g.kind === 'print' && drag?.pointerId === e.pointerId) {
+		gesture = null;
+		endDrag(e.type === 'pointercancel' ? 0 : 0.12, e.pointerType);
+	} else if (g.kind === 'pinch') {
+		// One finger up ends the pinch; the other just rests until it lifts.
+		gesture = null;
+		if (deskRef.value) deskRef.value.dataset.pan = '';
+		moveCam(clampCam(zoomedAbout(g.m.x, g.m.y, clampZoom(cam.z))), 0.35);
+	}
+}
+
+/* Panning */
+
+function startPan(id: number, from: Point) {
+	const now = performance.now();
+	gesture = { kind: 'pan', id, x0: from.x, y0: from.y, cam0: { ...cam }, lastX: from.x, lastY: from.y, lastT: now, vx: 0, vy: 0 };
+	capture(deskRef.value, id);
+	if (deskRef.value) deskRef.value.dataset.pan = 'active';
+	camTouched = true;
+	suppressClick = true;
+	hideGlow();
+	moving();
+}
+
+function panMove(g: Extract<Gesture, { kind: 'pan' }>, p: Point) {
+	const now = performance.now();
+	const dt = Math.max(8, now - g.lastT) / 1000;
+	g.vx = g.vx * 0.6 + ((p.x - g.lastX) / dt) * 0.4;
+	g.vy = g.vy * 0.6 + ((p.y - g.lastY) / dt) * 0.4;
+	g.lastX = p.x;
+	g.lastY = p.y;
+	g.lastT = now;
+	const b = camBounds(cam.z);
+	cam.x = rubber(g.cam0.x + p.x - g.x0, b.x0, b.x1);
+	cam.y = rubber(g.cam0.y + p.y - g.y0, b.y0, b.y1);
+	renderCam();
+}
+
+function endPan(g: Extract<Gesture, { kind: 'pan' }>, cancelled: boolean) {
+	if (deskRef.value) deskRef.value.dataset.pan = '';
+	// A flick glides on (a stale velocity — the finger paused first — doesn't).
+	const glide = cancelled || performance.now() - g.lastT > 80 ? 0 : 0.3;
+	moveCam(clampCam({ z: cam.z, x: cam.x + g.vx * glide, y: cam.y + g.vy * glide }), glide ? 0.8 : 0.4);
+}
+
+/* Pinching */
+
+const mid = (a: Point, b: Point) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+function startPinch() {
+	// A second finger turns whatever the first was doing into a pinch.
+	const g = gesture;
+	if (g?.kind === 'press') window.clearTimeout(g.timer);
+	if (g?.kind === 'print') endDrag(0, 'touch');
+	stopCam();
+	const [a, b] = [...pointers.values()];
+	const m = mid(a, b);
+	gesture = { kind: 'pinch', d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), m0: m, m, cam0: { ...cam } };
+	for (const id of pointers.keys()) capture(deskRef.value, id);
+	if (deskRef.value) deskRef.value.dataset.pan = 'active';
+	camTouched = true;
+	suppressClick = true;
+	hideGlow();
+	moving();
+}
+
+function pinchMove(g: Extract<Gesture, { kind: 'pinch' }>) {
+	const [a, b] = [...pointers.values()];
+	if (!b) return;
+	g.m = mid(a, b);
+	// Past either limit it still gives a little, then settles back on release.
+	const z = clamp((g.cam0.z * Math.hypot(a.x - b.x, a.y - b.y)) / g.d0, world.fit * 0.8, world.max * 1.25);
+	// The spot that was under the fingers stays under them as they move.
+	const wx = (g.m0.x - g.cam0.x) / g.cam0.z;
+	const wy = (g.m0.y - g.cam0.y) / g.cam0.z;
+	const bounds = camBounds(z);
+	cam.z = z;
+	cam.x = rubber(g.m.x - wx * z, bounds.x0, bounds.x1);
+	cam.y = rubber(g.m.y - wy * z, bounds.y0, bounds.y1);
+	renderCam();
+}
+
+/* Dragging prints */
+
+function startDrag(i: number, pointerId: number, at: Point, longPress = false) {
 	const el = els.get(i);
-	if (!el) return;
+	if (!el || mode.value !== 'pile') return;
+	// Picked up: it comes to the top of the pile and lifts off the desk.
+	gsap.killTweensOf(el);
+	const w = toWorld(at);
 	drag = {
 		i,
 		el,
-		pointerId: e.pointerId,
-		startX: e.clientX,
-		startY: e.clientY,
-		x0: Number(gsap.getProperty(el, 'x')),
-		y0: Number(gsap.getProperty(el, 'y')),
+		pointerId,
+		offX: Number(gsap.getProperty(el, 'x')) - w.x,
+		offY: Number(gsap.getProperty(el, 'y')) - w.y,
 		r0: targets.get(i)?.r ?? Number(gsap.getProperty(el, 'rotation')),
-		moved: false,
-		lastX: e.clientX,
-		lastY: e.clientY,
+		px: at.x,
+		py: at.y,
 		lastT: performance.now(),
 		vx: 0,
 		vy: 0,
+		tilt: gsap.quickTo(el, 'rotation', { duration: 0.4, ease: 'power3' }),
 	};
+	gesture = { kind: 'print' };
+	capture(el, pointerId);
+	raise(i);
+	el.classList.add('is-lifted');
+	dragging.value = true;
+	suppressClick = true;
+	if (longPress) navigator.vibrate?.(8);
+	edgeT = 0;
+	edgeRaf ||= requestAnimationFrame(edgePan);
 }
 
-function onPointerMove(e: PointerEvent, i: number) {
+/** Puts the dragged print under the pointer (wherever the view has moved). */
+function placeDragged(d: Drag) {
+	const w = toWorld({ x: d.px, y: d.py });
+	gsap.set(d.el, { x: clamp(w.x + d.offX, 0, world.w), y: clamp(w.y + d.offY, 0, world.h) });
+}
+
+function dragMove(pointerId: number, p: Point) {
 	const d = drag;
-	if (!d || d.i !== i || e.pointerId !== d.pointerId) return;
-	const dx = e.clientX - d.startX;
-	const dy = e.clientY - d.startY;
-	if (!d.moved) {
-		if (Math.hypot(dx, dy) < 6) return;
-		// Picked up: it comes to the top of the pile and lifts off the desk.
-		d.moved = true;
-		d.el.setPointerCapture(e.pointerId);
-		gsap.killTweensOf(d.el);
-		raise(i);
-		d.el.classList.add('is-lifted');
-		d.tilt = gsap.quickTo(d.el, 'rotation', { duration: 0.4, ease: 'power3' });
-		dragging.value = true;
-	}
+	if (!d || pointerId !== d.pointerId) return;
 	const now = performance.now();
 	const dt = Math.max(8, now - d.lastT) / 1000;
-	d.vx = d.vx * 0.6 + ((e.clientX - d.lastX) / dt) * 0.4;
-	d.vy = d.vy * 0.6 + ((e.clientY - d.lastY) / dt) * 0.4;
-	d.lastX = e.clientX;
-	d.lastY = e.clientY;
+	d.vx = d.vx * 0.6 + ((p.x - d.px) / dt) * 0.4;
+	d.vy = d.vy * 0.6 + ((p.y - d.py) / dt) * 0.4;
+	d.px = p.x;
+	d.py = p.y;
 	d.lastT = now;
-	gsap.set(d.el, {
-		x: clamp(d.x0 + dx, 0, geo.W),
-		y: clamp(d.y0 + dy, 0, deskHeight.value),
-	});
+	placeDragged(d);
 	// Swings a little with the motion, like paper dragged by a corner.
 	d.tilt?.(d.r0 + clamp(d.vx / 140, -9, 9));
 }
 
-function onPointerUp(e: PointerEvent, i: number) {
+/** Carried to the edge of the view, a print pulls the desk along with it. */
+let edgeRaf = 0;
+let edgeT = 0;
+function edgePan(now: number) {
 	const d = drag;
-	if (!d || d.i !== i || e.pointerId !== d.pointerId) return;
+	if (!d) {
+		edgeRaf = 0;
+		return;
+	}
+	const dt = edgeT ? Math.min(0.05, (now - edgeT) / 1000) : 0;
+	edgeT = now;
+	const E = 56;
+	const push = (v: number, lo: number, hi: number) =>
+		clamp(v < lo + E ? (lo + E - v) / E : v > hi - E ? (hi - E - v) / E : 0, -1, 1);
+	const sx = push(d.px, 0, geo.W);
+	const sy = push(d.py, geo.top, geo.H - geo.bottom);
+	if ((sx || sy) && canPan()) {
+		const b = camBounds(cam.z);
+		const x = clamp(cam.x + sx * 720 * dt, b.x0, b.x1);
+		const y = clamp(cam.y + sy * 720 * dt, b.y0, b.y1);
+		if (x !== cam.x || y !== cam.y) {
+			cam.x = x;
+			cam.y = y;
+			moving();
+			renderCam();
+			placeDragged(d);
+		}
+	}
+	edgeRaf = requestAnimationFrame(edgePan);
+}
+
+/** Lets go of the dragged print; `fling` is how far its momentum carries it (s). */
+function endDrag(fling: number, pointerType: string) {
+	const d = drag;
+	if (!d) return;
 	drag = null;
-	if (!d.moved) return; // a plain click — the click handler opens it
-	suppressClick = true;
+	cancelAnimationFrame(edgeRaf);
+	edgeRaf = 0;
 	dragging.value = false;
 	d.el.classList.remove('is-lifted');
 
 	// A flick carries the print on a little before friction wins.
+	const i = d.i;
 	const size = sizeOf(i);
-	const fling = e.type === 'pointercancel' ? 0 : 0.12;
-	const carry = (v: number) => clamp(v * fling, -140, 140);
-	const x = clamp(Number(gsap.getProperty(d.el, 'x')) + carry(d.vx), size.w / 2, geo.W - size.w / 2);
-	const y = clamp(Number(gsap.getProperty(d.el, 'y')) + carry(d.vy), size.h / 2, deskHeight.value - size.h / 2);
+	const carry = (v: number) => clamp((v * fling) / cam.z, -140, 140);
+	const x = clamp(Number(gsap.getProperty(d.el, 'x')) + carry(d.vx), size.w / 2, world.w - size.w / 2);
+	const y = clamp(Number(gsap.getProperty(d.el, 'y')) + carry(d.vy), size.h / 2, world.h - size.h / 2);
 	const r = clamp(d.r0 + d.vx * 0.006, d.r0 - 14, d.r0 + 14);
 	gsap.to(d.el, { x, y, rotation: r, duration: 0.6, ease: 'power3.out', overwrite: true });
 
 	const entry = pile.find((p) => p.i === i);
 	const t = targets.get(i);
-	const area = pileArea();
-	if (entry) entry.slot = { u: x / area.w, v: (y - geo.top) / area.h, r };
+	if (entry) entry.slot = { u: x / world.w, v: y / world.h, r };
 	if (t) Object.assign(t, { x, y, r });
-	if (e.pointerType === 'mouse' && d.el.matches(':hover')) showGlow(i);
+	if (pointerType === 'mouse' && d.el.matches(':hover')) showGlow(i);
+	settleCam();
+}
+
+/* Wheel, trackpad, keys */
+
+// Trackpad scrolling pans; a pinch (which browsers send as ctrl + wheel)
+// zooms about the pointer, as does ctrl + a mouse wheel.
+let safariPinch = false;
+function onWheel(e: WheelEvent) {
+	if (mode.value !== 'pile' || !ready) return;
+	e.preventDefault();
+	if (gesture || (safariPinch && e.ctrlKey)) return;
+	stopCam();
+	const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? geo.H : 1;
+	let dx = e.deltaX * unit;
+	let dy = e.deltaY * unit;
+	if (e.ctrlKey) {
+		const p = deskPoint(e);
+		Object.assign(cam, clampCam(zoomedAbout(p.x, p.y, clampZoom(cam.z * Math.exp(clamp(-dy, -50, 50) * 0.01)))));
+	} else {
+		if (e.shiftKey && !dx) [dx, dy] = [dy, 0];
+		Object.assign(cam, clampCam({ z: cam.z, x: cam.x - dx, y: cam.y - dy }));
+	}
+	camTouched = true;
+	hideGlow();
+	moving();
+	renderCam();
+	settleCam();
+}
+
+// Safari reports trackpad (and iOS) pinches as gesture events instead. Touch
+// pinches are already handled through pointers, so those only block page zoom.
+type SafariGesture = UIEvent & { scale: number; clientX: number; clientY: number };
+let gestureZ0 = 1;
+function onGestureStart(e: Event) {
+	if (mode.value !== 'pile') return;
+	e.preventDefault();
+	safariPinch = true;
+	gestureZ0 = cam.z;
+}
+
+function onGestureChange(e: Event) {
+	if (mode.value !== 'pile') return;
+	e.preventDefault();
+	if (pointers.size || !safariPinch) return;
+	const g = e as SafariGesture;
+	const p = deskPoint(g);
+	stopCam();
+	Object.assign(cam, clampCam(zoomedAbout(p.x, p.y, clampZoom(gestureZ0 * g.scale))));
+	camTouched = true;
+	moving();
+	renderCam();
+	settleCam();
+}
+
+function onGestureEnd(e: Event) {
+	if (mode.value === 'pile') e.preventDefault();
+	safariPinch = false;
+}
+
+function onDeskDblClick(e: MouseEvent) {
+	if (mode.value !== 'pile' || (e.target as Element).closest('.print')) return;
+	const p = deskPoint(e);
+	const z = cam.z >= world.max - 1e-3 ? world.home : clampZoom(cam.z * 2);
+	camTouched = true;
+	moveCam(clampCam(zoomedAbout(p.x, p.y, z)), 0.5);
+}
+
+// A long press on a phone would otherwise open the image menu mid-lift.
+function onContextMenu(e: MouseEvent) {
+	if (mode.value === 'pile' && lastPointerType === 'touch') e.preventDefault();
+}
+
+/** + and − zoom, 0 shows the whole desk — unless typing, or the lightbox is up. */
+function onKeydown(e: KeyboardEvent) {
+	if (mode.value !== 'pile' || !ready || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+	const t = e.target as HTMLElement | null;
+	if (t?.closest?.('input, textarea, select, [contenteditable]')) return;
+	if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+	if (e.key === '+' || e.key === '=') zoomBy(1.5);
+	else if (e.key === '-' || e.key === '_') zoomBy(1 / 1.5);
+	else if (e.key === '0') zoomToFit();
+	else return;
+	e.preventDefault();
 }
 
 function onPrintClick(i: number) {
@@ -1180,7 +1703,7 @@ function watchChrome() {
 		chromeH = h;
 		window.clearTimeout(chromeTimer);
 		chromeTimer = window.setTimeout(() => {
-			if (ready && !drag) applyLayout('shift');
+			if (ready && !gesture) applyLayout('shift');
 		}, 180);
 	});
 	chromeObserver.observe(bottomRef.value);
@@ -1205,8 +1728,10 @@ onMounted(async () => {
 	measure();
 	lastW = geo.W;
 	lastVH = window.innerHeight;
+	// Sized for where the view starts; zooming in swaps in sharper scans.
 	const dpr = Math.min(window.devicePixelRatio || 1, 2);
-	thumbLong = THUMB_STEPS.find((s) => s >= printLong.value * dpr) ?? THUMB_STEPS[THUMB_STEPS.length - 1];
+	const need = printLong.value * world.home * dpr;
+	thumbLong = THUMB_STEPS.find((s) => s >= need) ?? THUMB_STEPS[THUMB_STEPS.length - 1];
 	thumbUrls.clear();
 	lightboxRecords.clear();
 
@@ -1220,6 +1745,13 @@ onMounted(async () => {
 	}
 	ready = true;
 	window.addEventListener('resize', onResize);
+	window.addEventListener('keydown', onKeydown);
+	// Non-passive: in the pile, wheel and pinch move the desk, not the page.
+	const desk = deskRef.value;
+	desk?.addEventListener('wheel', onWheel, { passive: false });
+	desk?.addEventListener('gesturestart', onGestureStart);
+	desk?.addEventListener('gesturechange', onGestureChange);
+	desk?.addEventListener('gestureend', onGestureEnd);
 	watchChrome();
 });
 
@@ -1229,7 +1761,11 @@ onBeforeUnmount(() => {
 	chromeObserver?.disconnect();
 	window.clearTimeout(chromeTimer);
 	window.removeEventListener('resize', onResize);
+	window.removeEventListener('keydown', onKeydown);
 	window.clearTimeout(resizeTimer);
+	window.clearTimeout(settleTimer);
+	cancelAnimationFrame(edgeRaf);
+	camTween?.kill();
 	gsap.ticker.remove(syncGlow);
 	gsap.killTweensOf([...els.values()]);
 });
@@ -1352,6 +1888,79 @@ onBeforeUnmount(() => {
 	z-index: 2;
 }
 
+/* Zoom: a small column floating above the bottom chrome, at the right. */
+.film-bottom > .zoom {
+	position: absolute;
+	right: max(1rem, env(safe-area-inset-right));
+	bottom: calc(100% + 0.75rem);
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+	padding: 0.25rem;
+	border: 1px solid var(--gray-800);
+	border-radius: 999rem;
+	background: color-mix(in srgb, var(--gray-999) 82%, transparent);
+	backdrop-filter: blur(16px) saturate(1.3);
+	-webkit-backdrop-filter: blur(16px) saturate(1.3);
+	box-shadow: var(--shadow-md);
+}
+
+.zoom-btn {
+	display: grid;
+	place-items: center;
+	width: 2.25rem;
+	height: 2.25rem;
+	padding: 0;
+	border: 0;
+	border-radius: 999rem;
+	background: none;
+	color: var(--gray-200);
+	cursor: pointer;
+	transition:
+		background-color 200ms ease,
+		color 200ms ease,
+		opacity 200ms ease;
+}
+
+.zoom-btn:hover:not(:disabled) {
+	background: var(--gray-900);
+	color: var(--gray-0);
+}
+
+.zoom-btn:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.zoom-btn:focus-visible {
+	outline: 2px solid var(--accent-regular);
+	outline-offset: 2px;
+}
+
+.zoom-btn svg {
+	width: 1rem;
+	height: 1rem;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 18;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.zoom-enter-active,
+.zoom-leave-active {
+	transition:
+		opacity 300ms ease,
+		translate 300ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.zoom-enter-from,
+.zoom-leave-to {
+	opacity: 0;
+	translate: 0 0.5rem;
+}
+
 /* ── The desk: the whole page ── */
 
 .desk {
@@ -1361,6 +1970,33 @@ onBeforeUnmount(() => {
 	overflow: hidden;
 	isolation: isolate;
 	touch-action: pan-y;
+}
+
+/* The pile handles every touch itself (pan, pinch, long-press to lift). */
+.film:not(.is-grid) .desk {
+	touch-action: none;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.desk[data-pan='can'] {
+	cursor: grab;
+}
+
+.desk[data-pan='active'],
+.desk[data-pan='active'] .print {
+	cursor: grabbing;
+}
+
+.desk-world {
+	position: absolute;
+	inset: 0;
+	transform-origin: 0 0;
+}
+
+.desk-world.is-moving {
+	will-change: transform;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1380,7 +2016,7 @@ onBeforeUnmount(() => {
 	background: none;
 	opacity: 0;
 	cursor: grab;
-	touch-action: pan-y pinch-zoom;
+	touch-action: none;
 	-webkit-tap-highlight-color: transparent;
 	/* No standing will-change: a filed desk can hold hundreds of prints, and a
 	   compositor layer each is a lot of GPU memory. Tweens promote prints for
@@ -1707,7 +2343,7 @@ onBeforeUnmount(() => {
 
 /* The canister at the head of a roll, its film running out of the felt lip
    into the first strip (which starts tucked underneath). */
-.desk > .desk-can {
+.desk-world > .desk-can {
 	position: absolute;
 	z-index: 1;
 	filter: drop-shadow(0 8px 10px rgba(17, 16, 16, 0.25));
@@ -1715,11 +2351,11 @@ onBeforeUnmount(() => {
 }
 
 /* Standing strips: the canister lies across the head of the first one, lip down. */
-.desk > .desk-can.is-lying {
+.desk-world > .desk-can.is-lying {
 	rotate: 90deg;
 }
 
-:root.theme-dark .desk > .desk-can {
+:root.theme-dark .desk-world > .desk-can {
 	filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.8));
 }
 
