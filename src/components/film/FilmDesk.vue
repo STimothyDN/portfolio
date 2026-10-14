@@ -47,10 +47,11 @@
 					<button type="button" class="zoom-btn" :disabled="zoomAt === 'fit'" aria-label="Zoom out" @click="zoomBy(1 / 1.5)">
 						<svg viewBox="0 0 256 256" aria-hidden="true"><path d="M64 128h128" /></svg>
 					</button>
+					<!-- Still useful at full zoom-out while the rolls show: it tucks them away. -->
 					<button
 						type="button"
 						class="zoom-btn"
-						:disabled="zoomAt === 'fit'"
+						:disabled="zoomAt === 'fit' && rollsCurrent === 'away'"
 						aria-label="Show the whole desk"
 						@click="zoomToFit"
 					>
