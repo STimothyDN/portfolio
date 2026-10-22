@@ -17,6 +17,9 @@
  * each scan's star rating when it has one (Lightroom, Bridge, Capture One,
  * darktable and Windows all write it), otherwise 3. Tweak it in the JSON later.
  *
+ * Once a scan is up, its tone (black point, average, white point) is measured
+ * from the CDN for the Negative view (see scripts/measure-film-tone.mjs).
+ *
  * Must be run with env vars loaded (`npm run upload-film`, which passes
  * --env-file=.env) — except with --dry-run, which uploads and writes nothing.
  *
@@ -35,6 +38,8 @@ import exifr from 'exifr';
 import { imageSize } from 'image-size';
 
 import { fileExists, naturalSort, uploadToBunny } from './lib/bunny-storage.mjs';
+import { rollJson } from './lib/roll-json.mjs';
+import { scanTone } from './lib/scan-tone.mjs';
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 // Common scan formats the CDN's optimizer can't serve — export them as JPEG first.
@@ -252,7 +257,7 @@ async function mapLimit(items, limit, fn) {
 	return results;
 }
 
-async function processRoll(roll, { title, force, dryRun, storage }) {
+async function processRoll(roll, { title, force, dryRun, storage, cdn }) {
 	const jsonPath = path.join(CONTENT_DIR, `${roll.id}.json`);
 	const exists = await fileExists(jsonPath);
 	if (exists && !force) {
@@ -270,20 +275,27 @@ async function processRoll(roll, { title, force, dryRun, storage }) {
 	}
 	let done = 0;
 	const photos = await mapLimit(filenames, CONCURRENCY, async (filename) => {
+		const prior = existingByFile.get(filename);
 		const buffer = await readFile(path.join(roll.folder, filename));
 		const meta = await scanMeta(buffer);
+		let tone;
 		if (!dryRun) {
-			await uploadToBunny({ ...storage, remotePath: `film/${roll.id}/${filename}`, buffer });
+			const remotePath = `film/${roll.id}/${filename}`;
+			await uploadToBunny({ ...storage, remotePath, buffer });
+			tone = await scanTone(cdn, remotePath).catch((err) => {
+				console.warn(`\n    Couldn't measure ${filename}'s tone (${err.message}) — run measure-film-tone later.`);
+				return prior?.tone;
+			});
 		}
 		done++;
 		process.stdout.write(`\r    ${dryRun ? 'Read' : 'Uploaded'} ${done}/${filenames.length} scan(s)`);
-		const prior = existingByFile.get(filename);
 		return {
 			filename,
 			width: meta.width,
 			height: meta.height,
 			priority: prior?.priority ?? priorityFromRating(meta.rating),
 			...(prior?.caption ? { caption: prior.caption } : {}),
+			...(tone ? { tone } : {}),
 		};
 	});
 	process.stdout.write('\n');
@@ -301,7 +313,7 @@ async function processRoll(roll, { title, force, dryRun, storage }) {
 		...(existing?.description ? { description: existing.description } : {}),
 		photos,
 	};
-	if (!dryRun) await writeFile(jsonPath, JSON.stringify(data, null, 2) + '\n');
+	if (!dryRun) await writeFile(jsonPath, rollJson(data));
 
 	const rated = photos.filter((p) => p.priority !== 3).length;
 	console.log(`    "${data.title}" · ${rated} scan(s) with a non-default priority`);
@@ -321,11 +333,12 @@ async function main() {
 				accessKey: requireEnv('BUNNY_STORAGE_ACCESS_KEY'),
 				region: process.env.BUNNY_STORAGE_REGION || '',
 			};
+	const cdn = dryRun ? null : requireEnv('PUBLIC_BUNNY_CDN_URL');
 
 	console.log(`${dryRun ? 'Checking' : 'Uploading'} ${rolls.length} roll(s)…\n`);
 	const written = [];
 	for (const roll of rolls) {
-		const data = await processRoll(roll, { title, force, dryRun, storage });
+		const data = await processRoll(roll, { title, force, dryRun, storage, cdn });
 		if (data) written.push(data);
 	}
 

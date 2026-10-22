@@ -1,6 +1,7 @@
 import { type CollectionEntry, getCollection } from 'astro:content';
 
 import labels from '../data/film-labels.json';
+import { frameExposure, negativeProfileKey } from '../components/film/negative';
 import type { FilmPhotoData, FilmRollData } from '../components/film/types';
 
 export type FilmRoll = CollectionEntry<'film'>;
@@ -64,6 +65,9 @@ export function rollFolder(roll: FilmRoll): string {
 
 const PREVIEW_FRAMES = 3;
 
+/** A scan's exposure in stops, as its negative shows it; scans not yet measured count as normal. */
+const exposureOf = (photo: FilmRoll['data']['photos'][number]) => (photo.tone ? frameExposure(photo.tone) : 0);
+
 /** Compact island props for the film desk: rolls plus every frame on them. */
 export function toFilmDeskData(rolls: FilmRoll[]): { rolls: FilmRollData[]; photos: FilmPhotoData[] } {
 	const rollData = rolls.map((roll): FilmRollData => {
@@ -79,7 +83,11 @@ export function toFilmDeskData(rolls: FilmRoll[]): { rolls: FilmRollData[]; phot
 		const tied = ranked.filter((r) => r.photo.priority === cutoff).sort((a, b) => a.i - b.i);
 		const need = Math.min(PREVIEW_FRAMES, ranked.length) - sure.length;
 		const spread = Array.from({ length: need }, (_, k) => tied[Math.floor(((k + 0.5) * tied.length) / need)]);
-		const previews = [...sure, ...spread].sort((a, b) => a.i - b.i).map(({ photo }) => photo.filename);
+		const previews = [...sure, ...spread]
+			.sort((a, b) => a.i - b.i)
+			.map(({ photo }) => ({ file: photo.filename, exposure: exposureOf(photo) }));
+		const stockLabel = filmLabel('stocks', data.stock);
+		const stockBrand = filmBrand('stocks', data.stock);
 		return {
 			id: roll.id,
 			title: data.title,
@@ -89,11 +97,11 @@ export function toFilmDeskData(rolls: FilmRoll[]): { rolls: FilmRollData[]; phot
 			cameraLabel: filmLabel('cameras', data.camera),
 			cameraBrand: filmBrand('cameras', data.camera),
 			stock: data.stock,
-			stockLabel: filmLabel('stocks', data.stock),
-			stockBrand: filmBrand('stocks', data.stock),
+			stockLabel,
+			stockBrand,
 			lab: data.lab,
 			labLabel: filmLabel('labs', data.lab),
-			mono: isMonochrome(filmLabel('stocks', data.stock)),
+			negative: negativeProfileKey(stockLabel, stockBrand, isMonochrome(stockLabel)),
 			description: data.description,
 			folder: rollFolder(roll),
 			count: data.photos.length,
@@ -110,6 +118,7 @@ export function toFilmDeskData(rolls: FilmRoll[]): { rolls: FilmRollData[]; phot
 				h: photo.height,
 				p: photo.priority,
 				n: i + 1,
+				x: exposureOf(photo),
 				...(photo.caption ? { c: photo.caption } : {}),
 			})
 		)

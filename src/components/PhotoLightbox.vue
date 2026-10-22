@@ -56,7 +56,12 @@
 					<figure class="frame">
 						<div class="print">
 							<Transition :name="`photo-${direction}`">
-								<div class="photo" :class="{ 'is-loaded': loadedSrc === current?.fullUrl }" :key="current?.fullUrl">
+								<div
+									class="photo"
+									:class="{ 'is-loaded': loadedSrc === current?.fullUrl }"
+									:style="scanMode ? { '--neg': current?.negative } : undefined"
+									:key="current?.fullUrl"
+								>
 									<!-- Blur-up: the grid thumb holds the frame while the full
 									     print decodes, then the sharp image fades over it. The
 									     aspect-ratio keeps the box (and placeholder) sized
@@ -74,7 +79,7 @@
 									<template v-if="scanMode">
 										<div
 											class="scan-negative"
-											:class="{ 'is-running': loadedSrc === current?.fullUrl, 'is-mono': current?.mono }"
+											:class="{ 'is-running': loadedSrc === current?.fullUrl }"
 											aria-hidden="true"
 										>
 											<img :src="current?.fullUrl" alt="" decoding="async" />
@@ -814,9 +819,10 @@ onBeforeUnmount(() => {
 
 /* ── Negative scan (from the film desk's negative view) ── */
 
-/* While the full scan loads, the placeholder is a negative too. */
+/* While the full scan loads, the placeholder is a negative too. Each frame's
+   negative filter (its stock and exposure, in --neg) is the film desk's. */
 .scan-mode .photo-thumb {
-	filter: blur(20px) invert(1) sepia(0.55) saturate(1.7) hue-rotate(-14deg) brightness(0.9) contrast(0.92);
+	filter: var(--neg) blur(20px);
 }
 
 .scan-negative {
@@ -831,15 +837,10 @@ onBeforeUnmount(() => {
 	width: 100%;
 	height: 100%;
 	object-fit: contain;
-	filter: invert(1) sepia(0.55) saturate(1.7) hue-rotate(-14deg) brightness(0.9) contrast(0.92);
+	filter: var(--neg);
 }
 
 /* The negative peels away top to bottom behind the moving light bar. */
-/* Black-and-white film: a gray negative, no orange mask. */
-.scan-negative.is-mono img {
-	filter: invert(1) grayscale(1) contrast(0.88) brightness(1.04);
-}
-
 .scan-negative.is-running {
 	opacity: 1;
 	animation: scan-reveal 1.9s 0.35s cubic-bezier(0.5, 0, 0.25, 1) forwards;

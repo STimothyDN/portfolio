@@ -9,133 +9,155 @@
       "filename": "TimothyNav300518-R1-000-XA.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 1
+      "priority": 1,
+      "tone": [0, 0.22, 0.99]
     },
     {
       "filename": "TimothyNav300518-R1-002-00A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 5
+      "priority": 5,
+      "tone": [0.02, 0.52, 0.98]
     },
     {
       "filename": "TimothyNav300518-R1-004-0A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.02, 0.38, 0.98]
     },
     {
       "filename": "TimothyNav300518-R1-006-1A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.01, 0.4, 0.95]
     },
     {
       "filename": "TimothyNav300518-R1-008-2A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.05, 0.33, 0.97]
     },
     {
       "filename": "TimothyNav300518-R1-010-3A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.35, 0.38, 0.98]
     },
     {
       "filename": "TimothyNav300518-R1-012-4A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.17, 0.21, 0.92]
     },
     {
       "filename": "TimothyNav300518-R1-016-6A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.03, 0.56, 0.96]
     },
     {
       "filename": "TimothyNav300518-R1-018-7A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 3
+      "priority": 3,
+      "tone": [0, 0.53, 0.96]
     },
     {
       "filename": "TimothyNav300518-R1-020-8A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 5
+      "priority": 5,
+      "tone": [0.06, 0.42, 0.97]
     },
     {
       "filename": "TimothyNav300518-R1-022-9A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.06, 0.16, 0.97]
     },
     {
       "filename": "TimothyNav300518-R1-024-10A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.08, 0.35, 1]
     },
     {
       "filename": "TimothyNav300518-R1-026-11A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.11, 0.36, 0.98]
     },
     {
       "filename": "TimothyNav300518-R1-028-12A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 1
+      "priority": 1,
+      "tone": [0.09, 0.72, 0.96]
     },
     {
       "filename": "TimothyNav300518-R1-030-13A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.02, 0.52, 0.99]
     },
     {
       "filename": "TimothyNav300518-R1-032-14A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.09, 0.37, 0.97]
     },
     {
       "filename": "TimothyNav300518-R1-034-15A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.09, 0.21, 0.98]
     },
     {
       "filename": "TimothyNav300518-R1-036-16A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.21, 0.29, 0.98]
     },
     {
       "filename": "TimothyNav300518-R1-042-19A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.15, 0.24, 0.98]
     },
     {
       "filename": "TimothyNav300518-R1-046-21A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.03, 0.29, 0.96]
     },
     {
       "filename": "TimothyNav300518-R1-052-24A.jpg",
       "width": 4535,
       "height": 3118,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.02, 0.22, 0.95]
     },
     {
       "filename": "TimothyNav300518-R1-054-25A.jpg",
       "width": 3118,
       "height": 4535,
-      "priority": 5
+      "priority": 5,
+      "tone": [0.15, 0.43, 0.97]
     }
   ]
 }

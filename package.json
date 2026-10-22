@@ -11,6 +11,7 @@
     "upload-shoot": "node --env-file=.env scripts/upload-shoot.mjs",
     "upload-film": "node --env-file=.env scripts/upload-film.mjs",
     "fix-film-orientation": "node --env-file=.env scripts/fix-film-orientation.mjs",
+    "measure-film-tone": "node --env-file=.env scripts/measure-film-tone.mjs",
     "generate-caption": "node --env-file=.env scripts/generate-caption.mjs"
   },
   "dependencies": {

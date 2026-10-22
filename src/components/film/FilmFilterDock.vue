@@ -117,7 +117,7 @@
 			</div>
 		</div>
 
-		<!-- Show every strip as color negatives (the lightbox then scans them in). -->
+		<!-- Show every strip as negatives (the lightbox then scans them in). -->
 		<button
 			type="button"
 			class="dock-btn dock-neg"

@@ -34,12 +34,15 @@ const photoSchema = z.object({
 // One scan from a film roll. Scans carry no EXIF worth showing, so the roll
 // (folder) supplies the metadata; `priority` decides how close to the top of
 // the film desk's pile a print tends to land (1 = buried, 5 = nearly always on top).
+// `tone` is measured by the uploader: the scan's black point, log-average and
+// white point (sRGB luminance), which set how dense its negative looks.
 const filmPhotoSchema = z.object({
 	filename: z.string(),
 	width: z.number().optional(),
 	height: z.number().optional(),
 	priority: z.number().int().min(1).max(5).default(3),
 	caption: z.string().optional(),
+	tone: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1), z.number().min(0).max(1)]).optional(),
 });
 
 export const collections = {

@@ -9,229 +9,267 @@
       "filename": "NavarroT002764-R2-003-0.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 1
+      "priority": 1,
+      "tone": [0.03, 0.3, 0.98]
     },
     {
       "filename": "NavarroT002764-R2-005-1.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.06, 0.32, 0.93]
     },
     {
       "filename": "NavarroT002764-R2-007-2.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.01, 0.45, 0.96]
     },
     {
       "filename": "NavarroT002764-R2-009-3.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.07, 0.34, 0.95]
     },
     {
       "filename": "NavarroT002764-R2-011-4.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.03, 0.32, 0.96]
     },
     {
       "filename": "NavarroT002764-R2-013-5.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.06, 0.31, 0.97]
     },
     {
       "filename": "NavarroT002764-R2-015-6.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.18, 0.52, 0.88]
     },
     {
       "filename": "NavarroT002764-R2-017-7.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.07, 0.16, 0.95]
     },
     {
       "filename": "NavarroT002764-R2-019-8.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.08, 0.43, 0.94]
     },
     {
       "filename": "NavarroT002764-R2-021-9.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.04, 0.38, 0.98]
     },
     {
       "filename": "NavarroT002764-R2-023-10.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.09, 0.38, 0.98]
     },
     {
       "filename": "NavarroT002764-R2-025-11.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.16, 0.42, 0.95]
     },
     {
       "filename": "NavarroT002764-R2-027-12.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.1, 0.42, 0.96]
     },
     {
       "filename": "NavarroT002764-R2-029-13.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.09, 0.44, 0.98]
     },
     {
       "filename": "NavarroT002764-R2-031-14.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.09, 0.32, 0.97]
     },
     {
       "filename": "NavarroT002764-R2-033-15.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.11, 0.44, 0.97]
     },
     {
       "filename": "NavarroT002764-R2-035-16.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.12, 0.41, 0.97]
     },
     {
       "filename": "NavarroT002764-R2-037-17.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.11, 0.44, 0.92]
     },
     {
       "filename": "NavarroT002764-R2-039-18.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.07, 0.29, 0.97]
     },
     {
       "filename": "NavarroT002764-R2-041-19.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.05, 0.25, 0.95]
     },
     {
       "filename": "NavarroT002764-R2-043-20.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.01, 0.24, 0.92]
     },
     {
       "filename": "NavarroT002764-R2-045-21.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.07, 0.3, 0.98]
     },
     {
       "filename": "NavarroT002764-R2-047-22.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 5
+      "priority": 5,
+      "tone": [0.05, 0.28, 0.96]
     },
     {
       "filename": "NavarroT002764-R2-049-23.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.14, 0.43, 0.95]
     },
     {
       "filename": "NavarroT002764-R2-051-24.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.01, 0.35, 0.98]
     },
     {
       "filename": "NavarroT002764-R2-053-25.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.12, 0.47, 0.91]
     },
     {
       "filename": "NavarroT002764-R2-055-26.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.09, 0.48, 0.96]
     },
     {
       "filename": "NavarroT002764-R2-057-27.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.05, 0.29, 0.95]
     },
     {
       "filename": "NavarroT002764-R2-059-28.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.09, 0.37, 0.97]
     },
     {
       "filename": "NavarroT002764-R2-061-29.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 5
+      "priority": 5,
+      "tone": [0.06, 0.47, 0.93]
     },
     {
       "filename": "NavarroT002764-R2-063-30.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.09, 0.52, 0.95]
     },
     {
       "filename": "NavarroT002764-R2-065-31.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.06, 0.29, 1]
     },
     {
       "filename": "NavarroT002764-R2-067-32.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.02, 0.25, 0.94]
     },
     {
       "filename": "NavarroT002764-R2-069-33.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.09, 0.34, 0.95]
     },
     {
       "filename": "NavarroT002764-R2-071-34.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.09, 0.24, 0.97]
     },
     {
       "filename": "NavarroT002764-R2-073-35.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 5
+      "priority": 5,
+      "tone": [0.06, 0.45, 0.98]
     },
     {
       "filename": "NavarroT002764-R2-075-36.jpg",
       "width": 1228,
       "height": 1818,
-      "priority": 5
+      "priority": 5,
+      "tone": [0.03, 0.33, 0.97]
     },
     {
       "filename": "NavarroT002764-R2-077-37.jpg",
       "width": 1818,
       "height": 1228,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.06, 0.37, 0.97]
     }
   ]
 }

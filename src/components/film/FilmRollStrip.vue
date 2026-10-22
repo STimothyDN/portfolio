@@ -30,10 +30,10 @@
 				<button
 					type="button"
 					class="roll"
-					:class="{ 'is-mono': roll.mono, 'is-rewinding': rewinding.has(roll.id) }"
+					:class="{ 'is-rewinding': rewinding.has(roll.id) }"
 					@pointerleave="startRewind(roll.id)"
 					@blur="startRewind(roll.id)"
-					:style="{ '--i': i }"
+					:style="{ '--i': i, ...negativeBaseVars(roll.negative) }"
 					:title="roll.title"
 					:aria-pressed="selected.includes(roll.id)"
 					@click="emit('toggle', roll.id)"
@@ -50,13 +50,19 @@
 						     frames, then the cut leader. -->
 						<span class="film">
 							<span class="strip">
-								<span v-for="file in roll.previews.slice(0, 3)" :key="file" class="frame">
+								<span
+									v-for="pv in roll.previews.slice(0, 3)"
+									:key="pv.file"
+									class="frame"
+									:style="previewNegative(roll, pv)"
+								>
 									<img
-										:src="previewUrl(roll, file)"
+										:src="previewUrl(roll, pv.file)"
 										alt=""
 										loading="lazy"
 										decoding="async"
 										draggable="false"
+										@load="($event.target as HTMLImageElement).classList.add('is-loaded')"
 									/>
 								</span>
 								<!-- Rewound, the leader carries the lab's sticker with the roll's
@@ -114,6 +120,7 @@ import { type ComponentPublicInstance, computed, onBeforeUnmount, ref, watch } f
 import { bunnyUrl } from '../../utils/bunny';
 import { bestSplit } from './canister';
 import FilmCanister from './FilmCanister.vue';
+import { negativeBaseVars, negativeFilterId } from './negative';
 import type { FilmRollData, RollsState } from './types';
 
 const props = defineProps<{
@@ -122,7 +129,7 @@ const props = defineProps<{
 	/** Frames each roll would show under the other active filters. */
 	counts: Record<string, number>;
 	status: string;
-	/** Show the pulled-out film as color negatives. */
+	/** Show the pulled-out film as negatives. */
 	negative: boolean;
 	/** The viewer's choice; null = the default for the screen size. */
 	state: RollsState | null;
@@ -139,6 +146,12 @@ const rollCount = computed(() => {
 
 const previewUrl = (roll: FilmRollData, file: string) =>
 	bunnyUrl(`${roll.folder}/${file}`, { width: 160, format: 'webp', quality: 60 });
+
+/** A preview frame's negative: its scan, through its stock and exposure's filter (FilmDesk renders them). */
+const previewNegative = (roll: FilmRollData, pv: FilmRollData['previews'][number]) => ({
+	'--scan': `url("${previewUrl(roll, pv.file)}")`,
+	'--neg': `url(#${negativeFilterId(roll.negative, pv.exposure)})`,
+});
 
 // The leader sticker's writing: the title in marker on up to two lines, as
 // large as a ~124×22px label allows (the marker face runs ~0.6em a character).
@@ -283,10 +296,13 @@ defineExpose({ reveal });
 	--rail: 10px;
 	--leader-w: 34px;
 	--base: #211a14;
+	/* How bright the light table behind the negatives is. */
+	--neg-light: brightness(1);
 }
 
 :root.theme-dark .rolls {
 	--base: #2c241d;
+	--neg-light: brightness(0.84);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -461,6 +477,7 @@ defineExpose({ reveal });
 }
 
 .frame {
+	position: relative;
 	flex: none;
 	width: var(--frame-w);
 	height: var(--frame-h);
@@ -475,45 +492,52 @@ defineExpose({ reveal });
 	height: 100%;
 	object-fit: cover;
 	pointer-events: none;
-	transition: filter 650ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-/* Negative view: orange-masked film, inverted frames (positive on hover). */
-.rolls.is-negative {
-	--base: #a85d27;
+/* Negative view: each roll's film turns to its stock's bare base, and its
+   frames to their negatives (negative.ts); pulling on a roll shows the
+   positives. The negative is the same scan over the frame, through its
+   stock's filter, fading rather than easing (a filter can't ease to none). */
+.rolls.is-negative .roll {
+	--base: var(--stock-rail);
 }
 
-:root.theme-dark .rolls.is-negative {
-	--base: #8c4c20;
+:root.theme-dark .rolls.is-negative .roll {
+	--base: color-mix(in srgb, var(--stock-rail) 84%, #000);
 }
 
 .is-negative .frame {
-	background: #c27a3f;
+	background: var(--stock-frame);
 }
 
-.is-negative .frame img {
-	filter: invert(1) sepia(0.55) saturate(1.7) hue-rotate(-14deg) brightness(0.9) contrast(0.92);
+:root.theme-dark .is-negative .frame {
+	background: color-mix(in srgb, var(--stock-frame) 84%, #000);
 }
 
-.is-negative .roll.is-mono {
-	--base: #a9a6a0;
+.frame:has(> img.is-loaded)::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: var(--scan) center / cover;
+	filter: var(--neg) var(--neg-light);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 650ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-:root.theme-dark .is-negative .roll.is-mono {
-	--base: #7a7772;
+.is-negative .frame:has(> img.is-loaded)::after {
+	opacity: 1;
 }
 
-.is-negative .roll.is-mono .frame {
-	background: #c8c5bf;
+@starting-style {
+	.is-negative .frame:has(> img.is-loaded)::after {
+		opacity: 0;
+	}
 }
 
-.is-negative .roll.is-mono .frame img {
-	filter: invert(1) grayscale(1) contrast(0.88) brightness(1.04);
-}
-
-.is-negative .roll:hover .frame img,
-.is-negative .roll:focus-visible .frame img {
-	filter: none;
+.is-negative .roll:hover .frame::after,
+.is-negative .roll:focus-visible .frame::after {
+	opacity: 0;
 }
 
 /* The lab's sticker on the leader — only there once the film is rewound. */

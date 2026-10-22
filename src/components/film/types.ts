@@ -1,3 +1,5 @@
+import type { NegativeProfileKey } from './negative';
+
 /** Facets the film desk can filter on. `roll` is driven by the roll strip. */
 export type FacetKey = 'roll' | 'camera' | 'stock' | 'lab' | 'year';
 
@@ -29,20 +31,21 @@ export interface FilmRollData {
 	stockBrand: string;
 	lab: string;
 	labLabel: string;
-	/** Black-and-white stock: its negatives are gray, not orange-masked. */
-	mono: boolean;
+	/** How the stock's negatives look (orange mask, contrast…); see negative.ts. */
+	negative: NegativeProfileKey;
 	description?: string;
 	/** CDN folder holding the scans. */
 	folder: string;
 	count: number;
-	/** A few favorite frames (filenames) for the roll strip's mini contact sheet. */
-	previews: string[];
+	/** A few favorite frames for the roll strip's mini contact sheet, with their exposures. */
+	previews: { file: string; exposure: number }[];
 }
 
 /**
  * One scan, kept terse because every frame on every roll ships in the island's
  * props: r = roll index, f = filename, w/h = pixel size, p = priority (1–5),
- * n = frame number within the roll, c = optional caption.
+ * n = frame number within the roll, x = exposure in stops (from the scan's
+ * tone; sets its negative's density), c = optional caption.
  */
 export interface FilmPhotoData {
 	r: number;
@@ -51,5 +54,6 @@ export interface FilmPhotoData {
 	h?: number;
 	p: number;
 	n: number;
+	x: number;
 	c?: string;
 }

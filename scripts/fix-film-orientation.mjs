@@ -19,6 +19,8 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { imageSize } from 'image-size';
 
+import { rollJson } from './lib/roll-json.mjs';
+
 const CONTENT_DIR = path.resolve(import.meta.dirname, '../src/content/film');
 const CONCURRENCY = 8;
 const dryRun = process.argv.includes('--dry-run');
@@ -73,7 +75,7 @@ async function main() {
 		if (swapped.length) {
 			fixed += swapped.length;
 			console.log(`${file}: ${swapped.length} scan(s) ${dryRun ? 'would be turned' : 'turned'} upright`);
-			if (!dryRun) await writeFile(filePath, JSON.stringify(roll, null, 2) + '\n');
+			if (!dryRun) await writeFile(filePath, rollJson(roll));
 		}
 	}
 	console.log(`\nChecked ${checked} scan(s); ${dryRun ? 'would fix' : 'fixed'} ${fixed}.`);

@@ -9,223 +9,260 @@
       "filename": "R1-08640-0001.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.21, 0.59, 0.8]
     },
     {
       "filename": "R1-08640-0002.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.13, 0.42, 0.92]
     },
     {
       "filename": "R1-08640-0003.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.1, 0.41, 0.91]
     },
     {
       "filename": "R1-08640-0004.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.1, 0.44, 0.95]
     },
     {
       "filename": "R1-08640-0005.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.22, 0.5, 0.92]
     },
     {
       "filename": "R1-08640-0006.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.11, 0.46, 0.9]
     },
     {
       "filename": "R1-08640-0007.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.17, 0.42, 0.96]
     },
     {
       "filename": "R1-08640-0008.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.12, 0.38, 0.93]
     },
     {
       "filename": "R1-08640-0009.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 5
+      "priority": 5,
+      "tone": [0.13, 0.46, 0.91]
     },
     {
       "filename": "R1-08640-0010.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.11, 0.37, 0.83]
     },
     {
       "filename": "R1-08640-0011.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.26, 0.6, 0.86]
     },
     {
       "filename": "R1-08640-0012.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.11, 0.43, 0.86]
     },
     {
       "filename": "R1-08640-0013.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.28, 0.63, 0.84]
     },
     {
       "filename": "R1-08640-0014.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.2, 0.48, 0.82]
     },
     {
       "filename": "R1-08640-0015.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.11, 0.31, 0.94]
     },
     {
       "filename": "R1-08640-0016.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.08, 0.3, 0.86]
     },
     {
       "filename": "R1-08640-0017.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.21, 0.38, 0.97]
     },
     {
       "filename": "R1-08640-0018.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.1, 0.54, 0.89]
     },
     {
       "filename": "R1-08640-0019.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.16, 0.43, 0.95]
     },
     {
       "filename": "R1-08640-0020.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.16, 0.43, 0.93]
     },
     {
       "filename": "R1-08640-0021.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.09, 0.3, 0.96]
     },
     {
       "filename": "R1-08640-0022.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.12, 0.37, 0.84]
     },
     {
       "filename": "R1-08640-0023.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.1, 0.48, 0.85]
     },
     {
       "filename": "R1-08640-0024.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.26, 0.61, 0.88]
     },
     {
       "filename": "R1-08640-0025.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.17, 0.39, 0.95]
     },
     {
       "filename": "R1-08640-0026.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.13, 0.43, 0.92]
     },
     {
       "filename": "R1-08640-0027.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.11, 0.42, 0.93]
     },
     {
       "filename": "R1-08640-0028.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.24, 0.48, 0.93]
     },
     {
       "filename": "R1-08640-0029.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.13, 0.42, 0.92]
     },
     {
       "filename": "R1-08640-0030.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.14, 0.4, 0.89]
     },
     {
       "filename": "R1-08640-0031.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.18, 0.64, 0.87]
     },
     {
       "filename": "R1-08640-0032.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.16, 0.28, 0.94]
     },
     {
       "filename": "R1-08640-0033.JPG",
       "width": 2433,
       "height": 3637,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.08, 0.47, 0.86]
     },
     {
       "filename": "R1-08640-0034.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 4
+      "priority": 4,
+      "tone": [0.08, 0.55, 0.9]
     },
     {
       "filename": "R1-08640-0035.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 3
+      "priority": 3,
+      "tone": [0.08, 0.1, 0.97]
     },
     {
       "filename": "R1-08640-0036.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.07, 0.38, 0.96]
     },
     {
       "filename": "R1-08640-0037.JPG",
       "width": 3637,
       "height": 2433,
-      "priority": 2
+      "priority": 2,
+      "tone": [0.09, 0.51, 0.92]
     }
   ]
 }

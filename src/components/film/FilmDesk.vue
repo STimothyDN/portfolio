@@ -7,6 +7,35 @@
 		<!-- Keeps the floating site nav legible over the pile. -->
 		<div class="film-nav-scrim" aria-hidden="true"></div>
 
+		<!-- The Negative view's filters, one per film stock and exposure on the
+		     desk (negative.ts): the strips, roll previews and lightbox scan all
+		     point at them. -->
+		<svg v-if="negative" class="neg-filters" aria-hidden="true" focusable="false">
+			<filter
+				v-for="f in negFilters"
+				:id="f.id"
+				:key="f.id"
+				x="0"
+				y="0"
+				width="1"
+				height="1"
+				color-interpolation-filters="sRGB"
+			>
+				<feColorMatrix v-if="f.mono" type="saturate" values="0" />
+				<feComponentTransfer>
+					<feFuncR type="table" :tableValues="f.density[0]" />
+					<feFuncG type="table" :tableValues="f.density[1]" />
+					<feFuncB type="table" :tableValues="f.density[2]" />
+				</feComponentTransfer>
+				<feColorMatrix type="matrix" :values="f.matrix" />
+				<feComponentTransfer>
+					<feFuncR type="table" :tableValues="f.transmit[0]" />
+					<feFuncG type="table" :tableValues="f.transmit[1]" />
+					<feFuncB type="table" :tableValues="f.transmit[2]" />
+				</feComponentTransfer>
+			</filter>
+		</svg>
+
 		<!-- Floating along the bottom, under the pile: the rolls, then the
 		     controls. Before the desk in the DOM so keyboard users reach both
 		     without tabbing through every print. -->
@@ -92,13 +121,14 @@
 						v-for="(strip, k) in strips"
 						:key="strip.key"
 						class="neg-strip"
-						:class="{ 'is-tail': strip.tail, 'is-mono': strip.mono }"
+						:class="{ 'is-tail': strip.tail }"
 						:style="{
 							left: `${strip.x}px`,
 							top: `${strip.y}px`,
 							width: `${strip.w}px`,
 							height: `${strip.h}px`,
 							'--k': k,
+							...negativeBaseVars(strip.negative),
 						}"
 						aria-hidden="true"
 					>
@@ -181,8 +211,7 @@
 					:ref="(el) => setPrintEl(i, el)"
 					type="button"
 					class="print"
-					:class="{ 'is-mono': rolls[photos[i].r].mono }"
-					:style="{ width: `${sizeOf(i).w}px`, height: `${sizeOf(i).h}px` }"
+					:style="{ width: `${sizeOf(i).w}px`, height: `${sizeOf(i).h}px`, ...printNegative(i) }"
 					:data-i="i"
 					:aria-label="printLabel(i)"
 					@click="onPrintClick(i)"
@@ -227,6 +256,7 @@ import FilmCanister from './FilmCanister.vue';
 import FilmRollStrip from './FilmRollStrip.vue';
 import { bestSplit } from './canister';
 import { unpackFilmPhotos } from './data';
+import { negativeBaseVars, negativeFilter, negativeFilterId, type NegativeProfileKey } from './negative';
 import { bunnyUrl } from '../../utils/bunny';
 import {
 	clamp,
@@ -452,7 +482,7 @@ const strips = ref<
 		w: number;
 		h: number;
 		tail: boolean;
-		mono: boolean;
+		negative: NegativeProfileKey;
 		frames: { idx: number; x: number; y: number; n: number; stock: string }[];
 	}[]
 >([]);
@@ -489,7 +519,7 @@ const rollsState = ref<RollsState | null>(null);
 const narrow = ref(false);
 const rollsCurrent = computed<RollsState>(() => rollsState.value ?? (narrow.value ? 'away' : 'open'));
 
-// Negative view: strips show as color negatives (a viewer convenience, kept
+// Negative view: strips show as negatives (a viewer convenience, kept
 // in this browser only; it starts off and is read after hydration).
 const negative = ref(false);
 const NEGATIVE_KEY = 'film-negative';
@@ -500,6 +530,28 @@ watch(negative, (on) => {
 		/* storage unavailable — the toggle still works for this visit */
 	}
 });
+
+// Each frame's negative is its own scan run through a filter for its stock and
+// exposure (negative.ts). Only the pairs on the desk get one, built the first
+// time the view is switched on.
+const negFilters = computed(() => {
+	const pairs = new Map<string, [NegativeProfileKey, number]>();
+	for (const p of photos) {
+		const profile = props.rolls[p.r].negative;
+		pairs.set(negativeFilterId(profile, p.x), [profile, p.x]);
+	}
+	return [...pairs.values()].map(([profile, x]) => negativeFilter(profile, x));
+});
+
+/** A print's negative: its scan (the same image it shows) and the filter that turns it. */
+function printNegative(i: number) {
+	const profile = props.rolls[photos[i].r].negative;
+	return {
+		'--scan': `url("${printSrc(i)}")`,
+		'--neg': `url(#${negativeFilterId(profile, photos[i].x)})`,
+		...negativeBaseVars(profile),
+	};
+}
 
 const els = new Map<number, HTMLElement>();
 const setPrintEl = (i: number, el: unknown) => {
@@ -581,7 +633,7 @@ function buildLightboxRecord(i: number) {
 		caption: p.c ?? '',
 		label: `${roll.title} — Frame ${p.n}`,
 		fullUrl: bunnyUrl(scanPath(i), { width: 2000, format: 'webp', quality: 90 }),
-		mono: roll.mono,
+		negative: `url(#${negativeFilterId(roll.negative, p.x)})`,
 		thumbUrl: thumbUrl(i),
 		width: p.w,
 		height: p.h,
@@ -915,7 +967,7 @@ async function applyLayout(kind: Kind) {
 		});
 		strips.value = sheet.strips.map((strip) => ({
 			...strip,
-			mono: rollById.get(strip.run)!.mono,
+			negative: rollById.get(strip.run)!.negative,
 			frames: strip.frames.map((fr) => ({
 				...fr,
 				n: photos[fr.idx].n,
@@ -1785,35 +1837,24 @@ onBeforeUnmount(() => {
 	--neg-base: #211a14;
 	--neg-frame: #0f0b09;
 	--neg-ink: rgba(232, 168, 82, 0.85);
-	/* A color negative: inverted, under the orange mask of C-41 film. */
-	--negative: invert(1) sepia(0.55) saturate(1.7) hue-rotate(-14deg) brightness(0.9) contrast(0.92);
+	/* How bright the light table behind the negatives is. */
+	--neg-light: brightness(1);
 	position: relative;
 }
 
-/* Negative view: the strips turn to orange-masked film with dark edge print. */
-.film.is-negative {
-	--neg-base: #a85d27;
-	--neg-frame: #c27a3f;
-	--neg-ink: rgba(52, 22, 6, 0.8);
-	/* Black-and-white negatives: a clear gray base, frames inverted to gray. */
-	--negative-mono: invert(1) grayscale(1) contrast(0.88) brightness(1.04);
+/* Negative view: each strip turns to its stock's bare film (negative.ts),
+   orange-masked or B&W gray, with dense edge print. */
+.film.is-negative :is(.neg-strip, .print) {
+	--neg-base: var(--stock-rail);
+	--neg-frame: var(--stock-frame);
+	--neg-ink: var(--stock-ink);
 }
 
-.film.is-negative .neg-strip.is-mono {
-	--neg-base: #a9a6a0;
-	--neg-frame: #c8c5bf;
-	--neg-ink: rgba(20, 20, 20, 0.75);
-}
-
-:root.theme-dark .film.is-negative .neg-strip.is-mono {
-	--neg-base: #7a7772;
-	--neg-frame: #9b9893;
-}
-
-:root.theme-dark .film.is-negative {
-	--neg-base: #8c4c20;
-	--neg-frame: #a6622f;
-	--neg-ink: rgba(30, 12, 3, 0.85);
+/* Dark theme: the light table turned down, film and frames alike. */
+:root.theme-dark .film.is-negative :is(.neg-strip, .print) {
+	--neg-base: color-mix(in srgb, var(--stock-rail) 84%, #000);
+	--neg-frame: color-mix(in srgb, var(--stock-frame) 84%, #000);
+	--neg-ink: color-mix(in srgb, var(--stock-ink) 84%, #000);
 }
 
 :root.theme-dark .film {
@@ -1822,6 +1863,15 @@ onBeforeUnmount(() => {
 	--print-glow: 0 0 0 1px rgba(255, 250, 238, 0.95), 0 0 28px 6px rgba(255, 238, 205, 0.45);
 	--neg-base: #2c241d;
 	--neg-frame: #120e0b;
+	--neg-light: brightness(0.84);
+}
+
+/* Rendered but out of sight (Firefox drops filters inside display: none). */
+.neg-filters {
+	position: absolute;
+	width: 0;
+	height: 0;
+	overflow: hidden;
 }
 
 /* ── Floating chrome ── */
@@ -2224,21 +2274,35 @@ onBeforeUnmount(() => {
 	opacity: 1;
 }
 
-/* Frames in the strips read as negatives; pointing at one flips it positive. */
-.is-negative.is-grid .print-body img {
-	filter: var(--negative);
-	transition:
-		opacity 400ms ease,
-		filter 650ms cubic-bezier(0.33, 1, 0.68, 1);
+/* Filed into strips, each frame carries its negative over the positive: the
+   same scan, through its stock's filter. It shows in the Negative view, and
+   pointing at a frame lifts it away. A filter can't be eased to none, so the
+   negative fades instead. */
+.is-grid .print-body:has(> img.is-loaded)::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	padding: inherit;
+	background: var(--scan) center / cover content-box;
+	filter: var(--neg) var(--neg-light);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 650ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-.is-negative.is-grid .print.is-mono .print-body img {
-	filter: var(--negative-mono);
+.is-negative.is-grid .print-body:has(> img.is-loaded)::after {
+	opacity: 1;
 }
 
-.is-negative.is-grid .print:hover .print-body img,
-.is-negative.is-grid .print:focus-visible .print-body img {
-	filter: none;
+@starting-style {
+	.is-negative.is-grid .print-body:has(> img.is-loaded)::after {
+		opacity: 0;
+	}
+}
+
+.is-negative.is-grid .print:hover .print-body::after,
+.is-negative.is-grid .print:focus-visible .print-body::after {
+	opacity: 0;
 }
 
 /* Height shadow: strong while a print is in the air, gone once it lands. */

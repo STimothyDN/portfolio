@@ -104,10 +104,6 @@ section of `film-labels.json` names it — that's what groups them under the rig
 brand button and gives them the right canister color. A different spelling works too; it
 just gets a guessed name added to the file for you to fix.
 
-Black-and-white stocks (HP5, Delta, FP4, Pan F, Tri-X, T-Max…) are recognized from
-their display names: in the Negative view their strips show as gray B&W negatives
-rather than orange-masked color film.
-
 Along the bottom of the page each roll is a film canister labeled with its **film stock**
 (the display name above, fitted onto up to three lines), with the roll's **title** and
 date under the strip of film. Pick a filter or a roll and the frames file into strips of
@@ -115,6 +111,31 @@ negatives: each roll spools out of its canister and ends on a leader with the ti
 written on a lab sticker. Canister colors follow the stock's display name (Kodak
 yellow, Fuji green, Lucky red, Ilford white, CineStill black; anything else gets a steady
 color of its own).
+
+## The Negative view
+
+The **Negative** toggle shows every strip as the negatives the scans came from, worked
+back from each positive ([`src/components/film/negative.ts`](../../components/film/negative.ts)):
+
+- **The film stock** sets the base and the curves. Kodak's consumer films get a deep
+  amber mask, Portra a paler peach one with gentler contrast, Fuji a pinker one, Lucky a
+  dense brown one with heavy fog, cine film (CineStill, Candido) the deepest orange.
+  Black-and-white stocks (HP5, Delta, FP4, Pan F, Tri-X, T-Max…) are recognized from
+  their display names and show as gray silver negatives. The Kodak-made Fujifilm 200 and
+  400 count as Kodak. A stock the file doesn't know falls back by brand, then to a
+  generic C-41 look.
+- **Each scan's `tone`** sets how dense its frame is. Bright scans come from denser
+  negatives. Dark, muddy ones (lifted blacks the scanner had to stretch) come from thin
+  negatives that are mostly bare orange base.
+
+`npm run upload-film` measures each scan's tone once it's uploaded. Rolls uploaded before
+that can be measured in place (it only adds `tone`):
+
+```bash
+npm run measure-film-tone -- --dry-run   # see what would be measured
+npm run measure-film-tone                # scans without a tone
+npm run measure-film-tone -- --all       # re-measure everything
+```
 
 ## Priority: who ends up on top of the pile
 
@@ -147,7 +168,8 @@ scans default to 3). You can also edit `priority` in the JSON at any time.
       "width": 3089,                // auto-filled; used for the print's shape
       "height": 2048,
       "priority": 5,                // 1–5, see above
-      "caption": "…"                // optional; otherwise "Downtown Durham — Frame 12"
+      "caption": "…",               // optional; otherwise "Downtown Durham — Frame 12"
+      "tone": [0.06, 0.38, 0.95]    // auto-filled: black point, average, white point
     }
   ]
 }
