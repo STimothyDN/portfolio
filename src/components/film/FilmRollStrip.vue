@@ -115,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { type ComponentPublicInstance, computed, onBeforeUnmount, ref, watch } from 'vue';
+import { type ComponentPublicInstance, computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import { bunnyUrl } from '../../utils/bunny';
 import { bestSplit } from './canister';
@@ -151,6 +151,16 @@ const previewUrl = (roll: FilmRollData, file: string) =>
 const previewNegative = (roll: FilmRollData, pv: FilmRollData['previews'][number]) => ({
 	'--scan': `url("${previewUrl(roll, pv.file)}")`,
 	'--neg': `url(#${negativeFilterId(roll.negative, pv.exposure)})`,
+});
+
+// A preview's negative waits for its scan (is-loaded) so lazy previews stay
+// lazy. The previews are server-rendered, so a cached one can finish loading
+// before hydration attaches @load; catch those up here.
+onMounted(() => {
+	const ul = listRef.value?.$el as HTMLElement | undefined;
+	ul?.querySelectorAll<HTMLImageElement>('.frame img').forEach((img) => {
+		if (img.complete && img.naturalWidth) img.classList.add('is-loaded');
+	});
 });
 
 // The leader sticker's writing: the title in marker on up to two lines, as
