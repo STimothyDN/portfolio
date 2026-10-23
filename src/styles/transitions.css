@@ -395,6 +395,158 @@ html.section-crossing * {
 }
 
 /* ------------------------------------------------------------------
+ * 7. THEME SWEEP (observatory pages; ThemeToggle.astro)
+ *    A view transition: the new theme is revealed through a feathered
+ *    mask that sweeps down (dusk — night falls from the zenith) or up
+ *    (dawn — day rises from the horizon). A band of sunset/sunrise light,
+ *    .theme-sweep-glow (new state only), rides the mask's edge.
+ *
+ *    Geometry: the mask image is 2.5× the viewport tall with its soft edge
+ *    in the middle fifth, so mask-position-y 100% → 0% carries the edge
+ *    from 25vh above the top to 25vh below the bottom; the glow band
+ *    (centred in its full-viewport box) translates −75vh → +75vh with the
+ *    same timing to stay on it. Dawn runs both the other way.
+ * ------------------------------------------------------------------ */
+
+html.theme-sweep {
+	--sweep-duration: 1.3s;
+	--sweep-ease: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Only the root and the glow take part: anything else named (nav links,
+ * work titles) would otherwise cross-fade above the sweep, unmasked. */
+html.theme-sweep * {
+	view-transition-name: none !important;
+}
+
+html.theme-sweep .theme-sweep-glow {
+	view-transition-name: theme-sweep-glow !important;
+}
+
+html.theme-sweep::view-transition-old(root) {
+	animation: none;
+}
+
+html.theme-sweep::view-transition-new(root) {
+	mix-blend-mode: normal;
+	mask-size: 100% 250%;
+	mask-repeat: no-repeat;
+	animation: var(--sweep-duration) var(--sweep-ease) both;
+}
+
+html.theme-sweep-dusk::view-transition-new(root) {
+	mask-image: linear-gradient(to bottom, #000 40%, transparent 60%);
+	animation-name: theme-sweep-dusk;
+}
+
+html.theme-sweep-dawn::view-transition-new(root) {
+	mask-image: linear-gradient(to top, #000 40%, transparent 60%);
+	animation-name: theme-sweep-dawn;
+}
+
+@keyframes theme-sweep-dusk {
+	from {
+		mask-position: 0 100%;
+	}
+	to {
+		mask-position: 0 0;
+	}
+}
+
+@keyframes theme-sweep-dawn {
+	from {
+		mask-position: 0 0;
+	}
+	to {
+		mask-position: 0 100%;
+	}
+}
+
+/* The glow band. Its group would cross-fade in by default; it just rides. */
+html.theme-sweep::view-transition-group(theme-sweep-glow) {
+	animation: none;
+}
+
+html.theme-sweep::view-transition-new(theme-sweep-glow) {
+	animation: var(--sweep-duration) var(--sweep-ease) both;
+}
+
+html.theme-sweep-dusk::view-transition-new(theme-sweep-glow) {
+	animation-name: theme-sweep-glow-down;
+}
+
+html.theme-sweep-dawn::view-transition-new(theme-sweep-glow) {
+	animation-name: theme-sweep-glow-up;
+}
+
+@keyframes theme-sweep-glow-down {
+	from {
+		translate: 0 -75vh;
+	}
+	to {
+		translate: 0 75vh;
+	}
+}
+
+@keyframes theme-sweep-glow-up {
+	from {
+		translate: 0 75vh;
+	}
+	to {
+		translate: 0 -75vh;
+	}
+}
+
+.theme-sweep-glow {
+	position: fixed;
+	inset: 0;
+	z-index: 2147483646;
+	pointer-events: none;
+}
+
+/* The band itself: a horizon's worth of sky colour, centred in the box.
+ * It fades itself out just before the transition ends, so the live element
+ * never lingers for the frame before it's removed. */
+.theme-sweep-glow > span {
+	position: absolute;
+	inset: 0;
+	animation: theme-sweep-glow-life 1.3s steps(1, end) forwards;
+}
+
+.theme-sweep-glow[data-direction='dusk'] > span {
+	background: linear-gradient(
+		to bottom,
+		transparent 30%,
+		oklch(55% 0.2 305 / 0.22) 41%,
+		oklch(70% 0.17 15 / 0.42) 47%,
+		oklch(82% 0.14 60 / 0.55) 51%,
+		transparent 64%
+	);
+}
+
+/* Either way night is above the edge and day below it, so both bands run
+ * violet → rose → gold downward; dawn's are paler. */
+.theme-sweep-glow[data-direction='dawn'] > span {
+	background: linear-gradient(
+		to bottom,
+		transparent 32%,
+		oklch(62% 0.13 300 / 0.2) 42%,
+		oklch(82% 0.1 20 / 0.4) 48%,
+		oklch(91% 0.09 85 / 0.55) 52%,
+		transparent 66%
+	);
+}
+
+@keyframes theme-sweep-glow-life {
+	96% {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+/* ------------------------------------------------------------------
  * 6. REDUCED MOTION
  * ------------------------------------------------------------------ */
 

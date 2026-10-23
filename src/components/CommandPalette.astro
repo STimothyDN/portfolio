@@ -1,0 +1,600 @@
+---
+/**
+ * Command palette (⌘K / Ctrl+K, or "/"; any [data-palette-open] button): jump
+ * to any page, project or shoot, or run an action. The index is built here
+ * from the content collections, so every result is plain server-rendered
+ * markup; the script only filters, ranks, highlights and activates.
+ *
+ * Accessibility: a modal <dialog> (focus is contained and restored, Escape
+ * closes) holding the ARIA combobox pattern — the input owns the listbox
+ * and points at the active option with aria-activedescendant.
+ */
+import { getCollection } from 'astro:content';
+import Icon from './Icon.astro';
+import type { Props as IconProps } from './Icon.astro';
+
+type Item = {
+	id: string;
+	title: string;
+	subtitle?: string;
+	href?: string;
+	external?: boolean;
+	action?: 'theme' | 'copy-email' | 'strike' | 'meteor' | 'telemetry';
+	keywords?: string;
+	icon: IconProps['icon'];
+};
+type Group = { key: string; label: string; items: Item[] };
+
+const EMAIL = 'timothyrjs@gmail.com';
+const work = (await getCollection('work')).sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf());
+const shoots = (await getCollection('photography')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const monthYear = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+const groups: Group[] = [
+	{
+		key: 'pages',
+		label: 'Pages',
+		items: [
+			{ id: 'home', title: 'Home', href: '/', icon: 'house', keywords: 'start index timo3' },
+			{ id: 'work', title: 'Work', subtitle: 'Selected projects', href: '/work/', icon: 'code', keywords: 'projects portfolio developer' },
+			{ id: 'film', title: 'Photography', subtitle: 'The film desk', href: '/photography/', icon: 'camera', keywords: 'photos film rolls 35mm' },
+			{ id: 'digital', title: 'Digital shoots', href: '/photography/digital/', icon: 'camera', keywords: 'photos photography' },
+			{ id: 'about', title: 'About', href: '/about/', icon: 'user', keywords: 'bio background resume me' },
+		],
+	},
+	{
+		key: 'work',
+		label: 'Work',
+		items: work.map((entry) => ({
+			id: `work-${entry.slug}`,
+			title: entry.data.title,
+			subtitle: entry.data.description.trim(),
+			href: `/work/${entry.slug}/`,
+			icon: 'code',
+			keywords: entry.data.tags.join(' '),
+		})),
+	},
+	{
+		key: 'shoots',
+		label: 'Photography',
+		items: shoots.map((entry) => ({
+			id: `shoot-${entry.id}`,
+			title: entry.data.title,
+			subtitle: [entry.data.location, monthYear.format(entry.data.date)].filter(Boolean).join(' · '),
+			href: `/photography/digital/${entry.id}/`,
+			icon: 'camera',
+			keywords: 'shoot photos digital',
+		})),
+	},
+	{
+		key: 'actions',
+		label: 'Actions',
+		items: [
+			{ id: 'theme', title: 'Switch theme', action: 'theme', icon: 'moon-stars', keywords: 'dark light mode night day toggle' },
+			{ id: 'copy-email', title: 'Copy email address', subtitle: EMAIL, action: 'copy-email', icon: 'copy', keywords: 'contact mail' },
+			{ id: 'email', title: 'Send me an email', href: `mailto:${EMAIL}`, icon: 'paper-plane-tilt', keywords: 'contact hire mail' },
+			{ id: 'strike', title: 'Knock the 3 in', subtitle: 'Timothy → Timo3', action: 'strike', icon: 'shooting-star', keywords: 'meteor name timo3 easter egg' },
+			{ id: 'meteor', title: 'Launch a meteor', action: 'meteor', icon: 'shooting-star', keywords: 'shooting star sky' },
+			{ id: 'telemetry', title: 'Show telemetry', subtitle: 'Frame rate, sky model, load timing', action: 'telemetry', icon: 'terminal-window', keywords: 'debug performance fps stats hud' },
+		],
+	},
+	{
+		key: 'elsewhere',
+		label: 'Elsewhere',
+		items: [
+			{ id: 'linkedin', title: 'LinkedIn', href: 'https://www.linkedin.com/in/sean-timothy-navarro-842743247/', external: true, icon: 'linkedin-logo', keywords: 'resume career' },
+			{ id: 'github', title: 'GitHub', href: 'https://github.com/STimothyDN', external: true, icon: 'github-logo', keywords: 'code source repos' },
+			{ id: 'soundcloud', title: 'SoundCloud', href: 'https://soundcloud.com/timo_on_duty', external: true, icon: 'soundcloud-logo', keywords: 'music dj mixes producer' },
+			{ id: 'instagram', title: 'Instagram', href: 'https://www.instagram.com/timothy.rjs/', external: true, icon: 'instagram-logo', keywords: 'photos social' },
+		],
+	},
+];
+---
+
+<dialog class="palette" aria-label="Command palette" data-palette>
+	<div class="panel">
+		<div class="field">
+			<Icon icon="magnifying-glass" size="1.15rem" />
+			<input
+				type="text"
+				role="combobox"
+				aria-expanded="true"
+				aria-controls="palette-list"
+				aria-autocomplete="list"
+				aria-label="Search pages, work, shoots and actions"
+				placeholder="Search pages, work, shoots, actions…"
+				autocomplete="off"
+				autocapitalize="off"
+				spellcheck="false"
+				enterkeyhint="go"
+				data-palette-input
+			/>
+			<button type="button" class="esc" data-palette-close><kbd>esc</kbd><span class="sr-only">Close</span></button>
+		</div>
+
+		<div class="results" role="listbox" id="palette-list" aria-label="Results" data-palette-list>
+			{
+				groups.map((group) => (
+					<div class="group" role="group" aria-labelledby={`palette-group-${group.key}`} data-group>
+						<div class="group-label" id={`palette-group-${group.key}`}>
+							{group.label}
+						</div>
+						{group.items.map((item) => (
+							<div
+								class="item"
+								role="option"
+								id={`palette-${item.id}`}
+								aria-selected="false"
+								data-item
+								data-href={item.href}
+								data-external={item.external ? '' : undefined}
+								data-action={item.action}
+								data-search={[item.title, item.subtitle, item.keywords].filter(Boolean).join(' ').toLowerCase()}
+							>
+								<span class="item-icon">
+									<Icon icon={item.icon} size="1.1rem" />
+								</span>
+								<span class="item-text">
+									<span class="item-title" data-title={item.title}>
+										{item.title}
+									</span>
+									{item.subtitle && <span class="item-subtitle">{item.subtitle}</span>}
+								</span>
+								<span class="item-hint" aria-hidden="true">
+									{item.external ? '↗' : '↵'}
+								</span>
+							</div>
+						))}
+					</div>
+				))
+			}
+			<p class="empty" hidden data-palette-empty>No matches. Try “work”, “film” or “email”.</p>
+		</div>
+
+		<footer class="foot" aria-hidden="true">
+			<span><kbd>↑</kbd><kbd>↓</kbd> move</span>
+			<span><kbd>↵</kbd> open</span>
+			<span><kbd>esc</kbd> close</span>
+			<span class="status" data-palette-status></span>
+		</footer>
+	</div>
+</dialog>
+
+<script>
+	import { navigate } from 'astro:transitions/client';
+	import { launchMeteor } from '../scripts/sky';
+
+	const EMAIL = 'timothyrjs@gmail.com';
+	const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
+	/** Rank one item against the query's terms; 0 = no match. */
+	function score(title: string, haystack: string, terms: string[]) {
+		let total = 0;
+		const t = title.toLowerCase();
+		for (const term of terms) {
+			let s = 0;
+			if (t.startsWith(term)) s = 100;
+			else if (t.split(/\s+/).some((word) => word.startsWith(term))) s = 80;
+			else if (t.includes(term)) s = 60;
+			else if (haystack.split(/\s+/).some((word) => word.startsWith(term))) s = 40;
+			else if (haystack.includes(term)) s = 30;
+			else if (isSubsequence(term, t)) s = 15;
+			if (!s) return 0;
+			total += s;
+		}
+		return total;
+	}
+
+	function isSubsequence(needle: string, hay: string) {
+		let i = 0;
+		for (const ch of hay) if (ch === needle[i]) i++;
+		return i === needle.length;
+	}
+
+	const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+	/** The title with the first occurrence of each term marked. */
+	function highlight(title: string, terms: string[]) {
+		const marks = new Array(title.length).fill(false);
+		const lower = title.toLowerCase();
+		for (const term of terms) {
+			const at = lower.indexOf(term);
+			if (at >= 0) for (let i = at; i < at + term.length; i++) marks[i] = true;
+		}
+		let html = '';
+		let open = false;
+		for (let i = 0; i < title.length; i++) {
+			if (marks[i] !== open) {
+				html += marks[i] ? '<mark>' : '</mark>';
+				open = marks[i];
+			}
+			html += escapeHtml(title[i]);
+		}
+		return open ? `${html}</mark>` : html;
+	}
+
+	let controller: AbortController | null = null;
+
+	function init() {
+		controller?.abort();
+		const dialog = document.querySelector<HTMLDialogElement>('[data-palette]');
+		if (!dialog) return;
+		controller = new AbortController();
+		const { signal } = controller;
+		const input = dialog.querySelector<HTMLInputElement>('[data-palette-input]')!;
+		const list = dialog.querySelector<HTMLElement>('[data-palette-list]')!;
+		const empty = dialog.querySelector<HTMLElement>('[data-palette-empty]')!;
+		const status = dialog.querySelector<HTMLElement>('[data-palette-status]')!;
+		const groups = [...dialog.querySelectorAll<HTMLElement>('[data-group]')];
+		const items = [...dialog.querySelectorAll<HTMLElement>('[data-item]')];
+		const original = new Map(groups.map((g) => [g, [...g.querySelectorAll<HTMLElement>('[data-item]')]]));
+		let active: HTMLElement | null = null;
+
+		document.querySelectorAll('[data-palette-shortcut]').forEach((el) => (el.textContent = isMac ? '⌘K' : 'Ctrl K'));
+
+		const visible = () => items.filter((item) => !item.hidden && !item.closest<HTMLElement>('[data-group]')!.hidden);
+
+		const setActive = (item: HTMLElement | null, scroll = true) => {
+			active?.setAttribute('aria-selected', 'false');
+			active = item;
+			if (item) {
+				item.setAttribute('aria-selected', 'true');
+				input.setAttribute('aria-activedescendant', item.id);
+				if (scroll) item.scrollIntoView({ block: 'nearest' });
+			} else {
+				input.removeAttribute('aria-activedescendant');
+			}
+		};
+
+		const filter = () => {
+			const terms = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+			const ranked: { group: HTMLElement; best: number; order: number }[] = [];
+			groups.forEach((group, order) => {
+				const scored = original.get(group)!.map((item, i) => {
+					const title = item.querySelector<HTMLElement>('[data-title]')!;
+					const s =
+						'unavailable' in item.dataset ? 0 : terms.length ? score(title.dataset.title!, item.dataset.search!, terms) : 1;
+					item.hidden = s === 0;
+					title.innerHTML = terms.length ? highlight(title.dataset.title!, terms) : escapeHtml(title.dataset.title!);
+					return { item, s, i };
+				});
+				// Best matches first within a group; ties keep their authored order.
+				scored.sort((a, b) => b.s - a.s || a.i - b.i).forEach(({ item }) => group.append(item));
+				const best = Math.max(...scored.map((x) => x.s));
+				group.hidden = best === 0;
+				ranked.push({ group, best, order });
+			});
+			// With a query, the group holding the top hit leads.
+			if (terms.length) ranked.sort((a, b) => b.best - a.best || a.order - b.order);
+			else ranked.sort((a, b) => a.order - b.order);
+			ranked.forEach(({ group }) => list.insertBefore(group, empty));
+			const shown = visible();
+			empty.hidden = shown.length > 0;
+			setActive(shown[0] ?? null);
+		};
+
+		const refreshLabels = () => {
+			const dark = document.documentElement.classList.contains('theme-dark');
+			const theme = dialog.querySelector<HTMLElement>('#palette-theme [data-title]')!;
+			theme.dataset.title = `Switch to ${dark ? 'light' : 'dark'} theme`;
+			// Observatory-only actions.
+			const available = (id: string, yes: boolean) =>
+				dialog.querySelector<HTMLElement>(`#palette-${id}`)!.toggleAttribute('data-unavailable', !yes);
+			available('strike', !!document.querySelector('[data-dock-name]'));
+			available('telemetry', !!document.querySelector('[data-telemetry]'));
+			available('meteor', document.body.dataset.sky === 'observatory');
+		};
+
+		const open = () => {
+			if (dialog.open) return;
+			refreshLabels();
+			input.value = '';
+			status.textContent = '';
+			filter();
+			dialog.showModal();
+			input.focus();
+		};
+
+		const close = () => dialog.open && dialog.close();
+
+		const activate = async (item: HTMLElement | null) => {
+			if (!item) return;
+			const { href, action } = item.dataset;
+			if (action === 'copy-email') {
+				try {
+					await navigator.clipboard.writeText(EMAIL);
+					status.textContent = 'Copied!';
+				} catch {
+					status.textContent = EMAIL;
+				}
+				return;
+			}
+			close();
+			if (href && 'external' in item.dataset) window.open(href, '_blank', 'noopener');
+			else if (href?.startsWith('mailto:')) window.location.href = href;
+			else if (href) navigate(href);
+			else if (action === 'theme') document.querySelector<HTMLButtonElement>('theme-toggle button')?.click();
+			else if (action === 'strike') document.dispatchEvent(new CustomEvent('observatory:strike'));
+			else if (action === 'telemetry') document.dispatchEvent(new CustomEvent('telemetry:toggle'));
+			else if (action === 'meteor') launchMeteor(innerWidth * (0.25 + Math.random() * 0.5), innerHeight * 0.18);
+		};
+
+		input.addEventListener('input', filter, { signal });
+		input.addEventListener(
+			'keydown',
+			(event) => {
+				const shown = visible();
+				const at = active ? shown.indexOf(active) : -1;
+				if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+					event.preventDefault();
+					const step = event.key === 'ArrowDown' ? 1 : -1;
+					setActive(shown[(at + step + shown.length) % shown.length] ?? null);
+				} else if (event.key === 'Home' && event.ctrlKey) {
+					setActive(shown[0] ?? null);
+				} else if (event.key === 'Enter') {
+					event.preventDefault();
+					void activate(active);
+				}
+			},
+			{ signal }
+		);
+		list.addEventListener(
+			'pointermove',
+			(event) => {
+				const item = (event.target as Element).closest<HTMLElement>('[data-item]');
+				if (item && item !== active) setActive(item, false);
+			},
+			{ signal }
+		);
+		list.addEventListener('click', (event) => void activate((event.target as Element).closest<HTMLElement>('[data-item]')), {
+			signal,
+		});
+		dialog.querySelector('[data-palette-close]')!.addEventListener('click', close, { signal });
+		// Clicks on the backdrop land on the <dialog> itself.
+		dialog.addEventListener('click', (event) => event.target === dialog && close(), { signal });
+
+		document.addEventListener(
+			'keydown',
+			(event) => {
+				const typing = (event.target as Element | null)?.closest?.('input, textarea, select, [contenteditable]');
+				if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+					event.preventDefault();
+					if (dialog.open) close();
+					else open();
+				} else if (event.key === '/' && !typing && !dialog.open) {
+					event.preventDefault();
+					open();
+				}
+			},
+			{ signal }
+		);
+		document.addEventListener(
+			'click',
+			(event) => {
+				if ((event.target as Element).closest?.('[data-palette-open]')) open();
+			},
+			{ signal }
+		);
+	}
+
+	document.addEventListener('astro:page-load', init);
+	document.addEventListener('astro:before-swap', () => {
+		controller?.abort();
+		controller = null;
+	});
+</script>
+
+<style>
+	.palette {
+		--mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+		width: min(40rem, calc(100vw - 2rem));
+		max-height: min(34rem, calc(100dvh - 4rem));
+		margin: 12vh auto auto;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: var(--gray-200);
+		overflow: visible;
+	}
+
+	.palette::backdrop {
+		background: color-mix(in oklch, var(--gray-999) 45%, transparent);
+		-webkit-backdrop-filter: blur(6px);
+		backdrop-filter: blur(6px);
+	}
+
+	.panel {
+		display: flex;
+		flex-direction: column;
+		max-height: inherit;
+		border: 1px solid color-mix(in oklch, var(--gray-0) 14%, transparent);
+		border-radius: 1rem;
+		background: color-mix(in oklch, var(--gray-999) 84%, transparent);
+		-webkit-backdrop-filter: blur(20px);
+		backdrop-filter: blur(20px);
+		box-shadow: var(--shadow-lg);
+		overflow: hidden;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.palette[open] .panel {
+			transition:
+				opacity 0.18s ease-out,
+				scale 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+		}
+
+		@starting-style {
+			.palette[open] .panel {
+				opacity: 0;
+				scale: 0.97;
+			}
+		}
+	}
+
+	.field {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.875rem 1rem;
+		border-bottom: 1px solid color-mix(in oklch, var(--gray-0) 10%, transparent);
+		color: var(--gray-400);
+	}
+
+	input {
+		flex: 1;
+		min-width: 0;
+		border: 0;
+		background: none;
+		font: inherit;
+		font-size: var(--text-md);
+		color: var(--gray-0);
+		outline: none;
+	}
+
+	input::placeholder {
+		color: var(--gray-400);
+	}
+
+	kbd {
+		display: inline-block;
+		min-width: 1.5em;
+		padding: 0.05em 0.4em;
+		border: 1px solid color-mix(in oklch, var(--gray-0) 18%, transparent);
+		border-radius: 0.3rem;
+		font-family: var(--mono);
+		font-size: 0.6875rem;
+		text-align: center;
+		color: var(--gray-300);
+	}
+
+	.esc {
+		padding: 0;
+		border: 0;
+		background: none;
+		cursor: pointer;
+	}
+
+	.results {
+		flex: 1;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		padding: 0.375rem;
+	}
+
+	.group[hidden],
+	.item[hidden] {
+		display: none;
+	}
+
+	.group-label {
+		padding: 0.75rem 0.75rem 0.375rem;
+		font-family: var(--mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--gray-400);
+	}
+
+	.item {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.6rem;
+		cursor: pointer;
+	}
+
+	.item[aria-selected='true'] {
+		background: var(--accent-subtle-overlay);
+		box-shadow: inset 2px 0 0 var(--link-color);
+	}
+
+	.item-icon {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 0.5rem;
+		background: color-mix(in oklch, var(--gray-0) 6%, transparent);
+		color: var(--link-color);
+	}
+
+	.item-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+
+	.item-title {
+		color: var(--gray-100);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.item-title :global(mark) {
+		background: none;
+		color: var(--link-color);
+		text-decoration: underline;
+		text-decoration-thickness: 1px;
+		text-underline-offset: 3px;
+	}
+
+	.item-subtitle {
+		font-size: var(--text-sm);
+		color: var(--gray-400);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.item-hint {
+		font-family: var(--mono);
+		font-size: 0.8125rem;
+		color: var(--gray-400);
+		opacity: 0;
+	}
+
+	.item[aria-selected='true'] .item-hint {
+		opacity: 1;
+	}
+
+	.empty {
+		padding: 2rem 1rem;
+		text-align: center;
+		color: var(--gray-400);
+	}
+
+	.foot {
+		display: flex;
+		gap: 1rem;
+		padding: 0.625rem 1rem;
+		border-top: 1px solid color-mix(in oklch, var(--gray-0) 10%, transparent);
+		font-family: var(--mono);
+		font-size: 0.6875rem;
+		color: var(--gray-400);
+	}
+
+	.foot kbd {
+		margin-right: 0.15em;
+	}
+
+	.status {
+		margin-left: auto;
+		color: var(--link-color);
+	}
+
+	/* Phones: no keyboard hints, a bit more room for results. */
+	@media (max-width: 49.99em) {
+		.palette {
+			margin-top: 1rem;
+			max-height: calc(100dvh - 2rem);
+		}
+
+		.foot span:not(.status) {
+			display: none;
+		}
+	}
+</style>

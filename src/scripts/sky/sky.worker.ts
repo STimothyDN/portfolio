@@ -5,5 +5,6 @@
 import { SkyRenderer, type SkyMessage } from './renderer';
 
 const renderer = new SkyRenderer();
+renderer.emit = (stats) => postMessage(stats);
 
 addEventListener('message', (event) => renderer.handle((event as MessageEvent<SkyMessage>).data));

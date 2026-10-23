@@ -14,5 +14,8 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    // The sky worker is a module worker that code-splits (the observatory's
+    // star catalogue loads on demand), which the default iife format can't.
+    worker: { format: 'es' },
   },
 });

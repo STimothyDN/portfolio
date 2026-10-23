@@ -1,0 +1,296 @@
+{
+  "title": "Dix/Bond/Durham Central Parks, October 2026",
+  "developed": "2026-10-23",
+  "camera": "minoltax700",
+  "stock": "samesamebutdifferent400",
+  "lab": "seccarrboro",
+  "photos": [
+    {
+      "filename": "R1-00329-0000.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 1,
+      "tone": [0.01, 0.11, 0.77]
+    },
+    {
+      "filename": "R1-00329-0001.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 4,
+      "tone": [0.11, 0.58, 0.97]
+    },
+    {
+      "filename": "R1-00329-0002.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 4,
+      "tone": [0.06, 0.34, 0.89]
+    },
+    {
+      "filename": "R1-00329-0003.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 5,
+      "tone": [0.03, 0.22, 0.88]
+    },
+    {
+      "filename": "R1-00329-0004.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 4,
+      "tone": [0.11, 0.21, 0.99]
+    },
+    {
+      "filename": "R1-00329-0005.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 4,
+      "tone": [0.08, 0.33, 0.98]
+    },
+    {
+      "filename": "R1-00329-0006.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 4,
+      "tone": [0.05, 0.32, 0.96]
+    },
+    {
+      "filename": "R1-00329-0007.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 4,
+      "tone": [0.04, 0.42, 0.95]
+    },
+    {
+      "filename": "R1-00329-0008.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 5,
+      "tone": [0.08, 0.33, 0.98]
+    },
+    {
+      "filename": "R1-00329-0009.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 5,
+      "tone": [0.07, 0.32, 0.93]
+    },
+    {
+      "filename": "R1-00329-0010.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 4,
+      "tone": [0.06, 0.32, 0.92]
+    },
+    {
+      "filename": "R1-00329-0011.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 5,
+      "tone": [0.1, 0.31, 0.89]
+    },
+    {
+      "filename": "R1-00329-0012.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 3,
+      "tone": [0.06, 0.25, 0.98]
+    },
+    {
+      "filename": "R1-00329-0013.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 4,
+      "tone": [0.06, 0.27, 0.99]
+    },
+    {
+      "filename": "R1-00329-0014.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 2,
+      "tone": [0.15, 0.3, 0.91]
+    },
+    {
+      "filename": "R1-00329-0015.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 5,
+      "tone": [0.09, 0.29, 0.94]
+    },
+    {
+      "filename": "R1-00329-0016.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 3,
+      "tone": [0.19, 0.48, 0.78]
+    },
+    {
+      "filename": "R1-00329-0017.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 4,
+      "tone": [0.14, 0.39, 0.72]
+    },
+    {
+      "filename": "R1-00329-0018.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 3,
+      "tone": [0.14, 0.5, 0.95]
+    },
+    {
+      "filename": "R1-00329-0019.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 5,
+      "tone": [0.12, 0.41, 0.95]
+    },
+    {
+      "filename": "R1-00329-0020.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 3,
+      "tone": [0.07, 0.22, 0.96]
+    },
+    {
+      "filename": "R1-00329-0021.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 4,
+      "tone": [0.1, 0.26, 0.98]
+    },
+    {
+      "filename": "R1-00329-0022.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 4,
+      "tone": [0.1, 0.32, 0.83]
+    },
+    {
+      "filename": "R1-00329-0023.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 4,
+      "tone": [0.07, 0.3, 0.96]
+    },
+    {
+      "filename": "R1-00329-0024.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 5,
+      "tone": [0.08, 0.38, 0.94]
+    },
+    {
+      "filename": "R1-00329-0025.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 1,
+      "tone": [0.13, 0.28, 0.97]
+    },
+    {
+      "filename": "R1-00329-0026.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 4,
+      "tone": [0.08, 0.34, 0.94]
+    },
+    {
+      "filename": "R1-00329-0027.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 5,
+      "tone": [0.1, 0.19, 0.89]
+    },
+    {
+      "filename": "R1-00329-0028.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 3,
+      "tone": [0.15, 0.38, 0.84]
+    },
+    {
+      "filename": "R1-00329-0029.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 3,
+      "tone": [0.09, 0.28, 0.93]
+    },
+    {
+      "filename": "R1-00329-0030.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 5,
+      "tone": [0.06, 0.3, 0.94]
+    },
+    {
+      "filename": "R1-00329-0031.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 3,
+      "tone": [0.12, 0.29, 0.97]
+    },
+    {
+      "filename": "R1-00329-0032.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 5,
+      "tone": [0.08, 0.23, 0.97]
+    },
+    {
+      "filename": "R1-00329-0033.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 4,
+      "tone": [0.08, 0.15, 0.91]
+    },
+    {
+      "filename": "R1-00329-0034.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 3,
+      "tone": [0.08, 0.35, 0.95]
+    },
+    {
+      "filename": "R1-00329-0035.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 4,
+      "tone": [0.09, 0.29, 0.97]
+    },
+    {
+      "filename": "R1-00329-0036.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 2,
+      "tone": [0.09, 0.39, 1]
+    },
+    {
+      "filename": "R1-00329-0037.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 2,
+      "tone": [0.07, 0.25, 0.94]
+    },
+    {
+      "filename": "R1-00329-0038.JPG",
+      "width": 3637,
+      "height": 2433,
+      "priority": 3,
+      "tone": [0.04, 0.24, 0.99]
+    },
+    {
+      "filename": "R1-00329-0039.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 3,
+      "tone": [0.06, 0.36, 0.93]
+    },
+    {
+      "filename": "R1-00329-0040.JPG",
+      "width": 2433,
+      "height": 3637,
+      "priority": 2,
+      "tone": [0.04, 0.5, 0.96]
+    }
+  ]
+}

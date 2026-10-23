@@ -1,0 +1,305 @@
+---
+/**
+ * "Show your work" telemetry panel: what the sky thread and the page are
+ * doing right now. Toggled by the backtick key, the readout's "Live sky"
+ * button ([data-telemetry-toggle]) or a `telemetry:toggle` document event
+ * (the command palette); Escape closes it. While open, the sky
+ * renderer reports its own frame rate and draw cost (setSkyHud), and the
+ * page counts its frames; closed, nothing is measured but LCP/CLS, which
+ * are observed from load so they're ready when it opens.
+ */
+---
+
+<aside id="telemetry" class="telemetry" aria-label="Telemetry" data-telemetry hidden>
+	<header class="head">
+		<span>Telemetry</span>
+		<button type="button" class="close" data-telemetry-close>
+			<kbd>`</kbd><span class="sr-only">Close telemetry</span><span aria-hidden="true">✕</span>
+		</button>
+	</header>
+	<svg class="spark" viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+		<polyline data-t="spark" points="" />
+	</svg>
+	<dl>
+		<div><dt>Sky thread</dt><dd data-t="thread">—</dd></div>
+		<div><dt>Sky fps</dt><dd data-t="fps">—</dd></div>
+		<div><dt>Draw cost</dt><dd data-t="cost">—</dd></div>
+		<div><dt>Bodies</dt><dd data-t="bodies">—</dd></div>
+		<div><dt>Meteor rate</dt><dd data-t="rate">—</dd></div>
+		<div><dt>Sky model</dt><dd data-t="model">—</dd></div>
+		<div><dt>Gaze</dt><dd data-t="gaze">—</dd></div>
+		<div><dt>Moon · planets</dt><dd data-t="bodies-up">—</dd></div>
+		<div><dt>Radiant</dt><dd data-t="radiant">—</dd></div>
+		<div><dt>Page fps</dt><dd data-t="pagefps">—</dd></div>
+		<div><dt>LCP</dt><dd data-t="lcp">—</dd></div>
+		<div><dt>CLS</dt><dd data-t="cls">—</dd></div>
+		<div><dt>JS heap</dt><dd data-t="heap">—</dd></div>
+		<div><dt>Dock</dt><dd data-t="dock">—</dd></div>
+		<div><dt>Canvas</dt><dd data-t="canvas">—</dd></div>
+	</dl>
+</aside>
+
+<script>
+	import { setSkyHud, skyThread } from '../../scripts/sky';
+	import type { SkyStats } from '../../scripts/sky/renderer';
+
+	const STORAGE_KEY = 'telemetry-open';
+	const SPARK_SAMPLES = 40;
+
+	// Observed from load (buffered), so the numbers are there whenever the panel opens.
+	let lcp = 0;
+	let cls = 0;
+	try {
+		new PerformanceObserver((list) => {
+			const last = list.getEntries().at(-1);
+			if (last) lcp = last.startTime;
+		}).observe({ type: 'largest-contentful-paint', buffered: true });
+		new PerformanceObserver((list) => {
+			for (const entry of list.getEntries() as (PerformanceEntry & { value: number; hadRecentInput: boolean })[]) {
+				if (!entry.hadRecentInput) cls += entry.value;
+			}
+		}).observe({ type: 'layout-shift', buffered: true });
+	} catch {
+		/* entry types unsupported (Safari/Firefox for some) — shown as n/a */
+	}
+
+	let controller: AbortController | null = null;
+
+	function init() {
+		controller?.abort();
+		const panel = document.querySelector<HTMLElement>('[data-telemetry]');
+		if (!panel) return;
+		controller = new AbortController();
+		const { signal } = controller;
+		const field = (name: string) => panel.querySelector<HTMLElement>(`[data-t="${name}"]`)!;
+		const set = (name: string, value: string) => (field(name).textContent = value);
+		const toggles = () => document.querySelectorAll<HTMLElement>('[data-telemetry-toggle]');
+		const fpsHistory: number[] = [];
+
+		let open = false;
+		let rafId = 0;
+		let pageFrames = 0;
+		let pageSince = 0;
+		let lastStats = 0;
+		let pageTimer = 0;
+
+		const countFrame = (now: number) => {
+			pageFrames++;
+			if (now - pageSince >= 500) {
+				set('pagefps', `${Math.round((pageFrames * 1000) / (now - pageSince))}`);
+				pageFrames = 0;
+				pageSince = now;
+			}
+			rafId = requestAnimationFrame(countFrame);
+		};
+
+		const pageMetrics = () => {
+			set('lcp', lcp ? `${Math.round(lcp)} ms` : 'n/a');
+			set('cls', cls.toFixed(3));
+			const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+			set('heap', memory ? `${(memory.usedJSHeapSize / 1048576).toFixed(1)} MB` : 'n/a');
+			const dock = getComputedStyle(document.body).getPropertyValue('--dock-p').trim();
+			set('dock', dock ? Number(dock).toFixed(2) : 'n/a');
+			// Reduced motion / hidden: the renderer draws one static frame and stops.
+			if (performance.now() - lastStats > 1500) set('fps', 'idle');
+		};
+
+		const onStats = (event: Event) => {
+			const s = (event as CustomEvent<SkyStats>).detail;
+			lastStats = performance.now();
+			set('fps', `${s.fps.toFixed(0)} / ${s.capFps} cap`);
+			set('cost', `${s.frameMs.toFixed(2)} ms`);
+			const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+			set('bodies', s.night ? `${count(s.stars, 'star')} · ${count(s.meteors, 'meteor')}` : `${count(s.planes, 'plane')} · ${count(s.meteors, 'streak')}`);
+			set('rate', `${s.meteorRate.toFixed(2)}×`);
+			const real = s.realSky;
+			const deg = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(0)}°`;
+			set('model', real ? `BSC5 · ≤ mag ${real.limit.toFixed(1)}` : s.observatory ? 'loading…' : 'random field');
+			set('gaze', real ? `S, alt ${deg(real.viewAlt)}` : 'n/a');
+			set(
+				'bodies-up',
+				real ? [real.moonAlt !== null && real.moonAlt > 0 ? 'Moon' : '', ...real.planets].filter(Boolean).join(', ') || 'none up' : 'n/a'
+			);
+			set('radiant', s.shower ? `${s.shower} ${real?.radiantAlt != null ? deg(real.radiantAlt) : ''}` : 'no shower');
+			set('canvas', `${s.width}×${s.height} @${s.dpr}x`);
+			fpsHistory.push(s.fps / s.capFps);
+			if (fpsHistory.length > SPARK_SAMPLES) fpsHistory.shift();
+			field('spark').setAttribute(
+				'points',
+				fpsHistory
+					.map((v, i) => `${((i / (SPARK_SAMPLES - 1)) * 120).toFixed(1)},${(22 - Math.min(1, v) * 20).toFixed(1)}`)
+					.join(' ')
+			);
+		};
+
+		const setOpen = (next: boolean) => {
+			open = next;
+			panel.hidden = !open;
+			toggles().forEach((t) => t.setAttribute('aria-pressed', String(open)));
+			try {
+				sessionStorage.setItem(STORAGE_KEY, open ? '1' : '0');
+			} catch {
+				/* storage unavailable */
+			}
+			setSkyHud(open);
+			cancelAnimationFrame(rafId);
+			clearInterval(pageTimer);
+			if (!open) return;
+			set('thread', skyThread() === 'worker' ? 'worker · OffscreenCanvas' : 'main thread');
+			pageFrames = 0;
+			pageSince = performance.now();
+			lastStats = performance.now();
+			rafId = requestAnimationFrame(countFrame);
+			pageMetrics();
+			pageTimer = window.setInterval(pageMetrics, 500);
+		};
+
+		window.addEventListener('sky:stats', onStats, { signal });
+		// The command palette's "Show telemetry".
+		document.addEventListener('telemetry:toggle', () => setOpen(!open), { signal });
+		toggles().forEach((t) => t.addEventListener('click', () => setOpen(!open), { signal }));
+		panel.querySelector('[data-telemetry-close]')!.addEventListener('click', () => setOpen(false), { signal });
+		document.addEventListener(
+			'keydown',
+			(event) => {
+				const typing = (event.target as Element | null)?.closest?.('input, textarea, select, [contenteditable]');
+				if (event.key === '`' && !typing && !event.metaKey && !event.ctrlKey && !event.altKey) setOpen(!open);
+				else if (event.key === 'Escape' && open) setOpen(false);
+			},
+			{ signal }
+		);
+		signal.addEventListener('abort', () => {
+			cancelAnimationFrame(rafId);
+			clearInterval(pageTimer);
+			setSkyHud(false);
+		});
+
+		let restore = false;
+		try {
+			restore = sessionStorage.getItem(STORAGE_KEY) === '1';
+		} catch {
+			/* storage unavailable */
+		}
+		if (restore) setOpen(true);
+	}
+
+	document.addEventListener('astro:page-load', init);
+	document.addEventListener('astro:before-swap', () => {
+		controller?.abort();
+		controller = null;
+	});
+</script>
+
+<style>
+	.telemetry {
+		--mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+		position: fixed;
+		right: 1.5rem;
+		bottom: 1.5rem;
+		z-index: 10001;
+		width: 19.5rem;
+		padding: 0.875rem 1rem 1rem;
+		border: 1px solid color-mix(in oklch, var(--gray-0) 14%, transparent);
+		border-radius: 0.875rem;
+		background: color-mix(in oklch, var(--gray-999) 78%, transparent);
+		-webkit-backdrop-filter: blur(14px);
+		backdrop-filter: blur(14px);
+		box-shadow: var(--shadow-lg);
+		font-family: var(--mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.04em;
+		font-variant-numeric: tabular-nums;
+		color: var(--gray-200);
+	}
+
+	.telemetry[hidden] {
+		display: none;
+	}
+
+	.head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 0.5rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--link-color);
+	}
+
+	.close {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+		padding: 0.2em 0.4em;
+		border: 0;
+		border-radius: 0.25rem;
+		background: none;
+		font: inherit;
+		color: var(--gray-400);
+		cursor: pointer;
+	}
+
+	.close:hover,
+	.close:focus-visible {
+		color: var(--gray-0);
+		background: var(--accent-subtle-overlay);
+	}
+
+	kbd {
+		padding: 0 0.35em;
+		border: 1px solid var(--gray-700);
+		border-radius: 0.2rem;
+		font: inherit;
+	}
+
+	.spark {
+		display: block;
+		width: 100%;
+		height: 1.5rem;
+		margin-bottom: 0.5rem;
+		border-bottom: 1px solid color-mix(in oklch, var(--gray-0) 10%, transparent);
+	}
+
+	.spark polyline {
+		fill: none;
+		stroke: var(--link-color);
+		stroke-width: 1.25;
+		vector-effect: non-scaling-stroke;
+	}
+
+	dl {
+		display: grid;
+		gap: 0.3rem;
+		margin: 0;
+	}
+
+	dl div {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	dt {
+		color: var(--gray-400);
+	}
+
+	dd {
+		margin: 0;
+		text-align: right;
+	}
+
+	@media (max-width: 49.99em) {
+		.telemetry {
+			right: 0.75rem;
+			left: 0.75rem;
+			bottom: 0.75rem;
+			width: auto;
+		}
+
+		/* Above the bottom dock when there is one. */
+		:global(body:has(.mobile-dock)) .telemetry {
+			bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+		}
+	}
+</style>

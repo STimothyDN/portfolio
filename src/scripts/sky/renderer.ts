@@ -11,13 +11,23 @@
  * occasional meteors. Light (clouds): depth-layered drifting clouds with the
  * same gentle pointer parallax, plus the top-left sun glow.
  *
+ * Observatory mode (pages that opt in via `mode`): the random starfield is
+ * replaced by the real sky over the site (realsky.ts, loaded on demand: the
+ * Bright Star Catalogue, Moon, planets, Milky Way, horizon); the pointer
+ * lenses nearby stars like a gravity well; scroll velocity streaks them into
+ * warp trails; taps launch meteors; an active shower's meteors fly out from
+ * its real radiant; by day the glow sits at the real Sun and planes leave
+ * contrails (daylight.ts).
+ *
  * - inactive (hidden tab / photography section) → paused and cleared
  * - reduced motion → single static frame, no drift/parallax
  * - DPR capped at 2, night frames capped at 30fps / day at 18fps
  */
+import { Daylight } from './daylight';
+import { type Ctx2D, type SkyCanvas, context2d, createSurface } from './surface';
+import type { DrawStar, RealSky, RealSkyStats, StarSprite } from './realsky';
 
-export type SkyCanvas = HTMLCanvasElement | OffscreenCanvas;
-type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+export type { SkyCanvas };
 
 export type SkyMessage =
 	| {
@@ -34,10 +44,57 @@ export type SkyMessage =
 	| { type: 'resize'; width: number; height: number; dpr: number }
 	| { type: 'theme'; night: boolean; starColor: string }
 	| { type: 'active'; active: boolean }
-	/** Pointer position, normalized to -0.5…0.5 across the viewport. */
-	| { type: 'pointer'; x: number; y: number }
-	| { type: 'scroll'; top: number }
-	| { type: 'meteor' };
+	/**
+	 * Observatory effects on/off; the meteor-rate multiplier (shower calendar);
+	 * the active shower's radiant (degrees) and extra rate at full strength;
+	 * the observing site.
+	 */
+	| {
+			type: 'mode';
+			observatory: boolean;
+			meteorRate: number;
+			shower?: ActiveShower | null;
+			site?: { lat: number; lon: number };
+	  }
+	/** Pointer position, normalized to -0.5…0.5 across the viewport; `fine` = a mouse (lens-capable). */
+	| { type: 'pointer'; x: number; y: number; fine?: boolean }
+	| { type: 'pointer-out' }
+	/** Scroll position, and the page's maximum (the real sky lowers its gaze as you go). */
+	| { type: 'scroll'; top: number; max?: number }
+	| { type: 'meteor' }
+	/** Aimed meteor (viewport px) that arrives at `to` after `duration` seconds. */
+	| { type: 'strike'; from: Point; to: Point; duration: number }
+	/** Impact sparks at a viewport point. */
+	| { type: 'burst'; x: number; y: number }
+	/** A meteor launched from a tapped point. */
+	| { type: 'launch'; x: number; y: number }
+	/** Day: a cloud of `width` px condenses centred on (x, y) over `duration` seconds. */
+	| { type: 'drop'; x: number; y: number; width: number; duration: number }
+	/** Start/stop posting SkyStats twice a second. */
+	| { type: 'hud'; on: boolean };
+
+export type SkyStats = {
+	type: 'stats';
+	fps: number;
+	/** Average draw cost per rendered frame, ms. */
+	frameMs: number;
+	capFps: number;
+	stars: number;
+	meteors: number;
+	planes: number;
+	night: boolean;
+	observatory: boolean;
+	meteorRate: number;
+	width: number;
+	height: number;
+	dpr: number;
+	shower: string | null;
+	realSky: RealSkyStats | null;
+};
+
+export type ActiveShower = { name: string; ra: number; dec: number; extra: number };
+
+type Point = { x: number; y: number };
 
 type Star = {
 	x: number;
@@ -52,6 +109,9 @@ type Star = {
 };
 
 type Meteor = {
+	/** Where it lit up: the tail never reaches back past this. */
+	ox: number;
+	oy: number;
 	x: number;
 	y: number;
 	vx: number;
@@ -61,6 +121,11 @@ type Meteor = {
 	age: number;
 	maxAge: number;
 };
+
+/** Aimed meteor. `fade` (tap launches) decelerates and burns out instead of hitting. */
+type Strike = { from: Point; to: Point; age: number; duration: number; fade?: boolean };
+
+type Spark = { x: number; y: number; vx: number; vy: number; age: number; maxAge: number; size: number };
 
 type Sprite = { canvas: SkyCanvas; width: number; height: number };
 
@@ -73,7 +138,6 @@ type Cloud = {
 	phase: number;
 };
 
-type StarSprite = { canvas: SkyCanvas; size: number };
 
 const STAR_DENSITY = 1000 / (1440 * 900);
 const MIN_STARS = 280;
@@ -81,6 +145,12 @@ const MAX_STARS = 1000;
 const MAX_DPR = 2;
 const TARGET_FRAME_MS = 1000 / 30;
 const DAY_TARGET_FRAME_MS = 1000 / 18;
+/** Strikes and sparks move tens of px per frame; run them at full rate. */
+const FAST_FRAME_MS = 1000 / 60;
+/** Daytime strikes can't be white-on-white: they borrow the aurora violet. */
+const DAY_STRIKE_COLOR = '124, 58, 237';
+const STRIKE_TAIL = 210;
+const SPARK_GRAVITY = 900;
 const METEORS_PER_SECOND = 0.35;
 const MAX_METEORS = 1;
 const PERIMETER_OFFSET = 24;
@@ -93,20 +163,15 @@ const MAX_CLOUDS = 11;
 const POINTER_PARALLAX = 16;
 /** Scroll-parallax rate for the nearest layer (px shifted per px scrolled). */
 const SCROLL_PARALLAX = 0.08;
+/** Gravity-well lens around the pointer (observatory): radius and max push, px. */
+const LENS_RADIUS = 180;
+const LENS_PUSH = 34;
+/** Warp trails (observatory): px of streak per px/s of scroll, and the cap. */
+const WARP_SHUTTER = 0.014;
+const WARP_MAX = 70;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const randomBetween = (min: number, max: number) => Math.random() * (max - min) + min;
-
-/** Sprite surfaces: OffscreenCanvas wherever it exists (always, in a worker). */
-function createSurface(width: number, height: number): SkyCanvas {
-	if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(width, height);
-	const canvas = document.createElement('canvas');
-	canvas.width = width;
-	canvas.height = height;
-	return canvas;
-}
-
-const context2d = (canvas: SkyCanvas) => canvas.getContext('2d') as Ctx2D | null;
 
 // Workers get rAF in every engine that gives them OffscreenCanvas; the
 // timeout fallback is just a safety net (frames are capped at 30fps anyway).
@@ -122,6 +187,8 @@ export class SkyRenderer {
 	private ctx: Ctx2D | null = null;
 	private stars: Star[] = [];
 	private meteors: Meteor[] = [];
+	private strikes: Strike[] = [];
+	private sparks: Spark[] = [];
 	private clouds: Cloud[] = [];
 	private starSprites: StarSprite[] = [];
 	private sunlightSprite: Sprite | null = null;
@@ -141,6 +208,34 @@ export class SkyRenderer {
 	private pointerTargetY = 0;
 	private pointerX = 0;
 	private pointerY = 0;
+	// Observatory mode.
+	private observatory = false;
+	private meteorRate = 1;
+	private lensOn = false;
+	private lensAmount = 0;
+	private lensX = 0;
+	private lensY = 0;
+	private warp = 0;
+	private lastScrollTop = 0;
+	private daylight = new Daylight();
+	private shower: ActiveShower | null = null;
+	private site = { lat: 35.9, lon: -78.86 };
+	private realSky: RealSky | null = null;
+	private realSkyLoading = false;
+	private scrollMax = 0;
+	// Per-frame lens/warp state for drawStarPoint.
+	private lensPx = 0;
+	private lensPy = 0;
+	private warpNow = 0;
+	private radiantPt: Point = { x: 0, y: 0 };
+	private sunPt: Point = { x: 0, y: 0 };
+	// Telemetry.
+	private hud = false;
+	private statFrames = 0;
+	private statCost = 0;
+	private statSince = 0;
+	/** Where stats go: the worker posts them, the main-thread fallback dispatches them. */
+	emit: ((stats: SkyStats) => void) | null = null;
 
 	handle(msg: SkyMessage) {
 		switch (msg.type) {
@@ -167,15 +262,53 @@ export class SkyRenderer {
 				this.active = msg.active;
 				this.sync();
 				break;
+			case 'mode':
+				this.observatory = msg.observatory;
+				this.meteorRate = Math.max(0, msg.meteorRate);
+				this.shower = msg.shower ?? null;
+				if (msg.site) this.site = msg.site;
+				if (!this.observatory) this.lensOn = false;
+				if (this.observatory) this.loadRealSky();
+				this.realSky?.setRadiant(this.shower);
+				this.drawStaticFrame();
+				break;
 			case 'pointer':
 				this.pointerTargetX = msg.x;
 				this.pointerTargetY = msg.y;
+				this.lensOn = this.observatory && !!msg.fine;
+				break;
+			case 'pointer-out':
+				this.lensOn = false;
 				break;
 			case 'scroll':
 				this.scrollTop = msg.top;
+				if (msg.max !== undefined) this.scrollMax = msg.max;
 				break;
 			case 'meteor':
 				if (this.ctx && this.night && this.active && !this.reducedMotion) this.spawnMeteor();
+				break;
+			case 'strike':
+				if (this.ctx && this.active && !this.reducedMotion) {
+					this.strikes.push({ from: msg.from, to: msg.to, age: 0, duration: Math.max(0.1, msg.duration) });
+				}
+				break;
+			case 'burst':
+				if (this.ctx && this.active && !this.reducedMotion) this.spawnSparks(msg.x, msg.y);
+				break;
+			case 'launch':
+				if (this.ctx && this.active && !this.reducedMotion) this.launch(msg.x, msg.y);
+				break;
+			case 'drop':
+				if (this.ctx && this.active && !this.reducedMotion && !this.night) {
+					const width = Math.max(80, msg.width);
+					this.daylight.startDrop(this.createCloudSprite(width, width * 0.42, 0.88), msg.x, msg.y, msg.duration);
+				}
+				break;
+			case 'hud':
+				this.hud = msg.on;
+				this.statFrames = 0;
+				this.statCost = 0;
+				this.statSince = performance.now();
 				break;
 		}
 	}
@@ -194,6 +327,9 @@ export class SkyRenderer {
 		if (!this.ctx || !this.active) {
 			this.stop();
 			this.clear();
+			this.strikes = [];
+			this.sparks = [];
+			this.daylight.clear();
 			return;
 		}
 		if (this.reducedMotion) {
@@ -233,6 +369,7 @@ export class SkyRenderer {
 		this.canvas.height = Math.ceil(nextHeight * nextDpr);
 		this.ctx.setTransform(nextDpr, 0, 0, nextDpr, 0, 0);
 		this.createStarSprites();
+		this.realSky?.setDpr(nextDpr);
 		this.createSunlightSprite();
 		this.createAuroraSprite();
 		this.reconcileStars(forceRebuild);
@@ -368,8 +505,36 @@ export class SkyRenderer {
 		return { x: -PERIMETER_OFFSET, y: Math.random() * this.height };
 	}
 
+	/** The real sky, while this page is in observatory mode and it has loaded. */
+	private get sky() {
+		return this.observatory ? this.realSky : null;
+	}
+
+	private loadRealSky() {
+		if (this.realSky || this.realSkyLoading) return;
+		this.realSkyLoading = true;
+		void import('./realsky').then(({ RealSky }) => {
+			this.realSky = new RealSky(this.site.lat, this.site.lon);
+			this.realSky.setDpr(this.dpr);
+			this.realSky.setRadiant(this.shower);
+			this.drawStaticFrame();
+		});
+	}
+
+	/** With the real sky: sporadic rate plus the shower's, scaled by its radiant's height. */
+	private get effectiveMeteorRate() {
+		const sky = this.sky;
+		if (sky) return 1 + (this.shower ? this.shower.extra * sky.radiantFactor : 0);
+		return this.meteorRate;
+	}
+
 	private spawnMeteor() {
-		if (this.meteors.length >= MAX_METEORS) return;
+		const rate = this.effectiveMeteorRate;
+		if (this.meteors.length >= Math.max(MAX_METEORS, Math.ceil(rate))) return;
+		// Shower members fly out from the radiant; the rest are sporadic.
+		if (rate > 1 && Math.random() < (rate - 1) / rate && this.sky?.radiantOnScreen(this.radiantPt)) {
+			if (this.spawnShowerMeteor(this.radiantPt.x, this.radiantPt.y)) return;
+		}
 
 		const start = this.randomPerimeterPoint();
 		let end = this.randomPerimeterPoint();
@@ -384,6 +549,8 @@ export class SkyRenderer {
 		const speed = randomBetween(420, 680);
 
 		this.meteors.push({
+			ox: start.x,
+			oy: start.y,
 			x: start.x,
 			y: start.y,
 			vx: Math.cos(angle) * speed,
@@ -395,8 +562,36 @@ export class SkyRenderer {
 		});
 	}
 
+	/**
+	 * A shower meteor lights up somewhere in view and flies directly away
+	 * from the radiant — short near it (foreshortened), long far from it.
+	 */
+	private spawnShowerMeteor(rx: number, ry: number) {
+		for (let tries = 0; tries < 8; tries++) {
+			const x = randomBetween(0.05, 0.95) * this.width;
+			const y = randomBetween(0.05, 0.8) * this.height;
+			const d = Math.hypot(x - rx, y - ry);
+			if (d < 70) continue;
+			const speed = randomBetween(520, 760);
+			this.meteors.push({
+				ox: x,
+				oy: y,
+				x,
+				y,
+				vx: ((x - rx) / d) * speed,
+				vy: ((y - ry) / d) * speed,
+				speed,
+				length: clamp(d * 0.3, 40, 170),
+				age: 0,
+				maxAge: randomBetween(0.45, 0.8),
+			});
+			return true;
+		}
+		return false;
+	}
+
 	private tick = (now: number) => {
-		const targetFrameMs = this.night ? TARGET_FRAME_MS : DAY_TARGET_FRAME_MS;
+		const targetFrameMs = this.capFrameMs;
 
 		if (now - this.lastFrame < targetFrameMs) {
 			this.rafId = nextFrame(this.tick);
@@ -405,9 +600,43 @@ export class SkyRenderer {
 
 		const deltaSeconds = Math.min((now - this.lastFrame) / 1000, 0.05);
 		this.lastFrame = now;
+		const start = performance.now();
 		this.render(deltaSeconds, now / 1000);
+		if (this.hud) this.recordFrame(now, performance.now() - start);
 		this.rafId = nextFrame(this.tick);
 	};
+
+	private get capFrameMs() {
+		if (this.strikes.length || this.sparks.length || this.daylight.busy) return FAST_FRAME_MS;
+		return this.night ? TARGET_FRAME_MS : DAY_TARGET_FRAME_MS;
+	}
+
+	private recordFrame(now: number, cost: number) {
+		this.statFrames++;
+		this.statCost += cost;
+		const elapsed = now - this.statSince;
+		if (elapsed < 500) return;
+		this.emit?.({
+			type: 'stats',
+			fps: (this.statFrames * 1000) / elapsed,
+			frameMs: this.statCost / this.statFrames,
+			capFps: Math.round(1000 / this.capFrameMs),
+			stars: this.night ? (this.sky?.stats().stars ?? this.stars.length) : 0,
+			meteors: this.meteors.length + this.strikes.length,
+			planes: this.daylight.planeCount,
+			night: this.night,
+			observatory: this.observatory,
+			meteorRate: this.effectiveMeteorRate,
+			width: this.width,
+			height: this.height,
+			dpr: this.dpr,
+			shower: this.shower?.name ?? null,
+			realSky: this.sky?.stats() ?? null,
+		});
+		this.statFrames = 0;
+		this.statCost = 0;
+		this.statSince = now;
+	}
 
 	private render(deltaSeconds: number, elapsedSeconds: number) {
 		if (!this.ctx) return;
@@ -417,21 +646,163 @@ export class SkyRenderer {
 		this.pointerX += (this.pointerTargetX - this.pointerX) * lerp;
 		this.pointerY += (this.pointerTargetY - this.pointerY) * lerp;
 
+		if (this.observatory) {
+			// The lens tracks the pointer much more tightly than the parallax.
+			const follow = Math.min(1, deltaSeconds * 12);
+			this.lensX += (this.pointerTargetX - this.lensX) * follow;
+			this.lensY += (this.pointerTargetY - this.lensY) * follow;
+			this.lensAmount += ((this.lensOn ? 1 : 0) - this.lensAmount) * Math.min(1, deltaSeconds * 4);
+			// Scroll velocity (px/s), smoothed so a single jumpy frame can't flash a streak.
+			const velocity = deltaSeconds > 0 ? (this.scrollTop - this.lastScrollTop) / deltaSeconds : 0;
+			this.warp += (velocity - this.warp) * Math.min(1, deltaSeconds * 10);
+		} else {
+			this.lensAmount = 0;
+			this.warp = 0;
+		}
+		this.lastScrollTop = this.scrollTop;
+		this.lensPx = (this.lensX + 0.5) * this.width;
+		this.lensPy = (this.lensY + 0.5) * this.height;
+		this.warpNow = Math.abs(this.warp) > 40 ? this.warp : 0;
+
 		this.clear();
 		if (!this.night) {
 			this.drawDaySky(deltaSeconds, elapsedSeconds);
-			return;
+		} else {
+			this.drawAurora(elapsedSeconds);
+			if (this.sky) this.drawRealSky(elapsedSeconds);
+			else this.drawStars(elapsedSeconds);
+
+			if (Math.random() < METEORS_PER_SECOND * this.effectiveMeteorRate * deltaSeconds) {
+				this.spawnMeteor();
+			}
+
+			this.updateMeteors(deltaSeconds);
+			this.drawMeteors();
 		}
 
-		this.drawAurora(elapsedSeconds);
-		this.drawStars(elapsedSeconds);
-
-		if (Math.random() < METEORS_PER_SECOND * deltaSeconds) {
-			this.spawnMeteor();
+		if (!this.night) {
+			this.daylight.update(deltaSeconds, this.width, this.height, this.observatory);
+			this.daylight.draw(this.ctx);
 		}
 
-		this.updateMeteors(deltaSeconds);
-		this.drawMeteors();
+		this.drawStrikes(deltaSeconds);
+		this.drawSparks(deltaSeconds);
+	}
+
+	/** Tap-launched meteor: shoots off downward-ish from the point and burns out. */
+	private launch(x: number, y: number) {
+		const angle = (Math.random() < 0.5 ? randomBetween(20, 65) : randomBetween(115, 160)) * (Math.PI / 180);
+		const dist = randomBetween(240, 380);
+		this.strikes.push({
+			from: { x, y },
+			to: { x: x + Math.cos(angle) * dist, y: y + Math.sin(angle) * dist },
+			age: 0,
+			duration: dist / 760,
+			fade: true,
+		});
+		this.spawnSparks(x, y, 6, 0.55);
+	}
+
+	/** The colour strikes and sparks are drawn in: starlight by night, violet by day. */
+	private get strikeColor() {
+		return this.night ? this.starColor : DAY_STRIKE_COLOR;
+	}
+
+	private drawStrikes(deltaSeconds: number) {
+		if (!this.ctx || !this.strikes.length) return;
+		const ctx = this.ctx;
+		const color = this.strikeColor;
+
+		ctx.save();
+		ctx.lineCap = 'round';
+		for (let i = this.strikes.length - 1; i >= 0; i--) {
+			const strike = this.strikes[i];
+			strike.age += deltaSeconds;
+			// Strikes ease in (falling, gathering speed into the hit); launches
+			// ease out and burn away.
+			const t = clamp(strike.age / strike.duration, 0, 1);
+			const p = strike.fade ? 1 - (1 - t) ** 2 : t * (0.55 + 0.45 * t);
+			const life = strike.fade ? 1 - t * t : 1;
+			const dx = strike.to.x - strike.from.x;
+			const dy = strike.to.y - strike.from.y;
+			const dist = Math.hypot(dx, dy) || 1;
+			const x = strike.from.x + dx * p;
+			const y = strike.from.y + dy * p;
+			// The tail never reaches back past the launch point.
+			const tail = Math.min(STRIKE_TAIL, dist * p);
+			const tailX = x - (dx / dist) * tail;
+			const tailY = y - (dy / dist) * tail;
+
+			const gradient = ctx.createLinearGradient(x, y, tailX, tailY);
+			gradient.addColorStop(0, `rgba(${color}, ${life})`);
+			gradient.addColorStop(0.3, `rgba(${color}, ${0.5 * life})`);
+			gradient.addColorStop(1, `rgba(${color}, 0)`);
+			ctx.shadowBlur = 14;
+			ctx.shadowColor = `rgba(${color}, ${0.8 * life})`;
+			ctx.lineWidth = 2.6;
+			ctx.strokeStyle = gradient;
+			ctx.beginPath();
+			ctx.moveTo(x, y);
+			ctx.lineTo(tailX, tailY);
+			ctx.stroke();
+
+			// Bright head: swells into a hit, dwindles as a launch burns out.
+			const headR = strike.fade ? 2 + 5 * (1 - t) : 7 + 5 * t;
+			const head = ctx.createRadialGradient(x, y, 0, x, y, headR);
+			head.addColorStop(0, `rgba(${color}, ${0.95 * life})`);
+			head.addColorStop(1, `rgba(${color}, 0)`);
+			ctx.shadowBlur = 0;
+			ctx.fillStyle = head;
+			ctx.beginPath();
+			ctx.arc(x, y, headR, 0, Math.PI * 2);
+			ctx.fill();
+
+			if (t >= 1) this.strikes.splice(i, 1);
+		}
+		ctx.restore();
+	}
+
+	private spawnSparks(x: number, y: number, count = 14, power = 1) {
+		for (let i = 0; i < count; i++) {
+			// Mostly up and outward, like grit kicked off the word.
+			const angle = -Math.PI / 2 + randomBetween(-1.25, 1.25);
+			const speed = randomBetween(140, 360) * power;
+			this.sparks.push({
+				x,
+				y,
+				vx: Math.cos(angle) * speed,
+				vy: Math.sin(angle) * speed,
+				age: 0,
+				maxAge: randomBetween(0.45, 0.85),
+				size: randomBetween(0.9, 2.1),
+			});
+		}
+	}
+
+	private drawSparks(deltaSeconds: number) {
+		if (!this.ctx || !this.sparks.length) return;
+		const ctx = this.ctx;
+		const color = this.strikeColor;
+
+		ctx.save();
+		for (let i = this.sparks.length - 1; i >= 0; i--) {
+			const spark = this.sparks[i];
+			spark.age += deltaSeconds;
+			spark.vy += SPARK_GRAVITY * deltaSeconds;
+			spark.x += spark.vx * deltaSeconds;
+			spark.y += spark.vy * deltaSeconds;
+			const life = 1 - spark.age / spark.maxAge;
+			if (life <= 0) {
+				this.sparks.splice(i, 1);
+				continue;
+			}
+			ctx.globalAlpha = life;
+			ctx.fillStyle = `rgba(${color}, 1)`;
+			ctx.beginPath();
+			ctx.arc(spark.x, spark.y, spark.size * (0.6 + 0.4 * life), 0, Math.PI * 2);
+			ctx.fill();
+		}
+		ctx.restore();
 	}
 
 	private drawStaticFrame() {
@@ -442,7 +813,8 @@ export class SkyRenderer {
 			return;
 		}
 		this.drawAurora(0);
-		this.drawStars(performance.now() / 1000);
+		if (this.sky) this.drawRealSky(performance.now() / 1000);
+		else this.drawStars(performance.now() / 1000);
 	}
 
 	private clear() {
@@ -471,14 +843,66 @@ export class SkyRenderer {
 			const scrollShift = scrollTop * SCROLL_PARALLAX * star.depth;
 			// Wrap vertically so scrolled-off stars re-enter from the other edge.
 			const yBase = (((star.y * this.height - scrollShift) % this.height) + this.height) % this.height;
-			const x = star.x * this.width + px - sprite.size / 2;
-			const y = yBase + py - sprite.size / 2;
-
-			this.ctx.globalAlpha = alpha;
-			this.ctx.drawImage(sprite.canvas, x, y, sprite.size, sprite.size);
+			this.drawStarPoint(star.x * this.width + px, yBase + py, sprite, alpha, star.depth);
 		}
 
 		this.ctx.restore();
+	}
+
+	/**
+	 * One star at its centre (cx, cy), through the observatory effects: the
+	 * gravity-well lens pushes stars near the pointer outward (hardest closest
+	 * in, leaving a small dark core) and magnifies them; warp streaks them
+	 * along the scroll, trailing where they came from (scrolling down moves
+	 * the sky up, so the trail hangs below). Both are off outside observatory.
+	 */
+	private drawStarPoint: DrawStar = (cx, cy, sprite, alpha, depth) => {
+		const ctx = this.ctx!;
+		if (this.lensAmount > 0.01) {
+			const dx = cx - this.lensPx;
+			const dy = cy - this.lensPy;
+			const d2 = dx * dx + dy * dy;
+			if (d2 < LENS_RADIUS * LENS_RADIUS) {
+				const d = Math.sqrt(d2) || 0.001;
+				const f = 1 - d / LENS_RADIUS;
+				const push = LENS_PUSH * f * f * this.lensAmount;
+				cx += (dx / d) * push;
+				cy += (dy / d) * push;
+				alpha = Math.min(1, alpha * (1 + 0.8 * f * this.lensAmount));
+			}
+		}
+
+		const x = cx - sprite.size / 2;
+		const y = cy - sprite.size / 2;
+		const warp = this.warpNow;
+		const streak = warp ? Math.min(WARP_MAX, Math.abs(warp) * WARP_SHUTTER * (0.15 + depth)) : 0;
+		if (streak > 1.5) {
+			ctx.globalAlpha = alpha * (1 - Math.min(0.6, streak / 120));
+			ctx.drawImage(sprite.canvas, x, warp > 0 ? y : y - streak, sprite.size, sprite.size + streak);
+		} else {
+			ctx.globalAlpha = alpha;
+			ctx.drawImage(sprite.canvas, x, y, sprite.size, sprite.size);
+		}
+	};
+
+	/** Where the real sky is looking: down the page lowers the gaze; the pointer looks around. */
+	private aimRealSky(sky: RealSky) {
+		sky.update(Date.now());
+		const progress = this.reducedMotion || this.scrollMax <= 0 ? 0 : clamp(this.scrollTop / this.scrollMax, 0, 1);
+		sky.setView(this.width, this.height, progress, this.pointerX, this.pointerY);
+	}
+
+	private drawRealSky(elapsedSeconds: number) {
+		const sky = this.sky;
+		if (!this.ctx || !sky) return;
+		this.aimRealSky(sky);
+		sky.drawMilkyWay(this.ctx);
+		this.ctx.save();
+		sky.drawStars(elapsedSeconds, this.drawStarPoint);
+		this.ctx.restore();
+		sky.drawPlanets(this.ctx);
+		sky.drawMoon(this.ctx);
+		sky.drawHorizon(this.ctx);
 	}
 
 	private reconcileClouds(forceRebuild: boolean) {
@@ -614,6 +1038,24 @@ export class SkyRenderer {
 	private drawSunlight() {
 		if (!this.ctx) return;
 
+		// Observatory: the glow sits on the real Sun while it's up and in view.
+		const sky = this.sky;
+		if (sky) {
+			this.aimRealSky(sky);
+			if (sky.sunOnScreen(this.sunPt)) {
+				const { x, y } = this.sunPt;
+				const radius = Math.max(this.width, this.height) * 0.72;
+				const glow = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
+				glow.addColorStop(0, 'rgba(255, 244, 194, 0.24)');
+				glow.addColorStop(0.28, 'rgba(255, 230, 166, 0.1)');
+				glow.addColorStop(0.72, 'rgba(255, 255, 255, 0.018)');
+				glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+				this.ctx.fillStyle = glow;
+				this.ctx.fillRect(0, 0, this.width, this.height);
+				return;
+			}
+		}
+
 		if (!this.sunlightSprite) {
 			this.createSunlightSprite();
 		}
@@ -658,8 +1100,10 @@ export class SkyRenderer {
 		for (const meteor of this.meteors) {
 			const progress = meteor.age / meteor.maxAge;
 			const opacity = clamp(1 - progress, 0, 1);
-			const tailX = meteor.x - (meteor.vx / meteor.speed) * meteor.length;
-			const tailY = meteor.y - (meteor.vy / meteor.speed) * meteor.length;
+			// The trail grows from where the meteor lit up, never past it.
+			const length = Math.min(meteor.length, Math.hypot(meteor.x - meteor.ox, meteor.y - meteor.oy));
+			const tailX = meteor.x - (meteor.vx / meteor.speed) * length;
+			const tailY = meteor.y - (meteor.vy / meteor.speed) * length;
 			const gradient = this.ctx.createLinearGradient(meteor.x, meteor.y, tailX, tailY);
 
 			gradient.addColorStop(0, `rgba(${this.starColor}, ${opacity})`);

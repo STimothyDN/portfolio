@@ -27,11 +27,13 @@ import { ClientRouter } from 'astro:transitions';
 interface Props {
 	title?: string | undefined;
 	description?: string | undefined;
+	noindex?: boolean;
 }
 
 const {
 	title = 'Timothy Navarro',
 	description = 'The personal portfolio of Timothy Navarro',
+	noindex = false,
 } = Astro.props;
 
 // Same section computation as BaseLayout: the editorial faces are only
@@ -52,6 +54,7 @@ const cdnOrigin = import.meta.env.PUBLIC_BUNNY_CDN_URL;
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="generator" content={Astro.generator} />
 <title>{title}</title>
+{noindex && <meta name="robots" content="noindex" />}
 
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 {preloadFonts.map((href) => <link rel="preload" as="font" type="font/woff2" href={href} crossorigin />)}

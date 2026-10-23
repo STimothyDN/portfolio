@@ -125,8 +125,8 @@ back from each positive ([`src/components/film/negative.ts`](../../components/fi
   400 count as Kodak. A stock the file doesn't know falls back by brand, then to a
   generic C-41 look.
 - **Each scan's `tone`** sets how dense its frame is. Bright scans come from denser
-  negatives. Dark, muddy ones (lifted blacks the scanner had to stretch) come from thin
-  negatives that are mostly bare orange base.
+  negatives. Flat ones (muddy blacks and dull whites: a thin negative the scanner had to
+  stretch) come from thin negatives that are mostly bare orange base.
 
 `npm run upload-film` measures each scan's tone once it's uploaded. Rolls uploaded before
 that can be measured in place (it only adds `tone`):

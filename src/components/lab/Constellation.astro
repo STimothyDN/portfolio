@@ -1,0 +1,779 @@
+---
+/**
+ * Fig. 1 — a constellation shaped like the 3 in Timo3, whose four principal
+ * stars are the roles. One list, two layouts:
+ *
+ * - Desktop: a star chart. The SVG draws the planisphere grid, field stars
+ *   and the asterism's lines; the role links sit over it at their star's
+ *   coordinates. Hover/focus a star → its run of the line lights up and its
+ *   entry shows in the slot under the chart (CSS :has, no JS).
+ * - Phones: the SVG hides and the same list becomes a vertical field guide —
+ *   a rail down the left whose fill, and each star on it, light up as they
+ *   cross the middle of the screen (CSS view timelines, no JS).
+ */
+import Icon from '../Icon.astro';
+import type { Props as IconProps } from '../Icon.astro';
+
+const W = 400;
+const H = 500;
+
+/** The asterism, traced as a 3: top bowl → cusp → lower bowl. */
+const path: [number, number][] = [
+	[95, 112],
+	[188, 62],
+	[290, 88],
+	[322, 165],
+	[204, 240],
+	[306, 276],
+	[340, 350],
+	[300, 428],
+	[198, 460],
+	[88, 424],
+];
+
+type Role = {
+	key: string;
+	/** Index into `path`. */
+	at: number;
+	/** Segments (path[i] → path[i + 1]) this star lights when inspected. */
+	segments: number[];
+	bayer: string;
+	name: string;
+	href: string;
+	external?: boolean;
+	icon: IconProps['icon'];
+	blurb: string;
+	cta: string;
+	side: 'left' | 'right';
+};
+
+const roles: Role[] = [
+	{
+		key: 'dev',
+		at: 0,
+		segments: [0, 1, 2],
+		bayer: 'α',
+		name: 'Developer',
+		href: '/work/',
+		icon: 'code',
+		blurb: 'Full stack, with a soft spot for human-centered frontend work.',
+		cta: 'See my work',
+		side: 'right',
+	},
+	{
+		key: 'producer',
+		at: 4,
+		segments: [3, 4],
+		bayer: 'β',
+		name: 'Producer',
+		href: 'https://soundcloud.com/timo_on_duty',
+		external: true,
+		icon: 'producer',
+		blurb: 'Producing and mixing music as a DJ since 2021.',
+		cta: 'Listen on SoundCloud',
+		side: 'left',
+	},
+	{
+		key: 'photo',
+		at: 6,
+		segments: [5, 6],
+		bayer: 'γ',
+		name: 'Photographer',
+		href: '/photography/',
+		icon: 'camera',
+		blurb: 'Film and digital, documenting the journey since picking up a new camera in 2026.',
+		cta: 'View photography',
+		side: 'left',
+	},
+	{
+		key: 'cook',
+		at: 9,
+		segments: [7, 8],
+		bayer: 'δ',
+		name: 'Home Cook',
+		href: 'https://docs.google.com/document/d/1It_OJS21vwgpbcy6P4QIGzRIacEXh6JH8Os51Dc4qtc/edit?usp=sharing',
+		external: true,
+		icon: 'cook',
+		blurb: 'Cooking is one of my favorite things to do off the clock.',
+		cta: 'Open my cooking doc',
+		side: 'right',
+	},
+];
+
+const ownerOf = (segment: number) => roles.find((r) => r.segments.includes(segment))!.key;
+const segments = path.slice(0, -1).map(([x1, y1], i) => {
+	const [x2, y2] = path[i + 1];
+	return { x1, y1, x2, y2, i, owner: ownerOf(i) };
+});
+const roleAt = new Set(roles.map((r) => r.at));
+const minorStars = path.map(([x, y], i) => ({ x, y, i })).filter(({ i }) => !roleAt.has(i));
+
+// Background field stars: seeded so every build draws the same sky.
+let seed = 20261023;
+const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const field = Array.from({ length: 48 }, (_, i) => ({
+	x: rand() * W,
+	y: rand() * H,
+	r: 0.5 + rand() * 1.2,
+	o: 0.25 + rand() * 0.45,
+	// A handful twinkle; the rest hold still (SVG opacity repaints aren't free).
+	twinkle: i % 5 === 0,
+	delay: (rand() * 6).toFixed(2),
+}));
+
+// Planisphere ring + tick marks.
+const ring = { cx: 200, cy: 262, r: 212 };
+const ticks = Array.from({ length: 36 }, (_, i) => {
+	const a = (i * 10 * Math.PI) / 180;
+	const len = i % 3 === 0 ? 10 : 5;
+	const cos = Math.cos(a);
+	const sin = Math.sin(a);
+	return {
+		x1: ring.cx + cos * ring.r,
+		y1: ring.cy + sin * ring.r,
+		x2: ring.cx + cos * (ring.r + len),
+		y2: ring.cy + sin * (ring.r + len),
+	};
+});
+
+// Entrance choreography (desktop): the line draws star to star.
+const DRAW_START = 0.7;
+const SEG_STEP = 0.13;
+const starDelay = (i: number) => (DRAW_START + i * SEG_STEP).toFixed(2);
+const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
+---
+
+<section class="field" aria-labelledby="field-title">
+	<header class="field-head">
+		<h2 id="field-title" class="field-title">
+			<span class="fig">Fig. 1</span>
+			<span class="sep" aria-hidden="true">·</span>
+			4 principal stars<span class="sr-only">: what I do</span>
+			<span class="hint" aria-hidden="true"><span class="sep">·</span> hover one to inspect it</span>
+		</h2>
+	</header>
+
+	<div class="chart">
+		<svg class="chart-svg" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+			<g class="grid">
+				<circle cx={ring.cx} cy={ring.cy} r={ring.r} />
+				<circle cx={ring.cx} cy={ring.cy} r={ring.r * 0.62} class="dashed" />
+				<line x1={ring.cx} y1={ring.cy - ring.r - 14} x2={ring.cx} y2={ring.cy + ring.r + 14} />
+				<line x1={ring.cx - ring.r - 14} y1={ring.cy} x2={ring.cx + ring.r + 14} y2={ring.cy} />
+				{ticks.map((t) => <line {...t} />)}
+				<text x={ring.cx} y={ring.cy - ring.r - 20} text-anchor="middle">N</text>
+				<text x={ring.cx - ring.r - 22} y={ring.cy + 4} text-anchor="middle">E</text>
+			</g>
+			<g class="field-stars">
+				{
+					field.map((s) => (
+						<circle
+							cx={s.x.toFixed(1)}
+							cy={s.y.toFixed(1)}
+							r={s.r.toFixed(2)}
+							class:list={{ twinkle: s.twinkle }}
+							style={`--o:${s.o.toFixed(2)};--tw:${s.delay}s`}
+						/>
+					))
+				}
+			</g>
+			<g class="segs">
+				{
+					segments.map((s) => (
+						<line
+							x1={s.x1}
+							y1={s.y1}
+							x2={s.x2}
+							y2={s.y2}
+							pathLength="1"
+							class="seg"
+							style={`--d:${starDelay(s.i)}s`}
+						/>
+					))
+				}
+			</g>
+			<g class="segs-hi">
+				{segments.map((s) => <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} class={`hi hi-${s.owner}`} />)}
+			</g>
+			<g class="minor">
+				{minorStars.map((s) => <circle cx={s.x} cy={s.y} r="2.6" style={`--d:${starDelay(s.i)}s`} />)}
+			</g>
+		</svg>
+
+		<ol class="roles">
+			{
+				roles.map((role) => (
+					<li
+						class={`role role-${role.key}`}
+						data-side={role.side}
+						style={`--x:${pct(path[role.at][0], W)};--y:${pct(path[role.at][1], H)};--d:${starDelay(role.at)}s`}
+					>
+						<a
+							class="role-link"
+							href={role.href}
+							aria-describedby={`role-${role.key}-detail`}
+							{...(role.external ? { target: '_blank', rel: 'noopener' } : {})}
+						>
+							<span class="star" aria-hidden="true" />
+							<span class="label">
+								<span class="bayer" aria-hidden="true">
+									{role.bayer}
+								</span>
+								{role.name}
+							</span>
+						</a>
+						<div class="detail" id={`role-${role.key}-detail`}>
+							<Icon icon={role.icon} size="1.5rem" />
+							<div class="detail-body">
+								<div class="detail-row">
+									<p class="detail-meta" aria-hidden="true">
+										Fig. 1 <span class="sep">·</span> <span class="bayer-sm">{role.bayer}</span>
+									</p>
+									<p class="cta">
+										{role.cta}
+										{role.external && <span class="sr-only">(opens in a new tab)</span>}
+										<span aria-hidden="true">{role.external ? '↗' : '→'}</span>
+									</p>
+								</div>
+								<p class="blurb">{role.blurb}</p>
+							</div>
+						</div>
+					</li>
+				))
+			}
+		</ol>
+
+	</div>
+</section>
+
+<style>
+	.field {
+		--mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+		/* The visible accent in both main palettes (violet 67% by night, 44% by day). */
+		--ink: var(--link-color);
+		--line: color-mix(in oklch, var(--gray-0) 30%, transparent);
+		--grid: color-mix(in oklch, var(--gray-0) 10%, transparent);
+		--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	.field-head {
+		font-family: var(--mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-400);
+	}
+
+	.field-title {
+		font: inherit;
+		letter-spacing: inherit;
+		color: var(--gray-200);
+		text-wrap: balance;
+	}
+
+	.fig {
+		color: var(--ink);
+	}
+
+	.sep {
+		margin-inline: 0.35em;
+		color: var(--gray-400);
+	}
+
+	.hint {
+		display: none;
+		color: var(--gray-400);
+	}
+
+	/* The hover hint only means something where there is hover. */
+	@media (hover: hover) and (min-width: 50em) {
+		.hint {
+			display: inline;
+		}
+	}
+
+	.label,
+	.detail-meta,
+	.cta {
+		font-family: var(--mono);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.roles {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.role-link {
+		color: var(--gray-100);
+		text-decoration: none;
+	}
+
+	.bayer {
+		font-family: var(--font-brand);
+		font-size: 1.15em;
+		text-transform: none;
+		color: var(--ink);
+		margin-right: 0.4em;
+	}
+
+	/* A principal star: soft accent halo around a hard core. */
+	.star {
+		position: relative;
+		display: block;
+		flex: none;
+		width: 1.5rem;
+		height: 1.5rem;
+		transition: scale 0.35s var(--ease-out);
+	}
+
+	.star::before,
+	.star::after {
+		position: absolute;
+		border-radius: 50%;
+		content: '';
+	}
+
+	.star::before {
+		inset: -0.35rem;
+		background: radial-gradient(circle, color-mix(in oklch, var(--ink) 55%, transparent), transparent 68%);
+		transition: opacity 0.35s;
+		opacity: 0.7;
+	}
+
+	.star::after {
+		inset: 0.5rem;
+		background: var(--gray-0);
+		box-shadow: 0 0 0 0.2rem color-mix(in oklch, var(--ink) 40%, transparent);
+	}
+
+	.detail {
+		display: flex;
+		gap: 0.875rem;
+		color: var(--ink);
+	}
+
+	.detail-body {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.detail-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 1rem;
+	}
+
+	.detail-meta {
+		font-size: 0.6875rem;
+		color: var(--gray-400);
+	}
+
+	/* Greek stays lowercase: uppercase would turn γ into Γ. */
+	.bayer-sm {
+		text-transform: none;
+		color: var(--ink);
+	}
+
+	.blurb {
+		color: var(--gray-200);
+	}
+
+	.cta {
+		font-size: 0.75rem;
+		color: var(--ink);
+	}
+
+	/* ── Desktop: star chart ─────────────────────────────────────────── */
+	@media (min-width: 50em) {
+		/* Sized by viewport height too, so the whole figure — caption, chart
+		   and the detail slot under it — fits the first screen. */
+		.field {
+			--chart-w: clamp(17rem, calc((100svh - 23rem) * 0.8), 28rem);
+
+			position: relative;
+			width: min(100%, var(--chart-w));
+			margin-inline: auto;
+		}
+
+		/* Caption sits just above the chart, in the slack the centred grid
+		   row leaves under the readout — it costs the chart no height. */
+		.field-head {
+			position: absolute;
+			bottom: calc(100% + 0.75rem);
+			left: 50%;
+			translate: -50% 0;
+		}
+
+		/* One line: `text-wrap: balance` would otherwise win over nowrap. */
+		.field-title {
+			text-wrap: nowrap;
+		}
+
+		.blurb {
+			font-size: var(--text-sm);
+		}
+
+		.chart {
+			position: relative;
+			width: 100%;
+			aspect-ratio: 4 / 5;
+			/* Room for the shared detail slot under the chart. */
+			margin-bottom: 6rem;
+		}
+
+		.chart-svg {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			overflow: visible;
+		}
+
+		.grid {
+			fill: none;
+			stroke: var(--grid);
+			stroke-width: 1;
+		}
+
+		.grid .dashed {
+			stroke-dasharray: 2 6;
+		}
+
+		.grid text {
+			fill: var(--gray-400);
+			stroke: none;
+			font-family: var(--mono);
+			font-size: 11px;
+			letter-spacing: 0.1em;
+		}
+
+		.field-stars circle {
+			fill: var(--gray-0);
+			opacity: var(--o);
+		}
+
+		.seg {
+			stroke: var(--line);
+			stroke-width: 1.25;
+		}
+
+		.hi {
+			stroke: var(--ink);
+			stroke-width: 2;
+			stroke-linecap: round;
+			opacity: 0;
+			filter: drop-shadow(0 0 4px var(--ink));
+			transition: opacity 0.35s var(--ease-out);
+		}
+
+		.minor circle {
+			fill: var(--gray-0);
+		}
+
+		.roles {
+			position: absolute;
+			inset: 0;
+		}
+
+		/* The link straddles its star: the star's centre sits on (--x, --y),
+		   the label trails off to one side. */
+		.role-link {
+			position: absolute;
+			left: var(--x);
+			top: var(--y);
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			padding: 0.25rem;
+			border-radius: 999rem;
+			translate: -1rem -50%;
+			white-space: nowrap;
+		}
+
+		.role[data-side='left'] .role-link {
+			flex-direction: row-reverse;
+			translate: calc(-100% + 1rem) -50%;
+		}
+
+		.label {
+			font-size: 0.75rem;
+			padding: 0.25rem 0.5rem;
+			border-radius: 999rem;
+			transition:
+				color 0.25s,
+				background-color 0.25s;
+		}
+
+		.role-link:focus-visible {
+			outline: 2px solid var(--ink);
+			outline-offset: 2px;
+		}
+
+		.role-link:is(:hover, :focus-visible) .star {
+			scale: 1.45;
+		}
+
+		.role-link:is(:hover, :focus-visible) .star::before {
+			opacity: 1;
+		}
+
+		.role-link:is(:hover, :focus-visible) .label {
+			color: var(--gray-0);
+			background-color: var(--gray-999_65);
+		}
+
+		/* Inspecting a star dims the rest of the figure. */
+		.roles:has(.role-link:is(:hover, :focus-visible)) .role-link:not(:is(:hover, :focus-visible)) {
+			opacity: 0.55;
+		}
+
+		.chart:has(.role-dev .role-link:is(:hover, :focus-visible)) .hi-dev,
+		.chart:has(.role-producer .role-link:is(:hover, :focus-visible)) .hi-producer,
+		.chart:has(.role-photo .role-link:is(:hover, :focus-visible)) .hi-photo,
+		.chart:has(.role-cook .role-link:is(:hover, :focus-visible)) .hi-cook {
+			opacity: 1;
+		}
+
+		/* One shared slot under the chart: the inspected star's entry while
+		   one is hovered or focused. */
+		.detail {
+			position: absolute;
+			top: calc(100% + 1.5rem);
+			left: 0;
+			right: 0;
+		}
+
+		.detail {
+			align-items: center;
+			padding: 0.75rem 1rem;
+			border: 1px solid var(--gray-800);
+			border-radius: 1rem;
+			background: var(--gray-999_65);
+			-webkit-backdrop-filter: blur(10px);
+			backdrop-filter: blur(10px);
+			box-shadow: var(--shadow-sm);
+			opacity: 0;
+			visibility: hidden;
+			translate: 0 0.375rem;
+			transition:
+				opacity 0.25s,
+				translate 0.35s var(--ease-out),
+				visibility 0s 0.25s;
+		}
+
+		.role:has(.role-link:is(:hover, :focus-visible)) .detail {
+			opacity: 1;
+			visibility: visible;
+			translate: 0 0;
+			transition-delay: 0s;
+		}
+
+		/* Entrance: the line draws itself star to star, each star popping in
+		   as the line reaches it. Only when JS + motion are on (anim-ready),
+		   so no-JS and reduced-motion visitors get the finished chart.
+		   Backwards fill only: a finished entrance must not pin `scale`
+		   (the hover state animates it). */
+		@media (prefers-reduced-motion: no-preference) {
+			:global(html.anim-ready) .seg {
+				stroke-dasharray: 1;
+				animation: seg-draw 0.42s var(--d) linear backwards;
+			}
+
+			:global(html.anim-ready) :is(.minor circle, .star) {
+				animation: star-pop 0.7s var(--d) var(--ease-out) backwards;
+				transform-box: fill-box;
+				transform-origin: center;
+			}
+
+			:global(html.anim-ready) :is(.role .label, .grid, .field-stars, .field-head) {
+				animation: chart-fade 1.2s 0.4s ease-out backwards;
+			}
+
+			:global(html.anim-ready) .role .label {
+				animation-delay: calc(var(--d) + 0.15s);
+				animation-duration: 0.6s;
+			}
+
+			.field-stars .twinkle {
+				animation: twinkle 5s var(--tw) ease-in-out infinite;
+			}
+		}
+	}
+
+	@keyframes seg-draw {
+		from {
+			stroke-dashoffset: 1;
+		}
+		to {
+			stroke-dashoffset: 0;
+		}
+	}
+
+	@keyframes star-pop {
+		from {
+			scale: 0;
+			opacity: 0;
+		}
+		60% {
+			opacity: 1;
+		}
+		to {
+			scale: 1;
+		}
+	}
+
+	@keyframes chart-fade {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@keyframes twinkle {
+		50% {
+			opacity: calc(var(--o) * 0.25);
+		}
+	}
+
+	/* ── Phones: vertical field guide ────────────────────────────────── */
+	@media (max-width: 49.99em) {
+		.chart-svg {
+			display: none;
+		}
+
+		.roles {
+			--rail-x: 0.75rem;
+
+			position: relative;
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+			padding-left: 2.5rem;
+		}
+
+		/* The rail: a faint track, and a bright fill drawn over it. */
+		.roles::before,
+		.roles::after {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: var(--rail-x);
+			width: 1px;
+			content: '';
+		}
+
+		.roles::before {
+			background: var(--line);
+		}
+
+		.roles::after {
+			width: 2px;
+			margin-left: -0.5px;
+			background: linear-gradient(180deg, transparent, var(--ink) 4rem);
+			transform-origin: top;
+			box-shadow: 0 0 8px var(--ink);
+		}
+
+		.role {
+			position: relative;
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
+			padding: 1.125rem 1.25rem 1.25rem;
+			border: 1px solid var(--gray-800);
+			border-radius: 1rem;
+			background: var(--gray-999_65);
+			box-shadow: var(--shadow-sm);
+		}
+
+		/* The whole card is the link's hit area. */
+		.role-link::after {
+			position: absolute;
+			inset: 0;
+			border-radius: inherit;
+			content: '';
+		}
+
+		.role-link:focus-visible {
+			outline: none;
+		}
+
+		.role:has(.role-link:focus-visible) {
+			outline: 2px solid var(--ink);
+			outline-offset: 2px;
+		}
+
+		.label {
+			font-size: 0.8125rem;
+		}
+
+		/* The star sits on the rail, level with the card's label. */
+		.star {
+			position: absolute;
+			top: 1rem;
+			left: calc(var(--rail-x) - 2.5rem - 0.75rem);
+		}
+
+		.detail-meta {
+			display: none;
+		}
+
+		/* Blurb first, call to action last. */
+		.detail-body {
+			flex-direction: column-reverse;
+		}
+	}
+
+	/* Scroll-lit rail (phones): the fill tracks a line across the middle of
+	   the screen; each star lights as it crosses that line. */
+	@supports (animation-timeline: view()) {
+		@media (max-width: 49.99em) and (prefers-reduced-motion: no-preference) {
+			.roles {
+				view-timeline: --rail block;
+				view-timeline-inset: 50% 50%;
+			}
+
+			.roles::after {
+				animation: rail-fill linear both;
+				animation-timeline: --rail;
+				animation-range: cover 0% cover 100%;
+			}
+
+			.star {
+				animation: star-light linear both;
+				animation-timeline: view(block 50% 50%);
+				animation-range: cover 0% cover 100%;
+			}
+		}
+	}
+
+	@keyframes rail-fill {
+		from {
+			scale: 1 0;
+		}
+		to {
+			scale: 1 1;
+		}
+	}
+
+	@keyframes star-light {
+		from {
+			opacity: 0.35;
+			scale: 0.7;
+			filter: grayscale(1);
+		}
+		to {
+			opacity: 1;
+			scale: 1;
+			filter: none;
+		}
+	}
+</style>

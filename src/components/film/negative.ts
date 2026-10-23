@@ -90,37 +90,44 @@ const toSrgb = (v: number) => (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const LOG10_2 = Math.log10(2);
 
-// The median scan's log-average luminance, and a clean black point.
+// The median scan's log-average luminance, and the tonal range (stops from
+// black point to white point) of a full-bodied scan.
 const KEY_REF = 0.12;
-const BLACK_REF = 0.006;
+const RANGE_REF = 7;
 
 /**
  * A frame's exposure in stops from normal (to the half stop), estimated
  * from its scan's tone.
  */
-export function frameExposure([black, key]: Tone): number {
+export function frameExposure([black, key, white]: Tone): number {
 	// The camera's meter and the lab's scanner both pull frames toward mid gray,
 	// so a dark scan came from a thinner negative, though not as much thinner
 	// as its pixels alone suggest. Call it half.
 	const metered = 0.5 * Math.log2(KEY_REF / Math.max(toLinear(key), 1e-3));
-	// Muddy, lifted shadows in a dark scan mean the scanner had to stretch a
-	// thin negative: the shadows fell on the film's toe. In a bright scan
-	// they're haze or flare, which add density rather than take it away.
-	const murky = clamp((0.6 - key) / 0.25, 0, 1);
-	const thin = 0.5 * murky * Math.max(0, Math.log2(toLinear(black) / BLACK_REF));
+	// A flat scan (muddy blacks, dull whites) is the scanner stretching a thin
+	// negative as far as it would go: the shadows fell on the film's toe and
+	// the highlights never built up. Each stop of range it's missing is about
+	// a stop under. In a bright scan, flatness is haze or flare instead, which
+	// add density rather than take it away.
+	const range = Math.log2(toLinear(white) / Math.max(toLinear(black), 0.002));
+	const murky = clamp((0.7 - key) / 0.3, 0, 1);
+	const thin = murky * Math.max(0, RANGE_REF - range);
 	return clamp(Math.round((metered - thin) * 2) / 2, -3, 2);
 }
 
 // Where a stock's curve leaves its toe (log10 exposure, relative to a normal
-// highlight at 0): mid gray lands around 0.7 over base, as on a well-exposed
-// C-41 negative.
-const SPEED_POINT = -1.9;
+// highlight at 0): mid gray lands around 0.5 over base, and deep shadows
+// stay close to bare base.
+const SPEED_POINT = -1.6;
 const TOE = 0.22;
 const SHOULDER = 0.15;
 // Image density spans 0–D_RANGE in the filter's intermediate (8-bit) channel.
 const D_RANGE = 2.4;
-// The light table: a base of this density shows as sRGB 0.95.
+// The light table: a base of this density shows as sRGB 0.95. Its glare (a
+// share of the light through the base) fills in the densest areas, so they
+// read as deep amber rather than near black, as they do to the eye.
 const LIGHT = toLinear(0.95) * 10 ** 0.18;
+const GLARE = 0.08;
 const TABLE_STEPS = 33;
 
 /** Smooth max(0, u), easing in over `w`. */
@@ -135,8 +142,9 @@ function layerDensity(v: number, gamma: number, latitude: number, offset: number
 	return softmin(d, gamma * (latitude - SPEED_POINT), SHOULDER);
 }
 
-/** sRGB a light table shows through `density` (base included). */
-const shown = (density: number) => toSrgb(Math.min(1, LIGHT * 10 ** -density));
+/** sRGB a light table shows through a film base and the image density over it. */
+const shown = (base: number, image = 0) =>
+	toSrgb(Math.min(1, (LIGHT * 10 ** -base * (10 ** -image + GLARE)) / (1 + GLARE)));
 
 const table = (f: (t: number) => number) =>
 	Array.from({ length: TABLE_STEPS }, (_, i) => +f(i / (TABLE_STEPS - 1)).toFixed(4)).join(' ');
@@ -171,7 +179,7 @@ export function negativeFilter(key: NegativeProfileKey, exposure: number): Negat
 			})
 		),
 		matrix: [...rows, '0 0 0 1 0'].join(' '),
-		transmit: [0, 1, 2].map((c) => table((d) => shown(p.base[c] + d * D_RANGE))),
+		transmit: [0, 1, 2].map((c) => table((d) => shown(p.base[c], d * D_RANGE))),
 	};
 }
 
@@ -192,8 +200,8 @@ export function negativeBaseVars(key: NegativeProfileKey): Record<string, string
 		const { base } = NEGATIVE_PROFILES[key];
 		vars = {
 			'--stock-frame': hex(base.map((d) => shown(d))),
-			'--stock-rail': hex(base.map((d) => shown(d + 0.14))),
-			'--stock-ink': hex(base.map((d) => shown(d + 1.3))),
+			'--stock-rail': hex(base.map((d) => shown(d, 0.14))),
+			'--stock-ink': hex(base.map((d) => shown(d, 1.6))),
 		};
 		baseVars.set(key, vars);
 	}

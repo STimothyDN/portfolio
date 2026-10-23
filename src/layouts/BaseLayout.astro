@@ -6,15 +6,36 @@
 import MainHead from '../components/MainHead.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
+import MobileDock from '../components/MobileDock.astro';
+import CommandPalette from '../components/CommandPalette.astro';
 
 interface Props {
 	title?: string | undefined;
 	description?: string | undefined;
 	/** Full-screen page (the film desk): the nav floats over it and there's no footer. */
 	immersive?: boolean;
+	/** Sticky nav whose logo the page's hero name docks into (see Nav.astro). */
+	dockBrand?: boolean;
+	/** Keep the page out of search results (prototypes under /lab). */
+	noindex?: boolean;
+	/** Sky effects tier: 'observatory' opts the page into the interactive sky (src/scripts/sky). */
+	sky?: 'observatory';
+	/** Phones get the bottom nav dock instead of the hamburger menu. */
+	mobileDock?: boolean;
+	/** Mount the command palette (⌘K) and its desktop nav trigger. */
+	palette?: boolean;
 }
 
-const { title, description, immersive = false } = Astro.props;
+const {
+	title,
+	description,
+	immersive = false,
+	dockBrand = false,
+	noindex = false,
+	sky,
+	mobileDock = false,
+	palette = false,
+} = Astro.props;
 
 // Which "world" is this page in? The photography section gets the editorial
 // theme (see tokens.css `html[data-section="photography"]`). Computed server-side
@@ -27,9 +48,9 @@ const section =
 
 <html lang="en" data-section={section}>
 	<head>
-		<MainHead title={title} description={description} />
+		<MainHead title={title} description={description} noindex={noindex} />
 	</head>
-	<body>
+	<body data-sky={sky}>
 		{/*
 			The canvas renders ambient sky effects: clouds in light mode and
 			stars/meteors in dark mode (src/scripts/sky, drawn off the main thread
@@ -39,11 +60,13 @@ const section =
 		*/}
 		<div class="stack backgrounds">
 			<canvas class="twinkling-stars" transition:persist="sky"></canvas>
-			<div class="content">
-				<Nav floating={immersive} />
+			<div class:list={['content', { 'has-mobile-dock': mobileDock }]}>
+				<Nav floating={immersive} dockBrand={dockBrand} mobileDock={mobileDock} palette={palette} />
 				<slot />
 				{!immersive && <Footer />}
 			</div>
+			{mobileDock && <MobileDock />}
+			{palette && <CommandPalette />}
 		</div>
 
 		<!--
@@ -112,6 +135,13 @@ const section =
 			.content {
 				position: relative;
 				z-index: 2;
+			}
+
+			/* Room under the footer for the bottom dock. */
+			@media (max-width: 49.99em) {
+				.content.has-mobile-dock {
+					padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+				}
 			}
 
 			@media (forced-colors: active) {

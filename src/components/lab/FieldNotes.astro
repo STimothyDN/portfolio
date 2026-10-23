@@ -1,0 +1,319 @@
+---
+/**
+ * Fig. 2 — the scannable rewrite of the Skills box: what I build with
+ * (stack by layer), what I care about in data & AI (three principles), and
+ * life off the clock (a short logbook). All copy lives in the data below.
+ */
+import Icon from '../Icon.astro';
+
+/* ── Copy ─────────────────────────────────────────────────────────────── */
+
+const software = {
+	lead: 'Human-centered frontend work, with professional experience across the whole stack.',
+	stack: [
+		{ layer: 'Frontend', tools: ['React', 'Vue', 'Svelte'] },
+		{ layer: 'Backend', tools: ['Django', 'FastAPI', 'PostgreSQL', 'harness.js'] },
+		{ layer: 'Cloud', tools: ['AWS', 'Azure', 'Docker'] },
+		{ layer: 'Data & viz', tools: ['Python', 'R + tidyverse', 'Databricks', 'D3.js', 'Highcharts'] },
+	],
+	note: 'Svelte for journalism; Python, R and D3 for data visualization and analysis.',
+};
+
+const dataAi = {
+	lead: 'Data science and AI for the public good — learning what generative AI can do, and using it ethically in workflows that center the worker.',
+	principles: ['Human-autonomy centered', 'Open-source oriented', 'Science for the public good'],
+};
+
+const offTheClock: { what: string; when: string; href?: string; external?: boolean }[] = [
+	{ what: 'DJ & producer', when: 'since 2021', href: 'https://soundcloud.com/timo_on_duty', external: true },
+	{ what: 'Dancer', when: 'since I was a kid' },
+	{ what: 'Photographer', when: 'new camera, 2026', href: '/photography/' },
+	{ what: 'Hockey', when: 'learning now' },
+	{ what: 'Cooking & hiking', when: 'whenever I can' },
+	{ what: 'Dog dad to Biko', when: 'full-time' },
+];
+---
+
+<section class="notes" aria-labelledby="notes-title">
+	<h2 id="notes-title" class="caption" data-animate="fade">
+		<span class="fig">Fig. 2</span><span class="sep" aria-hidden="true">·</span>Field notes
+	</h2>
+
+	<div class="columns" data-animate-group data-stagger="0.12">
+		<article class="column">
+			<header class="head">
+				<span class="index" aria-hidden="true">01</span>
+				<Icon icon="terminal-window" size="1.25rem" />
+				<h3>Software</h3>
+			</header>
+			<p class="lead">{software.lead}</p>
+			<dl class="stack">
+				{
+					software.stack.map(({ layer, tools }) => (
+						<div class="layer">
+							<dt>{layer}</dt>
+							<dd>
+								<ul class="chips">
+									{tools.map((tool) => (
+										<li>{tool}</li>
+									))}
+								</ul>
+							</dd>
+						</div>
+					))
+				}
+			</dl>
+			<p class="note">{software.note}</p>
+		</article>
+
+		<article class="column">
+			<header class="head">
+				<span class="index" aria-hidden="true">02</span>
+				<Icon icon="strategy" size="1.25rem" />
+				<h3>Data science &amp; AI</h3>
+			</header>
+			<p class="lead">{dataAi.lead}</p>
+			<ol class="principles">
+				{dataAi.principles.map((principle) => <li>{principle}</li>)}
+			</ol>
+		</article>
+
+		<article class="column">
+			<header class="head">
+				<span class="index" aria-hidden="true">03</span>
+				<Icon icon="trophy" size="1.25rem" />
+				<h3>Off the clock</h3>
+			</header>
+			<ul class="log">
+				{
+					offTheClock.map(({ what, when, href, external }) => (
+						<li>
+							{href ? (
+								<a href={href} {...(external ? { target: '_blank', rel: 'noopener' } : {})}>
+									{what}
+									<span aria-hidden="true">{external ? ' ↗' : ' →'}</span>
+									{external && <span class="sr-only"> (opens in a new tab)</span>}
+								</a>
+							) : (
+								<span>{what}</span>
+							)}
+							<span class="when">{when}</span>
+						</li>
+					))
+				}
+			</ul>
+		</article>
+	</div>
+</section>
+
+<style>
+	.notes {
+		--mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+		--ink: var(--link-color);
+		--hairline: color-mix(in oklch, var(--gray-0) 12%, transparent);
+
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.caption {
+		font-family: var(--mono);
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-200);
+	}
+
+	.fig {
+		color: var(--ink);
+	}
+
+	.sep {
+		margin-inline: 0.5em;
+		color: var(--gray-400);
+	}
+
+	.columns {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.column {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1.25rem;
+		border: 1px solid var(--hairline);
+		border-radius: 1rem;
+		background-color: var(--gray-999_65);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.head {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		color: var(--ink);
+	}
+
+	.index {
+		font-family: var(--mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.08em;
+		color: var(--gray-400);
+	}
+
+	h3 {
+		font-size: var(--text-xl);
+		color: var(--gray-0);
+	}
+
+	.lead {
+		color: var(--gray-300);
+	}
+
+	/* Stack: one row per layer, a mono label beside its chips. */
+	.stack {
+		display: grid;
+		gap: 0.625rem;
+		margin: 0;
+	}
+
+	.layer {
+		display: grid;
+		grid-template-columns: 5.5rem minmax(0, 1fr);
+		align-items: baseline;
+		gap: 0.75rem;
+	}
+
+	dt {
+		font-family: var(--mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--gray-400);
+	}
+
+	dd {
+		margin: 0;
+	}
+
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.chips li {
+		padding: 0.2rem 0.6rem;
+		border: 1px solid var(--hairline);
+		border-radius: 999rem;
+		background: color-mix(in oklch, var(--gray-0) 4%, transparent);
+		font-size: var(--text-sm);
+		line-height: 1.4;
+		color: var(--gray-100);
+	}
+
+	.note {
+		font-size: var(--text-sm);
+		color: var(--gray-400);
+	}
+
+	/* Principles: numbered, set like a manifesto. */
+	.principles {
+		display: grid;
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: principle;
+	}
+
+	.principles li {
+		counter-increment: principle;
+		display: flex;
+		align-items: baseline;
+		gap: 0.75rem;
+		padding: 0.625rem 0.75rem;
+		border-left: 2px solid var(--ink);
+		border-radius: 0 0.5rem 0.5rem 0;
+		background: color-mix(in oklch, var(--gray-0) 4%, transparent);
+		font-family: var(--font-brand);
+		font-size: var(--text-lg);
+		font-weight: 500;
+		color: var(--gray-100);
+	}
+
+	.principles li::before {
+		content: counter(principle, decimal-leading-zero);
+		font-family: var(--mono);
+		font-size: 0.6875rem;
+		font-weight: 400;
+		color: var(--ink);
+	}
+
+	/* Logbook: what on the left, since-when in mono on the right. */
+	.log {
+		display: grid;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.log li {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1rem;
+		padding-block: 0.6rem;
+		border-bottom: 1px dashed var(--hairline);
+		color: var(--gray-100);
+	}
+
+	.log li:last-child {
+		border-bottom: 0;
+	}
+
+	.log a {
+		color: var(--gray-100);
+		text-decoration: underline;
+		text-decoration-color: color-mix(in oklch, var(--ink) 55%, transparent);
+		text-underline-offset: 3px;
+	}
+
+	.log a:hover,
+	.log a:focus-visible {
+		color: var(--ink);
+	}
+
+	.when {
+		font-family: var(--mono);
+		font-size: 0.75rem;
+		letter-spacing: 0.04em;
+		text-align: right;
+		color: var(--gray-400);
+	}
+
+	@media (min-width: 50em) {
+		.notes {
+			gap: 1.25rem;
+		}
+
+		.columns {
+			display: grid;
+			grid-template-columns: 1.25fr 1fr 1fr;
+			gap: 1.25rem;
+		}
+
+		.column {
+			padding: 1.75rem;
+			border-radius: 1.25rem;
+		}
+	}
+</style>

@@ -86,7 +86,42 @@ import Icon from './Icon.astro';
 </style>
 
 <script>
+	const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+	/**
+	 * Observatory pages turn the switch into a sky event: a view transition
+	 * where night falls from the top of the screen (dusk) or day rises from
+	 * the horizon (dawn), a band of sunset/sunrise colour riding the edge.
+	 * The new state is live, so the sky canvas swaps to stars or clouds under
+	 * the sweep as it passes. CSS: "7. THEME SWEEP" in transitions.css.
+	 */
+	function sweepTheme(dark: boolean, apply: () => void) {
+		const canSweep =
+			document.body.dataset.sky === 'observatory' && 'startViewTransition' in document && !reducedMotion.matches;
+		if (!canSweep) return apply();
+
+		const root = document.documentElement;
+		const direction = dark ? 'dusk' : 'dawn';
+		// Exists only in the new state, so the transition gets a lone, animatable
+		// image of it; its band fades itself out before the transition ends.
+		const glow = document.createElement('div');
+		glow.className = 'theme-sweep-glow';
+		glow.dataset.direction = direction;
+		glow.append(document.createElement('span'));
+		root.classList.add('theme-sweep', `theme-sweep-${direction}`);
+		const transition = document.startViewTransition(() => {
+			apply();
+			document.body.append(glow);
+		});
+		transition.finished.finally(() => {
+			glow.remove();
+			root.classList.remove('theme-sweep', `theme-sweep-${direction}`);
+		});
+	}
+
 	class ThemeToggle extends HTMLElement {
+		private observer: MutationObserver | null = null;
+
 		constructor() {
 			super();
 
@@ -94,8 +129,10 @@ import Icon from './Icon.astro';
 
 			/** Set the theme to dark/light mode. */
 			const setTheme = (dark: boolean) => {
-				document.documentElement.classList[dark ? 'add' : 'remove']('theme-dark');
-				button.setAttribute('aria-pressed', String(dark));
+				sweepTheme(dark, () => {
+					document.documentElement.classList[dark ? 'add' : 'remove']('theme-dark');
+					button.setAttribute('aria-pressed', String(dark));
+				});
 			};
 
 			// Toggle the theme when a user clicks the button. This is the only place
@@ -120,6 +157,17 @@ import Icon from './Icon.astro';
 			const syncButton = () => button.setAttribute('aria-pressed', String(this.isDark()));
 			syncButton();
 			requestAnimationFrame(syncButton);
+			// A page can carry more than one toggle (e.g. the mobile header's and
+			// the menu's), and the command palette switches themes too: follow <html>.
+			this.observer = new MutationObserver(syncButton);
+		}
+
+		connectedCallback() {
+			this.observer?.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+		}
+
+		disconnectedCallback() {
+			this.observer?.disconnect();
 		}
 
 		isDark() {
