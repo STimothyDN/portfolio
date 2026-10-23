@@ -7,7 +7,7 @@ interface Props {
 	floating?: boolean;
 	/**
 	 * Stick to the top and let the page's hero name dock into the logo spot
-	 * (the /lab Observatory prototype). The page drives `--dock-p` (0 → 1) on
+	 * (the Observatory home page). The page drives `--dock-p` (0 → 1) on
 	 * <body> and marks it [data-dock]; the "Timo3" text stays hidden until then.
 	 */
 	dockBrand?: boolean;
@@ -61,7 +61,7 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 		}
 	</div>
 	<div id="menu-content">
-		<ul class="nav-items">
+		<ul class="nav-items" data-glass>
 			{
 				textLinks.map(({ label, href }) => {
 					const active =
@@ -244,7 +244,7 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 		padding: 0.1em 0.45em;
 		border-radius: 0.3rem;
 		background: color-mix(in oklch, var(--gray-0) 8%, transparent);
-		font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 	}
 
@@ -427,6 +427,17 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 			background: var(--gradient-stroke);
 			border-radius: 999rem;
 			z-index: -1;
+		}
+
+		/* Liquid glass (scripts/liquid-glass.ts): the gradient border becomes a
+		   true 1px ring — as a full fill it would hide the refracted sky. */
+		:global(html.liquid-glass) .nav-items::before {
+			padding: 1px;
+			-webkit-mask:
+				linear-gradient(#000 0 0) content-box,
+				linear-gradient(#000 0 0);
+			-webkit-mask-composite: xor;
+			mask-composite: exclude;
 		}
 
 		.link {

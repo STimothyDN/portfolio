@@ -10,7 +10,7 @@
  */
 ---
 
-<aside id="telemetry" class="telemetry" aria-label="Telemetry" data-telemetry hidden>
+<aside id="telemetry" class="telemetry" aria-label="Telemetry" data-telemetry data-glass data-glass-blur="10" hidden>
 	<header class="head">
 		<span>Telemetry</span>
 		<button type="button" class="close" data-telemetry-close>
@@ -107,14 +107,23 @@
 		const onStats = (event: Event) => {
 			const s = (event as CustomEvent<SkyStats>).detail;
 			lastStats = performance.now();
-			set('fps', `${s.fps.toFixed(0)} / ${s.capFps} cap`);
+			set('fps', `${s.fps.toFixed(0)} · ${s.capFps ? `${s.capFps} cap (idle)` : 'full rate (live input)'}`);
 			set('cost', `${s.frameMs.toFixed(2)} ms`);
 			const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 			set('bodies', s.night ? `${count(s.stars, 'star')} · ${count(s.meteors, 'meteor')}` : `${count(s.planes, 'plane')} · ${count(s.meteors, 'streak')}`);
-			set('rate', `${s.meteorRate.toFixed(2)}×`);
+			set('rate', `≈${Math.round(s.meteorsPerMinute)}/min (${s.meteorRate.toFixed(2)}×)`);
 			const real = s.realSky;
 			const deg = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(0)}°`;
-			set('model', real ? `BSC5 · ≤ mag ${real.limit.toFixed(1)}` : s.observatory ? 'loading…' : 'random field');
+			set(
+				'model',
+				real
+					? s.starRenderer === 'webgl2'
+						? 'WebGL2 · BSC5 + faint field'
+						: `2D canvas · BSC5 ≤ mag ${real.limit.toFixed(1)}`
+					: s.observatory
+						? 'loading…'
+						: 'random field'
+			);
 			set('gaze', real ? `S, alt ${deg(real.viewAlt)}` : 'n/a');
 			set(
 				'bodies-up',
@@ -192,8 +201,6 @@
 
 <style>
 	.telemetry {
-		--mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-
 		position: fixed;
 		right: 1.5rem;
 		bottom: 1.5rem;
@@ -206,7 +213,7 @@
 		-webkit-backdrop-filter: blur(14px);
 		backdrop-filter: blur(14px);
 		box-shadow: var(--shadow-lg);
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		letter-spacing: 0.04em;
 		font-variant-numeric: tabular-nums;
@@ -215,6 +222,10 @@
 
 	.telemetry[hidden] {
 		display: none;
+	}
+
+	:global(html.liquid-glass) .telemetry {
+		background: color-mix(in oklch, var(--gray-999) 62%, transparent);
 	}
 
 	.head {

@@ -185,10 +185,14 @@ class SkyController {
 			this.night = document.documentElement.classList.contains('theme-dark');
 			this.photo = document.documentElement.dataset.section === 'photography';
 			const target = this.inWorker ? canvas.transferControlToOffscreen() : canvas;
+			// The GPU star layer's canvas (observatory pages draw on it); persisted alongside.
+			const glElement = document.querySelector<HTMLCanvasElement>('.sky-gl');
+			const glTarget = glElement && this.inWorker ? glElement.transferControlToOffscreen() : glElement;
 			this.send(
 				{
 					type: 'attach',
 					canvas: target,
+					glCanvas: glTarget ?? undefined,
 					width: window.innerWidth,
 					height: window.innerHeight,
 					dpr: window.devicePixelRatio || 1,
@@ -197,7 +201,7 @@ class SkyController {
 					active: this.isActive(),
 					reducedMotion,
 				},
-				this.inWorker ? [target as OffscreenCanvas] : []
+				this.inWorker ? [target as OffscreenCanvas, ...(glTarget ? [glTarget as OffscreenCanvas] : [])] : []
 			);
 		}
 		this.scrollTop = document.body.scrollTop;
@@ -205,6 +209,7 @@ class SkyController {
 		this.send({
 			type: 'mode',
 			observatory: this.observatory,
+			pace: document.body.dataset.skyPace === 'calm' ? 'calm' : 'lively',
 			meteorRate: this.observatory ? meteorRate() : 1,
 			shower: this.observatory ? activeShower() : null,
 			site: SITE,
@@ -310,8 +315,7 @@ class SkyController {
 			this.pointer = null;
 		}
 		if (this.scrollTop !== null) {
-			const body = document.body;
-			this.send({ type: 'scroll', top: this.scrollTop, max: Math.max(0, body.scrollHeight - body.clientHeight) });
+			this.send({ type: 'scroll', top: this.scrollTop });
 			this.scrollTop = null;
 		}
 	};

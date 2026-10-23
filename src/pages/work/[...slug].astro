@@ -1,5 +1,5 @@
 ---
-import { type CollectionEntry, getCollection } from 'astro:content';
+import { type CollectionEntry, getCollection, render } from 'astro:content';
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
@@ -19,19 +19,19 @@ interface Props {
 export async function getStaticPaths() {
 	const work = await getCollection('work');
 	return work.map((entry) => ({
-		params: { slug: entry.slug },
+		params: { slug: entry.id },
 		props: { entry },
 	}));
 }
 
 const { entry } = Astro.props;
-const { Content } = await entry.render();
+const { Content } = await render(entry);
 const year = entry.data.publishDate.getFullYear();
 // Same variants as the work index thumb, so the morph lands on a cached file.
 const featured = await workImage(entry.data.img);
 ---
 
-<BaseLayout title={entry.data.title} description={entry.data.description}>
+<BaseLayout title={entry.data.title} description={entry.data.description} skyPace="calm">
 	<div class="stack gap-20">
 		<div class="stack gap-15">
 			<header>
@@ -41,16 +41,16 @@ const featured = await workImage(entry.data.img);
 						title={entry.data.title}
 						align="start"
 						animateTitle={false}
-						titleTransitionName={`work-title-${entry.slug}`}
+						titleTransitionName={`work-title-${entry.id}`}
 					>
 						<div class="details">
 							<div class="meta-stack">
-								<p class="year" transition:name={`work-year-${entry.slug}`}>{year}</p>
+								<p class="year" transition:name={`work-year-${entry.id}`}>{year}</p>
 								<div class="tags">
-									{entry.data.tags.map((t, i) => <div class="tag-transition" transition:name={`work-tag-${entry.slug}-${i}`}><Pill>{t}</Pill></div>)}
+									{entry.data.tags.map((t, i) => <div class="tag-transition" transition:name={`work-tag-${entry.id}-${i}`}><Pill>{t}</Pill></div>)}
 								</div>
 							</div>
-							<p class="description" transition:name={`work-description-${entry.slug}`}>{entry.data.description}</p>
+							<p class="description" transition:name={`work-description-${entry.id}`}>{entry.data.description}</p>
 						</div>
 					</Hero>
 				</div>
@@ -71,7 +71,7 @@ const featured = await workImage(entry.data.img);
 										height={featured.height}
 										alt={entry.data.img_alt || ''}
 										fetchpriority="high"
-										transition:name={`work-image-${entry.slug}`}
+										transition:name={`work-image-${entry.id}`}
 									/>
 								</div>
 							</a>

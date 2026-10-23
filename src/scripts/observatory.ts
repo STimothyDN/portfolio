@@ -1,5 +1,5 @@
 /**
- * Observatory hero (/lab): the name docks into the nav logo on scroll, and
+ * Observatory hero (home page, and the /lab sandbox): the name docks into the nav logo on scroll, and
  * meteors knock the "thy" out of "Timothy".
  *
  * Dock — one progress value drives everything: `--dock-p` (0 → 1 over the

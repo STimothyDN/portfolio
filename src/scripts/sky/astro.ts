@@ -53,12 +53,6 @@ export function toHorizon(ra: number, dec: number, lst: number, lat: number, out
 	return out;
 }
 
-export function horizonFromAltAz(altDeg: number, azDeg: number): Horizon {
-	const alt = altDeg * DEG;
-	const az = azDeg * DEG;
-	return [Math.cos(alt) * Math.sin(az), Math.cos(alt) * Math.cos(az), Math.sin(alt)];
-}
-
 export const altitudeDeg = (v: Horizon) => Math.asin(Math.max(-1, Math.min(1, v[2]))) / DEG;
 
 /* ── Sun ─────────────────────────────────────────────────────────────── */

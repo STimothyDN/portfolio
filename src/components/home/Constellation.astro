@@ -3,9 +3,9 @@
  * Fig. 1 — a constellation shaped like the 3 in Timo3, whose four principal
  * stars are the roles. One list, two layouts:
  *
- * - Desktop: a star chart. The SVG draws the planisphere grid, field stars
- *   and the asterism's lines; the role links sit over it at their star's
- *   coordinates. Hover/focus a star → its run of the line lights up and its
+ * - Desktop: a star chart. The SVG draws the planisphere grid and the
+ *   asterism's lines (the real sky shows through it); the role links sit
+ *   over it at their star's coordinates. Hover/focus a star → its run of the line lights up and its
  *   entry shows in the slot under the chart (CSS :has, no JS).
  * - Phones: the SVG hides and the same list becomes a vertical field guide —
  *   a rail down the left whose fill, and each star on it, light up as they
@@ -108,18 +108,6 @@ const segments = path.slice(0, -1).map(([x1, y1], i) => {
 const roleAt = new Set(roles.map((r) => r.at));
 const minorStars = path.map(([x, y], i) => ({ x, y, i })).filter(({ i }) => !roleAt.has(i));
 
-// Background field stars: seeded so every build draws the same sky.
-let seed = 20261023;
-const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-const field = Array.from({ length: 48 }, (_, i) => ({
-	x: rand() * W,
-	y: rand() * H,
-	r: 0.5 + rand() * 1.2,
-	o: 0.25 + rand() * 0.45,
-	// A handful twinkle; the rest hold still (SVG opacity repaints aren't free).
-	twinkle: i % 5 === 0,
-	delay: (rand() * 6).toFixed(2),
-}));
 
 // Planisphere ring + tick marks.
 const ring = { cx: 200, cy: 262, r: 212 };
@@ -146,10 +134,8 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 <section class="field" aria-labelledby="field-title">
 	<header class="field-head">
 		<h2 id="field-title" class="field-title">
-			<span class="fig">Fig. 1</span>
-			<span class="sep" aria-hidden="true">·</span>
-			4 principal stars<span class="sr-only">: what I do</span>
-			<span class="hint" aria-hidden="true"><span class="sep">·</span> hover one to inspect it</span>
+			<span class="fig">Fig. 1</span><span class="sr-only">: what I do</span>
+			<span class="hint" aria-hidden="true"><span class="sep">·</span>hover a star to inspect it</span>
 		</h2>
 	</header>
 
@@ -163,19 +149,6 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 				{ticks.map((t) => <line {...t} />)}
 				<text x={ring.cx} y={ring.cy - ring.r - 20} text-anchor="middle">N</text>
 				<text x={ring.cx - ring.r - 22} y={ring.cy + 4} text-anchor="middle">E</text>
-			</g>
-			<g class="field-stars">
-				{
-					field.map((s) => (
-						<circle
-							cx={s.x.toFixed(1)}
-							cy={s.y.toFixed(1)}
-							r={s.r.toFixed(2)}
-							class:list={{ twinkle: s.twinkle }}
-							style={`--o:${s.o.toFixed(2)};--tw:${s.delay}s`}
-						/>
-					))
-				}
 			</g>
 			<g class="segs">
 				{
@@ -248,7 +221,6 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 
 <style>
 	.field {
-		--mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 		/* The visible accent in both main palettes (violet 67% by night, 44% by day). */
 		--ink: var(--link-color);
 		--line: color-mix(in oklch, var(--gray-0) 30%, transparent);
@@ -261,7 +233,7 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 	}
 
 	.field-head {
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -299,7 +271,7 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 	.label,
 	.detail-meta,
 	.cta {
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
@@ -451,14 +423,9 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 		.grid text {
 			fill: var(--gray-400);
 			stroke: none;
-			font-family: var(--mono);
+			font-family: var(--font-mono);
 			font-size: 11px;
 			letter-spacing: 0.1em;
-		}
-
-		.field-stars circle {
-			fill: var(--gray-0);
-			opacity: var(--o);
 		}
 
 		.seg {
@@ -594,17 +561,13 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 				transform-origin: center;
 			}
 
-			:global(html.anim-ready) :is(.role .label, .grid, .field-stars, .field-head) {
+			:global(html.anim-ready) :is(.role .label, .grid, .field-head) {
 				animation: chart-fade 1.2s 0.4s ease-out backwards;
 			}
 
 			:global(html.anim-ready) .role .label {
 				animation-delay: calc(var(--d) + 0.15s);
 				animation-duration: 0.6s;
-			}
-
-			.field-stars .twinkle {
-				animation: twinkle 5s var(--tw) ease-in-out infinite;
 			}
 		}
 	}
@@ -634,12 +597,6 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 	@keyframes chart-fade {
 		from {
 			opacity: 0;
-		}
-	}
-
-	@keyframes twinkle {
-		50% {
-			opacity: calc(var(--o) * 0.25);
 		}
 	}
 

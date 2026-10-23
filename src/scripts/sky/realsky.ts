@@ -5,11 +5,13 @@
  * renderer — this module carries the catalogue.
  *
  * The view faces south through a stereographic lens whose screen diagonal
- * spans 120° of sky. At the top of the page you look high into the southern
- * sky; scrolling lowers your gaze until the horizon, with a faint glow of
- * city light, rises into view near the footer. The pointer (or phone tilt)
- * looks a few degrees around. Positions follow the real clock: stars are
- * re-placed every few seconds, the Moon and planets every minute.
+ * spans 120° of sky, looking high into the southern sky. Scrolling lowers
+ * the gaze gently — the sky drifts at about an eighth of the page's speed,
+ * a far-background parallax that a worker frame behind can't visibly lag —
+ * and the pointer (or phone tilt) looks a degree or two around. (The
+ * horizon is page content: see ObservatoryHome.astro.) Positions follow the real
+ * clock: stars are re-placed every few seconds, the Moon and planets every
+ * minute.
  */
 import catalog from './bright-stars.json';
 import {
@@ -17,7 +19,6 @@ import {
 	type Horizon,
 	altitudeDeg,
 	galacticPlane,
-	horizonFromAltAz,
 	julian,
 	lstHours,
 	moon,
@@ -30,15 +31,31 @@ import { type Ctx2D, type SkyCanvas, context2d, createSurface } from './surface'
 const DIAG_HALF_FOV = 60 * DEG;
 const FACING_AZ = 180;
 /** How far the pointer/tilt looks around, degrees. */
-const PAN_AZ = 5;
-const PAN_ALT = 3;
+const PAN_AZ = 3;
+const PAN_ALT = 2;
+/** The sky drifts at this fraction of the scroll speed (at the view centre). */
+const SCROLL_DRIFT = 0.12;
 const STAR_SIZES = [0.95, 1.4, 2.15, 3.25, 4.15];
 /** Subtle B−V tints, blue-white → orange-red. */
 const TINTS = ['205, 220, 255', '236, 241, 255', '255, 251, 242', '255, 242, 218', '255, 226, 192', '255, 208, 178'];
 const STARS_EVERY_MS = 5000;
 const BODIES_EVERY_MS = 60000;
 const MILKY_WAY_TINT = '214, 218, 255';
-const CITY_GLOW = '255, 170, 140';
+/**
+ * The near side's maria as seen from Earth, north up: centre (x right, y
+ * down) and radius on the unit disc — enough to read as the Moon, not a dot.
+ */
+const MARIA = [
+	{ x: -0.6, y: -0.02, r: 0.32 }, // Oceanus Procellarum
+	{ x: -0.28, y: -0.42, r: 0.24 }, // Imbrium
+	{ x: 0.18, y: -0.36, r: 0.15 }, // Serenitatis
+	{ x: 0.32, y: -0.08, r: 0.19 }, // Tranquillitatis
+	{ x: 0.66, y: -0.3, r: 0.11 }, // Crisium
+	{ x: 0.56, y: 0.16, r: 0.13 }, // Fecunditatis
+	{ x: 0.3, y: 0.32, r: 0.09 }, // Nectaris
+	{ x: -0.16, y: 0.42, r: 0.15 }, // Nubium
+	{ x: -0.46, y: 0.4, r: 0.09 }, // Humorum
+];
 
 export type StarSprite = { canvas: SkyCanvas; size: number };
 /** Draws one star; the renderer applies its lens and warp. `depth` 0–1 = how near/bright it reads. */
@@ -177,8 +194,11 @@ export class RealSky {
 		ctx.fillRect(0, 0, blob, blob);
 	}
 
-	/** Re-place everything for the current time (cheap to call every frame). */
-	update(now: number) {
+	/**
+	 * Re-place everything for the current time (cheap to call every frame).
+	 * `stars: false` skips the catalogue (the GPU layer turns the sky itself).
+	 */
+	update(now: number, stars = true) {
 		const jd = julian(now);
 		const lat = this.latDeg * DEG;
 		if (now - this.starsAt >= STARS_EVERY_MS) {
@@ -187,7 +207,7 @@ export class RealSky {
 			const sinLat = Math.sin(lat);
 			const cosLat = Math.cos(lat);
 			const v = this.vec;
-			for (let i = 0; i < this.count; i++) {
+			for (let i = 0; stars && i < this.count; i++) {
 				const ha = this.lst - this.ra[i];
 				const cosHa = Math.cos(ha);
 				v[i * 3] = -this.cosDec[i] * Math.sin(ha);
@@ -213,22 +233,25 @@ export class RealSky {
 	}
 
 	/**
-	 * Aim the view. `progress` is how far down the page (0–1); `panX`/`panY`
+	 * Aim the view. `scrollTop` is how far down the page (px); `panX`/`panY`
 	 * are the pointer/tilt offsets (−0.5…0.5).
 	 */
-	setView(width: number, height: number, progress: number, panX: number, panY: number) {
+	setView(width: number, height: number, scrollTop: number, panX: number, panY: number) {
 		this.width = width;
 		this.height = height;
 		this.cx = width / 2;
 		this.cy = height / 2;
 		this.K = Math.hypot(width, height) / 2 / Math.tan(DIAG_HALF_FOV / 2);
 		this.limit = width * height >= 1.1e6 ? 6.5 : width * height >= 5e5 ? 6.0 : 5.6;
-		// Top of the page: the bottom edge sits ~22° up. Bottom of the page:
-		// the horizon rides about a seventh of the way up the screen.
+		// Top of the page: the bottom edge sits ~22° up. Scrolling lowers the
+		// gaze at SCROLL_DRIFT of the page's speed (screen px per degree at the
+		// centre of a stereographic view is K/2 per radian), never far enough
+		// to bring the horizon itself into view.
 		const toEdge = (2 * Math.atan(height / 2 / this.K)) / DEG;
+		const pxPerDeg = (this.K / 2) * DEG;
 		const top = Math.min(80, 22 + toEdge);
-		const bottom = (2 * Math.atan((0.72 * height) / 2 / this.K)) / DEG;
-		this.viewAlt = top + (bottom - top) * smoothstep(0, 1, progress) + panY * 2 * PAN_ALT;
+		const gaze = Math.max(toEdge + 4, top - (scrollTop * SCROLL_DRIFT) / pxPerDeg);
+		this.viewAlt = gaze + panY * 2 * PAN_ALT;
 		this.viewAz = FACING_AZ - panX * 2 * PAN_AZ;
 
 		const az = this.viewAz * DEG;
@@ -237,6 +260,11 @@ export class RealSky {
 		this.f = [cl * sa, cl * ca, sl];
 		this.r = [ca, -sa, 0];
 		this.u = [-sa * sl, -ca * sl, cl];
+	}
+
+	/** The current view, for the GPU star layer (glsky.ts) to project identically. */
+	get view() {
+		return { r: this.r, u: this.u, f: this.f, K: this.K };
 	}
 
 	/** Stereographic projection of a horizon-frame vector; false if it's behind the viewer. */
@@ -311,7 +339,10 @@ export class RealSky {
 		ctx.restore();
 	}
 
-	/** The Moon (drawn ~3× true size), lit on the side facing the Sun. */
+	/**
+	 * The Moon (drawn ~3× true size): lit on the side facing the Sun, with
+	 * limb darkening and its maria turned to the Moon's real north on screen.
+	 */
 	drawMoon(ctx: Ctx2D) {
 		const m = this.moonBody;
 		if (!m) return;
@@ -319,11 +350,17 @@ export class RealSky {
 		if (z < -0.02 || !this.project(x, y, z, this.pt) || !this.onScreen(this.pt, 60)) return;
 		const mx = this.pt.x;
 		const my = this.pt.y;
-		// Bright-limb direction on screen: step a little along the great circle toward the Sun.
-		const s = this.sunVec;
-		const toward = this.pt;
-		if (!this.project(x + (s[0] - x) * 0.02, y + (s[1] - y) * 0.02, z + (s[2] - z) * 0.02, toward)) return;
-		const angle = Math.atan2(toward.y - my, toward.x - mx);
+		// Screen directions from the Moon: step a little along the great
+		// circle toward the Sun (the bright limb) and toward the celestial
+		// pole (the Moon's north, near enough).
+		const directionTo = (t: Horizon) => {
+			if (!this.project(x + (t[0] - x) * 0.02, y + (t[1] - y) * 0.02, z + (t[2] - z) * 0.02, this.pt)) return null;
+			return Math.atan2(this.pt.y - my, this.pt.x - mx);
+		};
+		const lat = this.latDeg * DEG;
+		const angle = directionTo(this.sunVec);
+		const north = directionTo([0, Math.cos(lat), Math.sin(lat)]);
+		if (angle === null || north === null) return;
 		const radius = clamp(this.K * 0.016, 7, 14);
 		const fade = smoothstep(-0.02, 0.15, z);
 
@@ -347,58 +384,37 @@ export class RealSky {
 		// bulging away from the Sun when gibbous, toward it when a crescent.
 		ctx.rotate(angle);
 		const terminator = Math.cos(m.phaseAngle);
-		ctx.fillStyle = `rgba(250, 248, 238, ${0.95 * fade})`;
 		ctx.beginPath();
 		ctx.arc(0, 0, radius, -Math.PI / 2, Math.PI / 2);
 		if (terminator >= 0) ctx.ellipse(0, 0, radius * terminator, radius, 0, Math.PI / 2, (3 * Math.PI) / 2);
 		else ctx.ellipse(0, 0, radius * -terminator, radius, 0, Math.PI / 2, -Math.PI / 2, true);
 		ctx.closePath();
-		ctx.fill();
-		ctx.restore();
-	}
+		ctx.clip();
 
-	/** City glow along the horizon and the ground below it, once they're in view. */
-	drawHorizon(ctx: Ctx2D) {
-		const points: Point[] = [];
-		let top = Infinity;
-		for (let d = -120; d <= 120; d += 4) {
-			const [x, y, z] = horizonFromAltAz(0, this.viewAz + d);
-			if (!this.project(x, y, z, this.pt)) continue;
-			points.push({ ...this.pt });
-			if (Math.abs(this.pt.x - this.cx) < this.width / 2) top = Math.min(top, this.pt.y);
-		}
-		if (points.length < 2 || top > this.height * 1.1) return;
-
-		// City glow hugging the (curved) horizon: stacked soft strokes of the
-		// horizon line, each wider and fainter; the ground then covers their
-		// lower halves.
-		const trace = () => {
+		// Inside the lit part, turn to the Moon's own frame (north up).
+		ctx.rotate(north + Math.PI / 2 - angle);
+		ctx.globalAlpha = fade;
+		const surface = ctx.createRadialGradient(-radius * 0.2, -radius * 0.2, 0, 0, 0, radius);
+		surface.addColorStop(0, 'rgb(244, 242, 236)');
+		surface.addColorStop(0.75, 'rgb(226, 224, 220)');
+		surface.addColorStop(1, 'rgb(196, 195, 194)');
+		ctx.fillStyle = surface;
+		ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+		for (const mare of MARIA) {
+			const cx = mare.x * radius;
+			const cy = mare.y * radius;
+			// Slightly oversized and soft-edged, so neighbouring seas run together.
+			const r = mare.r * radius * 1.2;
+			const patch = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+			patch.addColorStop(0, 'rgba(118, 120, 130, 0.38)');
+			patch.addColorStop(0.6, 'rgba(118, 120, 130, 0.24)');
+			patch.addColorStop(1, 'rgba(118, 120, 130, 0)');
+			ctx.fillStyle = patch;
 			ctx.beginPath();
-			ctx.moveTo(points[0].x, points[0].y);
-			for (const p of points) ctx.lineTo(p.x, p.y);
-		};
-		ctx.save();
-		ctx.lineJoin = 'round';
-		trace();
-		for (let k = 6; k >= 1; k--) {
-			ctx.lineWidth = k * this.height * 0.03;
-			ctx.strokeStyle = `rgba(${CITY_GLOW}, ${0.035 - k * 0.0035})`;
-			ctx.stroke();
+			ctx.arc(cx, cy, r, 0, Math.PI * 2);
+			ctx.fill();
 		}
 		ctx.restore();
-
-		trace();
-		ctx.lineTo(points.at(-1)!.x, this.height + 60);
-		ctx.lineTo(points[0].x, this.height + 60);
-		ctx.closePath();
-		const ground = ctx.createLinearGradient(0, top, 0, top + 80);
-		ground.addColorStop(0, 'rgba(8, 7, 16, 0.75)');
-		ground.addColorStop(1, 'rgba(6, 5, 12, 0.92)');
-		ctx.fillStyle = ground;
-		ctx.fill();
-		ctx.strokeStyle = `rgba(${CITY_GLOW}, 0.18)`;
-		ctx.lineWidth = 1;
-		ctx.stroke();
 	}
 
 	/** Screen position of the active shower's radiant, if it's above the horizon. */

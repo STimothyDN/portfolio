@@ -15,14 +15,15 @@
     "generate-caption": "node --env-file=.env scripts/generate-caption.mjs"
   },
   "dependencies": {
-    "@astrojs/vue": "^5.1.4",
+    "@astrojs/vue": "^7.1.2",
     "@fontsource-variable/bricolage-grotesque": "^5.2.10",
     "@fontsource-variable/fraunces": "^5.2.9",
+    "@fontsource-variable/geist-mono": "^5.3.0",
     "@fontsource-variable/instrument-sans": "^5.2.8",
     "@fontsource-variable/newsreader": "^5.2.10",
     "@fontsource/permanent-marker": "^5.3.0",
     "@tailwindcss/vite": "^4.3.2",
-    "astro": "^5.17.3",
+    "astro": "^7.4.2",
     "d3": "^7.9.0",
     "d3-array": "^3.2.4",
     "d3-scale-chromatic": "^3.1.0",

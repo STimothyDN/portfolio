@@ -2,7 +2,8 @@
 /**
  * Fig. 2 — the scannable rewrite of the Skills box: what I build with
  * (stack by layer), what I care about in data & AI (three principles), and
- * life off the clock (a short logbook). All copy lives in the data below.
+ * life off the clock (the original paragraph, in my own voice). All copy
+ * lives in the data below.
  */
 import Icon from '../Icon.astro';
 
@@ -24,14 +25,9 @@ const dataAi = {
 	principles: ['Human-autonomy centered', 'Open-source oriented', 'Science for the public good'],
 };
 
-const offTheClock: { what: string; when: string; href?: string; external?: boolean }[] = [
-	{ what: 'DJ & producer', when: 'since 2021', href: 'https://soundcloud.com/timo_on_duty', external: true },
-	{ what: 'Dancer', when: 'since I was a kid' },
-	{ what: 'Photographer', when: 'new camera, 2026', href: '/photography/' },
-	{ what: 'Hockey', when: 'learning now' },
-	{ what: 'Cooking & hiking', when: 'whenever I can' },
-	{ what: 'Dog dad to Biko', when: 'full-time' },
-];
+/** Verbatim from the original Skills box: this one reads as prose, not a list. */
+const offTheClock =
+	'Music and dance are a huge part of my life, producing and mixing music as a DJ since 2021, and I have been dancing in some capacity since I was a kid! Outside of those, my other hobbies include cooking, hiking, and being a dog dad for my boy, Biko. Picked up a new camera in 2026 and documenting that journey here, and currently learning how to play hockey!';
 ---
 
 <section class="notes" aria-labelledby="notes-title">
@@ -84,31 +80,13 @@ const offTheClock: { what: string; when: string; href?: string; external?: boole
 				<Icon icon="trophy" size="1.25rem" />
 				<h3>Off the clock</h3>
 			</header>
-			<ul class="log">
-				{
-					offTheClock.map(({ what, when, href, external }) => (
-						<li>
-							{href ? (
-								<a href={href} {...(external ? { target: '_blank', rel: 'noopener' } : {})}>
-									{what}
-									<span aria-hidden="true">{external ? ' ↗' : ' →'}</span>
-									{external && <span class="sr-only"> (opens in a new tab)</span>}
-								</a>
-							) : (
-								<span>{what}</span>
-							)}
-							<span class="when">{when}</span>
-						</li>
-					))
-				}
-			</ul>
+			<p class="lead">{offTheClock}</p>
 		</article>
 	</div>
 </section>
 
 <style>
 	.notes {
-		--mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 		--ink: var(--link-color);
 		--hairline: color-mix(in oklch, var(--gray-0) 12%, transparent);
 
@@ -118,7 +96,7 @@ const offTheClock: { what: string; when: string; href?: string; external?: boole
 	}
 
 	.caption {
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		font-weight: 400;
 		letter-spacing: 0.08em;
@@ -160,7 +138,7 @@ const offTheClock: { what: string; when: string; href?: string; external?: boole
 	}
 
 	.index {
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		letter-spacing: 0.08em;
 		color: var(--gray-400);
@@ -190,7 +168,7 @@ const offTheClock: { what: string; when: string; href?: string; external?: boole
 	}
 
 	dt {
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
@@ -252,52 +230,10 @@ const offTheClock: { what: string; when: string; href?: string; external?: boole
 
 	.principles li::before {
 		content: counter(principle, decimal-leading-zero);
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		font-weight: 400;
 		color: var(--ink);
-	}
-
-	/* Logbook: what on the left, since-when in mono on the right. */
-	.log {
-		display: grid;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-
-	.log li {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 1rem;
-		padding-block: 0.6rem;
-		border-bottom: 1px dashed var(--hairline);
-		color: var(--gray-100);
-	}
-
-	.log li:last-child {
-		border-bottom: 0;
-	}
-
-	.log a {
-		color: var(--gray-100);
-		text-decoration: underline;
-		text-decoration-color: color-mix(in oklch, var(--ink) 55%, transparent);
-		text-underline-offset: 3px;
-	}
-
-	.log a:hover,
-	.log a:focus-visible {
-		color: var(--ink);
-	}
-
-	.when {
-		font-family: var(--mono);
-		font-size: 0.75rem;
-		letter-spacing: 0.04em;
-		text-align: right;
-		color: var(--gray-400);
 	}
 
 	@media (min-width: 50em) {

@@ -9,7 +9,8 @@ interface Props {
 }
 
 const { project, eager = false } = Astro.props;
-const { data, slug } = project;
+// Collection ids are the old slugs (lower-cased file names), so URLs are unchanged.
+const { data, id: slug } = project;
 const year = data.publishDate.getFullYear();
 const img = await workImage(data.img);
 ---

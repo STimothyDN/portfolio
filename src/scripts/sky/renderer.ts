@@ -21,11 +21,15 @@
  *
  * - inactive (hidden tab / photography section) → paused and cleared
  * - reduced motion → single static frame, no drift/parallax
- * - DPR capped at 2, night frames capped at 30fps / day at 18fps
+ * - DPR capped at 2, night frames capped at 30fps / day at 18fps while the
+ *   sky is idle; observatory pages render every display frame while the
+ *   pointer or page is moving (and strikes always do), so nothing tied to
+ *   input trails the page
  */
 import { Daylight } from './daylight';
 import { type Ctx2D, type SkyCanvas, context2d, createSurface } from './surface';
 import type { DrawStar, RealSky, RealSkyStats, StarSprite } from './realsky';
+import type { GLSky } from './glsky';
 
 export type { SkyCanvas };
 
@@ -33,6 +37,8 @@ export type SkyMessage =
 	| {
 			type: 'attach';
 			canvas: SkyCanvas;
+			/** Optional second canvas, under the first, for the GPU star layer. */
+			glCanvas?: SkyCanvas;
 			width: number;
 			height: number;
 			dpr: number;
@@ -52,6 +58,8 @@ export type SkyMessage =
 	| {
 			type: 'mode';
 			observatory: boolean;
+			/** Sporadic meteor pace: 'calm' for long reads. */
+			pace?: 'lively' | 'calm';
 			meteorRate: number;
 			shower?: ActiveShower | null;
 			site?: { lat: number; lon: number };
@@ -59,8 +67,8 @@ export type SkyMessage =
 	/** Pointer position, normalized to -0.5…0.5 across the viewport; `fine` = a mouse (lens-capable). */
 	| { type: 'pointer'; x: number; y: number; fine?: boolean }
 	| { type: 'pointer-out' }
-	/** Scroll position, and the page's maximum (the real sky lowers its gaze as you go). */
-	| { type: 'scroll'; top: number; max?: number }
+	/** Scroll position (the real sky lowers its gaze as you go down the page). */
+	| { type: 'scroll'; top: number }
 	| { type: 'meteor' }
 	/** Aimed meteor (viewport px) that arrives at `to` after `duration` seconds. */
 	| { type: 'strike'; from: Point; to: Point; duration: number }
@@ -85,11 +93,15 @@ export type SkyStats = {
 	night: boolean;
 	observatory: boolean;
 	meteorRate: number;
+	/** Expected meteors a minute (night sky) at the current rate. */
+	meteorsPerMinute: number;
 	width: number;
 	height: number;
 	dpr: number;
 	shower: string | null;
 	realSky: RealSkyStats | null;
+	/** What draws the stars: the GPU layer, or the 2D canvas. */
+	starRenderer: 'webgl2' | '2d';
 };
 
 export type ActiveShower = { name: string; ra: number; dec: number; extra: number };
@@ -112,6 +124,11 @@ type Meteor = {
 	/** Where it lit up: the tail never reaches back past this. */
 	ox: number;
 	oy: number;
+	/** Peak opacity and line width (faint sporadics vs. bright ones). */
+	peak: number;
+	width: number;
+	/** Brighten then fade (observatory) instead of starting at full and fading. */
+	envelope: boolean;
 	x: number;
 	y: number;
 	vx: number;
@@ -145,14 +162,25 @@ const MAX_STARS = 1000;
 const MAX_DPR = 2;
 const TARGET_FRAME_MS = 1000 / 30;
 const DAY_TARGET_FRAME_MS = 1000 / 18;
-/** Strikes and sparks move tens of px per frame; run them at full rate. */
-const FAST_FRAME_MS = 1000 / 60;
+/** Strikes, sparks and live input render on every display frame (60/120Hz). */
+const FAST_FRAME_MS = 0;
+/** How long after the last pointer/scroll input the sky keeps full rate. */
+const INTERACTIVE_MS = 700;
 /** Daytime strikes can't be white-on-white: they borrow the aurora violet. */
 const DAY_STRIKE_COLOR = '124, 58, 237';
 const STRIKE_TAIL = 210;
 const SPARK_GRAVITY = 900;
 const METEORS_PER_SECOND = 0.35;
 const MAX_METEORS = 1;
+/**
+ * Observatory sporadics: frequent, but mostly faint and short-lived, lighting
+ * up mid-sky in every direction — a lively sky rather than things falling.
+ */
+const OBS_METEORS_PER_SECOND = 1.1;
+/** Long reads (body[data-sky-pace='calm']): about a third of the sporadics. */
+const CALM_PACE = 0.3;
+const OBS_MAX_METEORS = 3;
+const OBS_BRIGHT_SHARE = 0.18;
 const PERIMETER_OFFSET = 24;
 const OUTER_PADDING = 72;
 const STAR_SIZES = [0.95, 1.4, 2.15, 3.25, 4.15];
@@ -171,6 +199,8 @@ const WARP_SHUTTER = 0.014;
 const WARP_MAX = 70;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+/** Frame-rate-independent easing factor: the share of the gap closed this frame at `rate`/s. */
+const approach = (rate: number, dt: number) => 1 - Math.exp(-rate * dt);
 const randomBetween = (min: number, max: number) => Math.random() * (max - min) + min;
 
 // Workers get rAF in every engine that gives them OffscreenCanvas; the
@@ -219,16 +249,23 @@ export class SkyRenderer {
 	private lastScrollTop = 0;
 	private daylight = new Daylight();
 	private shower: ActiveShower | null = null;
+	private pace = 1;
 	private site = { lat: 35.9, lon: -78.86 };
 	private realSky: RealSky | null = null;
 	private realSkyLoading = false;
-	private scrollMax = 0;
+	private glCanvas: SkyCanvas | null = null;
+	private glSky: GLSky | null = null;
+	private glState: 'none' | 'loading' | 'ready' | 'failed' = 'none';
+	/** The GPU canvas is showing a frame (and needs clearing when it shouldn't). */
+	private glPainted = false;
 	// Per-frame lens/warp state for drawStarPoint.
 	private lensPx = 0;
 	private lensPy = 0;
 	private warpNow = 0;
 	private radiantPt: Point = { x: 0, y: 0 };
 	private sunPt: Point = { x: 0, y: 0 };
+	/** Last pointer/scroll input (renderer clock): drives the full-rate window. */
+	private lastInput = -Infinity;
 	// Telemetry.
 	private hud = false;
 	private statFrames = 0;
@@ -244,6 +281,7 @@ export class SkyRenderer {
 				this.starColor = msg.starColor;
 				this.active = msg.active;
 				this.reducedMotion = msg.reducedMotion;
+				this.glCanvas = msg.glCanvas ?? null;
 				this.attach(msg.canvas, msg.width, msg.height, msg.dpr);
 				break;
 			case 'resize':
@@ -264,6 +302,7 @@ export class SkyRenderer {
 				break;
 			case 'mode':
 				this.observatory = msg.observatory;
+				this.pace = msg.pace === 'calm' ? CALM_PACE : 1;
 				this.meteorRate = Math.max(0, msg.meteorRate);
 				this.shower = msg.shower ?? null;
 				if (msg.site) this.site = msg.site;
@@ -276,16 +315,21 @@ export class SkyRenderer {
 				this.pointerTargetX = msg.x;
 				this.pointerTargetY = msg.y;
 				this.lensOn = this.observatory && !!msg.fine;
+				this.lastInput = performance.now();
 				break;
 			case 'pointer-out':
 				this.lensOn = false;
 				break;
 			case 'scroll':
 				this.scrollTop = msg.top;
-				if (msg.max !== undefined) this.scrollMax = msg.max;
+				this.lastInput = performance.now();
 				break;
 			case 'meteor':
-				if (this.ctx && this.night && this.active && !this.reducedMotion) this.spawnMeteor();
+				// Asked for by a page (the 404's welcome): always a bright one.
+				if (this.ctx && this.night && this.active && !this.reducedMotion) {
+					if (this.observatory) this.spawnSporadic(true);
+					else this.spawnMeteor();
+				}
 				break;
 			case 'strike':
 				if (this.ctx && this.active && !this.reducedMotion) {
@@ -327,6 +371,7 @@ export class SkyRenderer {
 		if (!this.ctx || !this.active) {
 			this.stop();
 			this.clear();
+			this.clearGL();
 			this.strikes = [];
 			this.sparks = [];
 			this.daylight.clear();
@@ -370,6 +415,7 @@ export class SkyRenderer {
 		this.ctx.setTransform(nextDpr, 0, 0, nextDpr, 0, 0);
 		this.createStarSprites();
 		this.realSky?.setDpr(nextDpr);
+		this.glSky?.resize(nextWidth, nextHeight, nextDpr);
 		this.createSunlightSprite();
 		this.createAuroraSprite();
 		this.reconcileStars(forceRebuild);
@@ -518,7 +564,40 @@ export class SkyRenderer {
 			this.realSky.setDpr(this.dpr);
 			this.realSky.setRadiant(this.shower);
 			this.drawStaticFrame();
+			this.loadGL();
 		});
+	}
+
+	/** The GPU star layer: loaded after the real sky; any failure leaves the 2D stars in charge. */
+	private loadGL() {
+		if (!this.glCanvas || this.glState !== 'none') return;
+		this.glState = 'loading';
+		void import('./glsky')
+			.then(({ GLSky }) => {
+				this.glSky = new GLSky(this.glCanvas!, this.site.lat, this.site.lon);
+				this.glSky.resize(this.width, this.height, this.dpr);
+				this.glState = 'ready';
+			})
+			.catch(() => {
+				this.glState = 'failed';
+			})
+			.finally(() => this.drawStaticFrame());
+	}
+
+	/** The GPU layer, while it's usable (not failed, context not lost). */
+	private get gl() {
+		return this.glState === 'ready' && this.glSky?.ok ? this.glSky : null;
+	}
+
+	/** This frame's stars go to the GPU layer (night, observatory, layer ready). */
+	private get usingGL() {
+		return this.night && !!this.sky && !!this.gl;
+	}
+
+	private clearGL() {
+		if (!this.glPainted) return;
+		this.glSky?.clear();
+		this.glPainted = false;
 	}
 
 	/** With the real sky: sporadic rate plus the shower's, scaled by its radiant's height. */
@@ -530,10 +609,15 @@ export class SkyRenderer {
 
 	private spawnMeteor() {
 		const rate = this.effectiveMeteorRate;
-		if (this.meteors.length >= Math.max(MAX_METEORS, Math.ceil(rate))) return;
+		const max = this.observatory ? OBS_MAX_METEORS + Math.ceil(rate - 1) : Math.max(MAX_METEORS, Math.ceil(rate));
+		if (this.meteors.length >= max) return;
 		// Shower members fly out from the radiant; the rest are sporadic.
 		if (rate > 1 && Math.random() < (rate - 1) / rate && this.sky?.radiantOnScreen(this.radiantPt)) {
 			if (this.spawnShowerMeteor(this.radiantPt.x, this.radiantPt.y)) return;
+		}
+		if (this.observatory) {
+			this.spawnSporadic();
+			return;
 		}
 
 		const start = this.randomPerimeterPoint();
@@ -551,6 +635,9 @@ export class SkyRenderer {
 		this.meteors.push({
 			ox: start.x,
 			oy: start.y,
+			peak: 1,
+			width: 1.8,
+			envelope: false,
 			x: start.x,
 			y: start.y,
 			vx: Math.cos(angle) * speed,
@@ -559,6 +646,35 @@ export class SkyRenderer {
 			length: randomBetween(90, 170),
 			age: 0,
 			maxAge: randomBetween(0.55, 0.9),
+		});
+	}
+
+	/**
+	 * Observatory sporadic: lights up mid-sky rather than crossing the whole
+	 * screen, in any direction (mostly downward-ish, as the eye expects). Most
+	 * are faint, short and quick; about one in six is a bright, long one.
+	 */
+	private spawnSporadic(forceBright = false) {
+		const bright = forceBright || Math.random() < OBS_BRIGHT_SHARE;
+		const x = randomBetween(0.04, 0.96) * this.width;
+		const y = randomBetween(0.03, 0.78) * this.height;
+		const angle =
+			Math.random() < 0.75 ? randomBetween(12, 168) * (Math.PI / 180) : randomBetween(0, Math.PI * 2);
+		const speed = bright ? randomBetween(520, 760) : randomBetween(360, 560);
+		this.meteors.push({
+			ox: x,
+			oy: y,
+			peak: bright ? 0.95 : randomBetween(0.3, 0.6),
+			width: bright ? 1.8 : 1.1,
+			envelope: true,
+			x,
+			y,
+			vx: Math.cos(angle) * speed,
+			vy: Math.sin(angle) * speed,
+			speed,
+			length: bright ? randomBetween(110, 190) : randomBetween(35, 90),
+			age: 0,
+			maxAge: bright ? randomBetween(0.6, 0.95) : randomBetween(0.28, 0.5),
 		});
 	}
 
@@ -576,6 +692,9 @@ export class SkyRenderer {
 			this.meteors.push({
 				ox: x,
 				oy: y,
+				peak: randomBetween(0.6, 0.95),
+				width: 1.5,
+				envelope: true,
 				x,
 				y,
 				vx: ((x - rx) / d) * speed,
@@ -608,6 +727,7 @@ export class SkyRenderer {
 
 	private get capFrameMs() {
 		if (this.strikes.length || this.sparks.length || this.daylight.busy) return FAST_FRAME_MS;
+		if (this.observatory && performance.now() - this.lastInput < INTERACTIVE_MS) return FAST_FRAME_MS;
 		return this.night ? TARGET_FRAME_MS : DAY_TARGET_FRAME_MS;
 	}
 
@@ -620,18 +740,21 @@ export class SkyRenderer {
 			type: 'stats',
 			fps: (this.statFrames * 1000) / elapsed,
 			frameMs: this.statCost / this.statFrames,
-			capFps: Math.round(1000 / this.capFrameMs),
-			stars: this.night ? (this.sky?.stats().stars ?? this.stars.length) : 0,
+			capFps: this.capFrameMs ? Math.round(1000 / this.capFrameMs) : 0,
+			stars: this.night ? (this.usingGL ? this.gl!.starCount : (this.sky?.stats().stars ?? this.stars.length)) : 0,
 			meteors: this.meteors.length + this.strikes.length,
 			planes: this.daylight.planeCount,
 			night: this.night,
 			observatory: this.observatory,
 			meteorRate: this.effectiveMeteorRate,
+			meteorsPerMinute:
+				60 * (this.observatory ? OBS_METEORS_PER_SECOND * this.pace : METEORS_PER_SECOND) * this.effectiveMeteorRate,
 			width: this.width,
 			height: this.height,
 			dpr: this.dpr,
 			shower: this.shower?.name ?? null,
 			realSky: this.sky?.stats() ?? null,
+			starRenderer: this.usingGL ? 'webgl2' : '2d',
 		});
 		this.statFrames = 0;
 		this.statCost = 0;
@@ -641,20 +764,22 @@ export class SkyRenderer {
 	private render(deltaSeconds: number, elapsedSeconds: number) {
 		if (!this.ctx) return;
 
-		// Ease the pointer offset toward its target for a weighty, lagged feel.
-		const lerp = Math.min(1, deltaSeconds * 3.5);
+		// Ease the pointer offset toward its target: weighty on the main site;
+		// on observatory pages quick enough (~110ms) to feel attached to the hand.
+		// Exponential, so the feel is the same at 30, 60 or 120 frames a second.
+		const lerp = approach(this.observatory ? 9 : 3.5, deltaSeconds);
 		this.pointerX += (this.pointerTargetX - this.pointerX) * lerp;
 		this.pointerY += (this.pointerTargetY - this.pointerY) * lerp;
 
 		if (this.observatory) {
-			// The lens tracks the pointer much more tightly than the parallax.
-			const follow = Math.min(1, deltaSeconds * 12);
+			// The lens all but sits on the pointer (~30ms).
+			const follow = approach(32, deltaSeconds);
 			this.lensX += (this.pointerTargetX - this.lensX) * follow;
 			this.lensY += (this.pointerTargetY - this.lensY) * follow;
-			this.lensAmount += ((this.lensOn ? 1 : 0) - this.lensAmount) * Math.min(1, deltaSeconds * 4);
+			this.lensAmount += ((this.lensOn ? 1 : 0) - this.lensAmount) * approach(5, deltaSeconds);
 			// Scroll velocity (px/s), smoothed so a single jumpy frame can't flash a streak.
 			const velocity = deltaSeconds > 0 ? (this.scrollTop - this.lastScrollTop) / deltaSeconds : 0;
-			this.warp += (velocity - this.warp) * Math.min(1, deltaSeconds * 10);
+			this.warp += (velocity - this.warp) * approach(10, deltaSeconds);
 		} else {
 			this.lensAmount = 0;
 			this.warp = 0;
@@ -665,6 +790,7 @@ export class SkyRenderer {
 		this.warpNow = Math.abs(this.warp) > 40 ? this.warp : 0;
 
 		this.clear();
+		if (!this.usingGL) this.clearGL();
 		if (!this.night) {
 			this.drawDaySky(deltaSeconds, elapsedSeconds);
 		} else {
@@ -672,7 +798,8 @@ export class SkyRenderer {
 			if (this.sky) this.drawRealSky(elapsedSeconds);
 			else this.drawStars(elapsedSeconds);
 
-			if (Math.random() < METEORS_PER_SECOND * this.effectiveMeteorRate * deltaSeconds) {
+			const perSecond = this.observatory ? OBS_METEORS_PER_SECOND * this.pace : METEORS_PER_SECOND;
+			if (Math.random() < perSecond * this.effectiveMeteorRate * deltaSeconds) {
 				this.spawnMeteor();
 			}
 
@@ -808,6 +935,7 @@ export class SkyRenderer {
 	private drawStaticFrame() {
 		if (!this.ctx || !this.active) return;
 		this.clear();
+		if (!this.usingGL) this.clearGL();
 		if (!this.night) {
 			this.drawDaySky(0, performance.now() / 1000);
 			return;
@@ -887,22 +1015,34 @@ export class SkyRenderer {
 
 	/** Where the real sky is looking: down the page lowers the gaze; the pointer looks around. */
 	private aimRealSky(sky: RealSky) {
-		sky.update(Date.now());
-		const progress = this.reducedMotion || this.scrollMax <= 0 ? 0 : clamp(this.scrollTop / this.scrollMax, 0, 1);
-		sky.setView(this.width, this.height, progress, this.pointerX, this.pointerY);
+		sky.update(Date.now(), !this.gl);
+		sky.setView(this.width, this.height, this.reducedMotion ? 0 : this.scrollTop, this.pointerX, this.pointerY);
 	}
 
 	private drawRealSky(elapsedSeconds: number) {
 		const sky = this.sky;
 		if (!this.ctx || !sky) return;
 		this.aimRealSky(sky);
-		sky.drawMilkyWay(this.ctx);
-		this.ctx.save();
-		sky.drawStars(elapsedSeconds, this.drawStarPoint);
-		this.ctx.restore();
+		const gl = this.gl;
+		if (gl) {
+			// Stars and Milky Way on the GPU canvas beneath; this one keeps the bodies.
+			gl.render({
+				view: sky.view,
+				width: this.width,
+				height: this.height,
+				time: elapsedSeconds,
+				lens: { x: this.lensPx, y: this.lensPy, amount: this.lensAmount },
+				warp: this.warpNow,
+			});
+			this.glPainted = true;
+		} else {
+			sky.drawMilkyWay(this.ctx);
+			this.ctx.save();
+			sky.drawStars(elapsedSeconds, this.drawStarPoint);
+			this.ctx.restore();
+		}
 		sky.drawPlanets(this.ctx);
 		sky.drawMoon(this.ctx);
-		sky.drawHorizon(this.ctx);
 	}
 
 	private reconcileClouds(forceRebuild: boolean) {
@@ -1093,13 +1233,17 @@ export class SkyRenderer {
 
 		this.ctx.save();
 		this.ctx.lineCap = 'round';
-		this.ctx.lineWidth = 1.8;
-		this.ctx.shadowBlur = 9;
 		this.ctx.shadowColor = `rgba(${this.starColor}, 0.55)`;
 
 		for (const meteor of this.meteors) {
-			const progress = meteor.age / meteor.maxAge;
-			const opacity = clamp(1 - progress, 0, 1);
+			const progress = clamp(meteor.age / meteor.maxAge, 0, 1);
+			// Envelope: flare up over the first 30% of its life, burn out over the
+			// rest — a meteor igniting, rather than switching on at full.
+			const lit = progress < 0.3 ? progress / 0.3 : 1 - (progress - 0.3) / 0.7;
+			const opacity = meteor.peak * (meteor.envelope ? Math.sin((lit * Math.PI) / 2) : 1 - progress);
+			this.ctx.lineWidth = meteor.width;
+			// Glow only on the bright ones: blur is the costly part of a stroke.
+			this.ctx.shadowBlur = meteor.peak > 0.7 ? 9 : 0;
 			// The trail grows from where the meteor lit up, never past it.
 			const length = Math.min(meteor.length, Math.hypot(meteor.x - meteor.ox, meteor.y - meteor.oy));
 			const tailX = meteor.x - (meteor.vx / meteor.speed) * length;

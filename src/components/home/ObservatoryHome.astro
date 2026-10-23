@@ -1,0 +1,306 @@
+---
+/**
+ * The Observatory home page (rendered by / and by the /lab sandbox).
+ *
+ * - Readout strip: the live sky over RTP (SkyReadout).
+ * - The name docks into the nav logo as you scroll; meteors knock the "thy"
+ *   out on load, on tap, and now and then while idle (scripts/observatory.ts);
+ *   on desktop its letters swell toward the cursor (scripts/name-proximity.ts).
+ * - The roles are a constellation: a star chart beside the name on desktop,
+ *   a scroll-lit field guide under it on phones (Constellation).
+ * - Fig. 2, Field notes: the scannable skills section (FieldNotes).
+ * - The sky runs in observatory mode — the page's BaseLayout must pass
+ *   sky="observatory" (plus dockBrand, mobileDock, palette): the real sky over
+ *   RTP right now, drawn on the GPU where it can be, with lens, warp, tap
+ *   meteors, tilt, contrails and shower meteors from their radiants. ` opens
+ *   the telemetry panel; floating chrome gets liquid glass in Chromium.
+ * - The page ends on a horizon: a glowing arc, with the footer as its ground.
+ */
+import Hero from '../Hero.astro';
+import ContactCTA from '../ContactCTA.astro';
+import SkyReadout from './SkyReadout.astro';
+import Constellation from './Constellation.astro';
+import Telemetry from './Telemetry.astro';
+import FieldNotes from './FieldNotes.astro';
+
+import '@fontsource-variable/geist-mono';
+// The hero name's own cut of Bricolage with all three axes (wght, wdth, opsz):
+// the proximity effect needs width, which the site-wide opsz file lacks.
+import heroFontUrl from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-standard-normal.woff2?url';
+
+import portraitSrc from '../../assets/timothy.jpeg';
+import { responsive } from '../../utils/images';
+
+// Byline avatar: a 3:4 top crop of the portrait, shown in a small circle.
+const avatar = await responsive(portraitSrc, {
+	widths: [96, 160],
+	format: 'webp',
+	crop: { aspect: 3 / 4, position: 'top' },
+});
+---
+
+<div class="stack gap-10 lg:gap-20">
+	<div class="wrapper stack gap-12 lg:gap-20">
+		<section class="obs">
+			<div class="readout-slot" data-animate="fade" data-animate-delay="0.2">
+				<SkyReadout />
+			</div>
+
+			<div class="masthead">
+				<div class="dock" data-dock-name>
+					<Hero
+						title="Timothy Navarro."
+						align="start"
+						size="display"
+						brandSwap={{ keep: 'Timo', swapOut: 'thy', swapIn: '3' }}
+					/>
+				</div>
+				<div class="byline-slot" data-dock-fade>
+					<p class="byline" data-animate="fade-up" data-animate-delay="0.45">
+						<img
+							class="avatar"
+							src={avatar.src}
+							srcset={avatar.srcset}
+							sizes="3rem"
+							width="48"
+							height="64"
+							alt=""
+							decoding="async"
+						/>
+						<span>
+							I am a Full Stack Software Developer currently based in Research Triangle Park, North
+							Carolina
+						</span>
+					</p>
+				</div>
+			</div>
+
+			<div class="chart-slot">
+				<Constellation />
+			</div>
+		</section>
+
+		<FieldNotes />
+	</div>
+
+	<ContactCTA />
+
+	<!-- The horizon: page content rather than part of the sky canvas, so it
+	     scrolls in lockstep with the page. The footer below is its ground. -->
+	<div class="horizon" aria-hidden="true"></div>
+</div>
+
+<Telemetry />
+
+{/* Its fallback is the already-loaded opsz cut of the same design, so the
+    name paints at once and the swap to this file shifts nothing. */}
+<style
+	is:inline
+	set:html={`@font-face{font-family:'Bricolage Grotesque Hero';font-style:normal;font-display:swap;font-weight:200 800;font-stretch:75% 100%;src:url(${heroFontUrl}) format('woff2-variations');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}`}
+/>
+
+
+<script>
+	import '../../scripts/observatory';
+	import '../../scripts/name-proximity';
+</script>
+
+<style>
+	/* ── Dock progress ────────────────────────────────────────────────────
+	 * --dock-p: 0 → 1 over the first --dock-range px of scroll. A scroll
+	 * timeline drives it where supported; observatory.ts measures the range
+	 * and geometry (and drives --dock-p itself elsewhere). */
+	@property --dock-p {
+		syntax: '<number>';
+		inherits: true;
+		initial-value: 0;
+	}
+
+	@keyframes dock-progress {
+		to {
+			--dock-p: 1;
+		}
+	}
+
+	@supports (animation-timeline: scroll()) {
+		:global(body) {
+			animation: dock-progress linear both;
+			animation-timeline: scroll(self block);
+			animation-range: 0px var(--dock-range, 18rem);
+		}
+	}
+
+	/* ── Layout ───────────────────────────────────────────────────────── */
+	.obs {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+
+	.masthead {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+		gap: 1.5rem;
+		/* Phones: the name owns the first screen. */
+		min-height: 52svh;
+	}
+
+	/* The name rides above the sticky nav while it docks into it. */
+	.dock {
+		position: relative;
+		z-index: 10000;
+	}
+
+	:global(body:has(.menu-button[aria-expanded='true'])) .dock {
+		z-index: auto;
+	}
+
+	:global(body[data-docked]) .dock {
+		pointer-events: none;
+	}
+
+	.dock :global(.hero) {
+		text-align: start;
+	}
+
+	.obs .dock :global(.hero .title) {
+		font-family: 'Bricolage Grotesque Hero', var(--font-brand);
+		max-width: none;
+		margin-inline: 0;
+		font-size: clamp(3.25rem, 17vw, 6rem);
+		line-height: 0.95;
+	}
+
+	.byline {
+		display: flex;
+		align-items: center;
+		gap: 0.875rem;
+		max-width: 34ch;
+		font-size: var(--text-lg);
+		color: var(--gray-300);
+	}
+
+	.avatar {
+		flex: none;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 50%;
+		object-fit: cover;
+		object-position: 50% 8%;
+		box-shadow:
+			0 0 0 2px var(--gray-999),
+			0 0 0 3px var(--link-color);
+	}
+
+	@media (min-width: 50em) {
+		.obs {
+			display: grid;
+			grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+			grid-template-areas:
+				'readout readout'
+				'masthead chart';
+			align-items: center;
+			column-gap: 3rem;
+			row-gap: 2rem;
+			padding-inline: 2.5rem;
+			/* First screen, less the sticky nav (8rem) and its 1rem gutter. */
+			min-height: calc(100svh - 10rem);
+		}
+
+		.readout-slot {
+			grid-area: readout;
+			align-self: start;
+		}
+
+		.masthead {
+			grid-area: masthead;
+			min-height: 0;
+			justify-content: center;
+		}
+
+		.chart-slot {
+			grid-area: chart;
+		}
+
+		.obs .dock :global(.hero .title) {
+			font-size: clamp(3.5rem, 1.5rem + 6vw, 7rem);
+		}
+	}
+
+	/* ── Docking ──────────────────────────────────────────────────────────
+	 * All from --dock-p: the name shrinks and slides into the nav logo
+	 * (fading in the last 4%, as the nav's own text fades in), "Navarro."
+	 * tips off the line in the first 40%, the byline lifts away by 33%. */
+	@media (prefers-reduced-motion: no-preference) {
+		:global(body[data-dock]) .dock {
+			transform-origin: var(--dock-ox) var(--dock-oy);
+			translate: calc(var(--dock-dx) * var(--dock-p)) calc(var(--dock-dy) * var(--dock-p));
+			scale: calc(1 + (var(--dock-s) - 1) * var(--dock-p));
+			opacity: clamp(0, (1 - var(--dock-p)) * 25, 1);
+		}
+
+		:global(body[data-dock]) .dock :global(.word:not(.brand-word)) {
+			--fall: clamp(0, var(--dock-p) * 2.5, 1);
+
+			transform-origin: left bottom;
+			translate: 0 calc(var(--fall) * 0.45em);
+			rotate: calc(var(--fall) * 7deg);
+			opacity: calc(1 - var(--fall));
+		}
+
+		:global(body[data-dock]) [data-dock-fade] {
+			translate: 0 calc(clamp(0, var(--dock-p) * 3, 1) * -1rem);
+			opacity: calc(1 - clamp(0, var(--dock-p) * 3, 1));
+		}
+	}
+
+	/* ── Horizon ───────────────────────────────────────────────────────────
+	 * A wide, shallow arc of ground (an ellipse far wider than the page) with
+	 * city glow rising off its edge; the footer carries on as solid ground,
+	 * hiding the sky below. By day: a pale, hazy rise instead. */
+	:global(body[data-sky='observatory']) {
+		--ground: color-mix(in oklch, var(--gray-999) 82%, var(--gray-900));
+		--horizon-line: oklch(80% 0.06 60 / 0.35);
+		--horizon-glow: oklch(74% 0.13 45 / 0.4);
+	}
+
+	:global(:root.theme-dark body[data-sky='observatory']) {
+		--ground: oklch(10% 0.012 280);
+		--horizon-line: oklch(78% 0.1 50 / 0.45);
+		--horizon-glow: oklch(70% 0.15 40 / 0.32);
+	}
+
+	.horizon {
+		position: relative;
+		height: clamp(6rem, 14vw, 10rem);
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	.horizon::before {
+		position: absolute;
+		top: 50%;
+		left: -40%;
+		right: -40%;
+		height: 600%;
+		border-radius: 50%;
+		content: '';
+		background: var(--ground);
+		box-shadow:
+			0 0 0 1px var(--horizon-line),
+			0 -8px 30px -4px var(--horizon-glow),
+			0 -24px 90px -10px var(--horizon-glow);
+	}
+
+	:global(body[data-sky='observatory']) :global(footer) {
+		background: var(--ground);
+	}
+
+	/* Phones: the strip kept clear for the bottom dock is ground too. */
+	@media (max-width: 49.99em) {
+		:global(body[data-sky='observatory'] .content.has-mobile-dock) {
+			background: linear-gradient(to top, var(--ground) calc(5.5rem + env(safe-area-inset-bottom, 0px)), transparent 0);
+		}
+	}
+</style>

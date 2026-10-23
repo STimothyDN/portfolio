@@ -9,6 +9,7 @@
  * closes) holding the ARIA combobox pattern — the input owns the listbox
  * and points at the active option with aria-activedescendant.
  */
+import '@fontsource-variable/geist-mono';
 import { getCollection } from 'astro:content';
 import Icon from './Icon.astro';
 import type { Props as IconProps } from './Icon.astro';
@@ -46,10 +47,10 @@ const groups: Group[] = [
 		key: 'work',
 		label: 'Work',
 		items: work.map((entry) => ({
-			id: `work-${entry.slug}`,
+			id: `work-${entry.id}`,
 			title: entry.data.title,
 			subtitle: entry.data.description.trim(),
-			href: `/work/${entry.slug}/`,
+			href: `/work/${entry.id}/`,
 			icon: 'code',
 			keywords: entry.data.tags.join(' '),
 		})),
@@ -92,7 +93,7 @@ const groups: Group[] = [
 ---
 
 <dialog class="palette" aria-label="Command palette" data-palette>
-	<div class="panel">
+	<div class="panel" data-glass data-glass-blur="14" data-glass-scale="36">
 		<div class="field">
 			<Icon icon="magnifying-glass" size="1.15rem" />
 			<input
@@ -386,8 +387,6 @@ const groups: Group[] = [
 
 <style>
 	.palette {
-		--mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-
 		width: min(40rem, calc(100vw - 2rem));
 		max-height: min(34rem, calc(100dvh - 4rem));
 		margin: 12vh auto auto;
@@ -415,6 +414,10 @@ const groups: Group[] = [
 		backdrop-filter: blur(20px);
 		box-shadow: var(--shadow-lg);
 		overflow: hidden;
+	}
+
+	:global(html.liquid-glass) .panel {
+		background: color-mix(in oklch, var(--gray-999) 70%, transparent);
 	}
 
 	@media (prefers-reduced-motion: no-preference) {
@@ -462,7 +465,7 @@ const groups: Group[] = [
 		padding: 0.05em 0.4em;
 		border: 1px solid color-mix(in oklch, var(--gray-0) 18%, transparent);
 		border-radius: 0.3rem;
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		text-align: center;
 		color: var(--gray-300);
@@ -489,7 +492,7 @@ const groups: Group[] = [
 
 	.group-label {
 		padding: 0.75rem 0.75rem 0.375rem;
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
@@ -551,7 +554,7 @@ const groups: Group[] = [
 	}
 
 	.item-hint {
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.8125rem;
 		color: var(--gray-400);
 		opacity: 0;
@@ -572,7 +575,7 @@ const groups: Group[] = [
 		gap: 1rem;
 		padding: 0.625rem 1rem;
 		border-top: 1px solid color-mix(in oklch, var(--gray-0) 10%, transparent);
-		font-family: var(--mono);
+		font-family: var(--font-mono);
 		font-size: 0.6875rem;
 		color: var(--gray-400);
 	}
