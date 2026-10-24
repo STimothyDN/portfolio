@@ -60,7 +60,7 @@ const cdnOrigin = import.meta.env.PUBLIC_BUNNY_CDN_URL;
 {preloadFonts.map((href) => <link rel="preload" as="font" type="font/woff2" href={href} crossorigin />)}
 {/* Every photography image comes off the Bunny pull zone; warm the
     connection before the first <img> or client-built URL asks for it. */}
-{isPhotography && cdnOrigin && <link rel="preconnect" href={cdnOrigin} />}
+{cdnOrigin && (isPhotography ? <link rel="preconnect" href={cdnOrigin} /> : <link rel="dns-prefetch" href={cdnOrigin} />)}
 
 <ClientRouter />
 
@@ -71,8 +71,8 @@ const cdnOrigin = import.meta.env.PUBLIC_BUNNY_CDN_URL;
 	// section never carries into the other. With nothing saved, the main
 	// site defaults to dark and photography defaults to light.
 	const themeKey = (isPhoto) => (isPhoto ? 'theme-photography' : 'theme');
-	const applyTheme = () => {
-		const isPhoto = window.location.pathname.startsWith('/photography');
+	const applyTheme = (root = document.documentElement, pathname = window.location.pathname) => {
+		const isPhoto = pathname.startsWith('/photography');
 		let saved = null;
 		try {
 			saved = localStorage.getItem(themeKey(isPhoto));
@@ -80,7 +80,7 @@ const cdnOrigin = import.meta.env.PUBLIC_BUNNY_CDN_URL;
 			/* storage unavailable — fall through to section defaults */
 		}
 		const isDark = saved ? saved === 'dark' : !isPhoto;
-		document.documentElement.classList[isDark ? 'add' : 'remove']('theme-dark');
+		root.classList[isDark ? 'add' : 'remove']('theme-dark');
 	};
 	applyTheme();
 
@@ -89,12 +89,16 @@ const cdnOrigin = import.meta.env.PUBLIC_BUNNY_CDN_URL;
 	// unrelated class changes (e.g. the `loaded` class), saving the OS-derived mode
 	// as if the user had chosen it — which then pinned the site to that mode forever.
 
-	// ClientRouter swaps the <html> attributes on navigation, which drops
-	// `theme-dark`; reapply it after every swap. Register once — this `is:inline`
-	// script re-executes on every navigation.
+	// ClientRouter swaps the <html> attributes on navigation, which would drop
+	// `theme-dark`; stamp it onto the incoming document before swap (and
+	// re-assert after swap). Register once — this `is:inline` script re-executes
+	// on every navigation.
 	if (!window.__themeObserver) {
 		window.__themeObserver = true;
-		document.addEventListener('astro:after-swap', applyTheme);
+		document.addEventListener('astro:before-swap', (e) => {
+			if (e.newDocument) applyTheme(e.newDocument.documentElement, e.to?.pathname ?? window.location.pathname);
+		});
+		document.addEventListener('astro:after-swap', () => applyTheme());
 	}
 </script>
 
@@ -104,14 +108,17 @@ const cdnOrigin = import.meta.env.PUBLIC_BUNNY_CDN_URL;
 	// static HTML flashes for a frame before motion.ts sets its initial states.
 	// Only added when JS runs and motion is allowed, so no-JS and reduced-motion
 	// visitors always see fully-visible content. motion.ts then reveals it.
-	const applyAnimReady = () => {
+	const applyAnimReady = (root = document.documentElement) => {
 		const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-		document.documentElement.classList.toggle('anim-ready', !reduce);
+		root.classList.toggle('anim-ready', !reduce);
 	};
 	applyAnimReady();
 	if (!window.__animReadySwap) {
 		window.__animReadySwap = true;
-		document.addEventListener('astro:after-swap', applyAnimReady);
+		document.addEventListener('astro:before-swap', (e) => {
+			if (e.newDocument) applyAnimReady(e.newDocument.documentElement);
+		});
+		document.addEventListener('astro:after-swap', () => applyAnimReady());
 		// Failsafe: if motion.ts never arrives (network error, blocked script),
 		// don't leave pre-hidden content invisible — show it without motion.
 		setTimeout(() => {

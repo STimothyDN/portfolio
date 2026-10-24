@@ -28,9 +28,16 @@ function setup() {
 	if (!index || !float || !floatImg || !floatOverlay) return;
 	if (!window.matchMedia(GATE).matches) return;
 
-	// The hidden thumb column keeps lazy images unloaded; warm them so the
-	// follower never pops in empty.
-	index.querySelectorAll<HTMLImageElement>('.thumb img').forEach((img) => (img.loading = 'eager'));
+	// The hidden thumb column keeps lazy images unloaded; warm them during idle
+	// so the follower never pops in empty without competing with initial load.
+	const warmThumbs = () => {
+		index.querySelectorAll<HTMLImageElement>('.thumb img').forEach((img) => {
+			img.fetchPriority = 'low';
+			img.loading = 'eager';
+		});
+	};
+	if ('requestIdleCallback' in window) window.requestIdleCallback(warmThumbs, { timeout: 1500 });
+	else window.setTimeout(warmThumbs, 200);
 
 	// Position chases the cursor; the tilt swings with horizontal speed and
 	// settles once the pointer rests. Everything lands in one transform write

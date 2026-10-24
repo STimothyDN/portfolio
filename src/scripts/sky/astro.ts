@@ -225,26 +225,28 @@ export function galacticPlane(stepDeg: number) {
 const DAY_MS = 86400000;
 
 /** The Sun's altitude (degrees) at a moment, for a site. */
+const scratchHorizon: Horizon = [0, 0, 0];
 export function sunAltitudeAt(ms: number, latDeg: number, lonDeg: number) {
 	const jd = julian(ms);
 	const s = sun(jd);
-	return altitudeDeg(toHorizon(s.ra, s.dec, lstHours(jd, lonDeg) * 15 * DEG, latDeg * DEG));
+	return altitudeDeg(toHorizon(s.ra, s.dec, lstHours(jd, lonDeg) * 15 * DEG, latDeg * DEG, scratchHorizon));
 }
 
-/** When altitude(t) crosses `target` within [a, b] (it must be monotonic there); null if it doesn't. */
-function crossing(a: number, b: number, target: number, altitude: (ms: number) => number) {
-	let fa = altitude(a) - target;
-	const fb = altitude(b) - target;
+/** When f(t) crosses `target` within [a, b] (it must be monotonic there); null if it doesn't. */
+function crossing(a: number, b: number, target: number, fn: (ms: number) => number) {
+	let fa = fn(a) - target;
+	const fb = fn(b) - target;
 	if (Math.sign(fa) === Math.sign(fb)) return null;
-	for (let i = 0; i < 40; i++) {
-		const m = (a + b) / 2;
-		const fm = altitude(m) - target;
+	// 25 bisection steps narrow 12h (43.2M ms) to ~1.3 ms.
+	for (let i = 0; i < 25; i++) {
+		const m = (a + b) * 0.5;
+		const fm = fn(m) - target;
 		if (Math.sign(fm) === Math.sign(fa)) {
 			a = m;
 			fa = fm;
 		} else b = m;
 	}
-	return (a + b) / 2;
+	return (a + b) * 0.5;
 }
 
 export type SunDay = {
@@ -257,33 +259,61 @@ export type SunDay = {
 	goldenEvening: [number, number] | null;
 };
 
+let cachedSunDayKey = '';
+let cachedSunDayVal: SunDay | null = null;
+
 /**
  * The Sun's day around the solar noon nearest `ms` (epoch ms): noon,
  * sunrise/sunset (upper limb on the refracted horizon, −0.833°) and the
  * golden hours.
  */
 export function sunDay(ms: number, latDeg: number, lonDeg: number): SunDay {
-	const altitude = (t: number) => sunAltitudeAt(t, latDeg, lonDeg);
 	// Local mean noon in UTC, then refine to the highest point.
 	const meanNoon = Math.round((ms - (-lonDeg / 360) * DAY_MS - DAY_MS / 2) / DAY_MS) * DAY_MS + DAY_MS / 2 + (-lonDeg / 360) * DAY_MS;
+	const cacheKey = `${Math.round(meanNoon)}:${latDeg}:${lonDeg}`;
+	if (cachedSunDayKey === cacheKey && cachedSunDayVal) return cachedSunDayVal;
+
+	const latRad = latDeg * DEG;
+	const sinLat = Math.sin(latRad);
+	const cosLat = Math.cos(latRad);
+	// sin(altitude) is strictly monotonic with altitude on [-90°, 90°], avoiding asin() and allocations per step.
+	const sinAltitude = (t: number) => {
+		const jd = julian(t);
+		const n = jd - 2451545;
+		const L = mod(280.46 + 0.9856474 * n, 360);
+		const g = mod(357.528 + 0.9856003 * n, 360) * DEG;
+		const lambda = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * DEG;
+		const eps = obliquity(jd);
+		const sinLambda = Math.sin(lambda);
+		const sinDec = Math.sin(eps) * sinLambda;
+		const cosDec = Math.sqrt(Math.max(0, 1 - sinDec * sinDec));
+		const ra = mod(Math.atan2(Math.cos(eps) * sinLambda, Math.cos(lambda)), TAU);
+		const lst = lstHours(jd, lonDeg) * 15 * DEG;
+		return sinDec * sinLat + cosDec * Math.cos(lst - ra) * cosLat;
+	};
+
 	let a = meanNoon - 2 * 3600000;
 	let b = meanNoon + 2 * 3600000;
-	for (let i = 0; i < 50; i++) {
-		const m1 = a + (b - a) / 3;
-		const m2 = b - (b - a) / 3;
-		if (altitude(m1) < altitude(m2)) a = m1;
+	for (let i = 0; i < 28; i++) {
+		const step = (b - a) / 3;
+		const m1 = a + step;
+		const m2 = b - step;
+		if (sinAltitude(m1) < sinAltitude(m2)) a = m1;
 		else b = m2;
 	}
-	const noon = (a + b) / 2;
-	const morning = (target: number) => crossing(noon - DAY_MS / 2, noon, target, altitude);
-	const evening = (target: number) => crossing(noon, noon + DAY_MS / 2, target, altitude);
+	const noon = (a + b) * 0.5;
+	const morning = (targetDeg: number) => crossing(noon - DAY_MS / 2, noon, Math.sin(targetDeg * DEG), sinAltitude);
+	const evening = (targetDeg: number) => crossing(noon, noon + DAY_MS / 2, Math.sin(targetDeg * DEG), sinAltitude);
 	const span = (from: number | null, to: number | null): [number, number] | null =>
 		from !== null && to !== null ? [from, to] : null;
-	return {
+	const result: SunDay = {
 		noon,
 		sunrise: morning(-0.833),
 		sunset: evening(-0.833),
 		goldenMorning: span(morning(-4), morning(6)),
 		goldenEvening: span(evening(6), evening(-4)),
 	};
+	cachedSunDayKey = cacheKey;
+	cachedSunDayVal = result;
+	return result;
 }

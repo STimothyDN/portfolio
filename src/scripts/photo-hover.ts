@@ -45,12 +45,24 @@ function setup() {
 	const rows = Array.from(list.querySelectorAll<HTMLElement>('.shoot-row'));
 	if (bufs.length < 2 || !parallax || !rows.length) return;
 
-	// The hidden per-row thumbs are the stage's image source; force them to
-	// load now so swaps decode instantly.
-	rows.forEach((row) => {
-		const img = row.querySelector<HTMLImageElement>('.frame img');
-		if (img) img.loading = 'eager';
-	});
+	// The hidden per-row thumbs are the stage's image source; warm the initial
+	// stage image immediately and defer the rest to idle so they don't compete
+	// with initial page assets and globe textures.
+	const firstImg = rows[0]?.querySelector<HTMLImageElement>('.frame img');
+	if (firstImg) firstImg.loading = 'eager';
+	const warmRest = () => {
+		for (let i = 1; i < rows.length; i++) {
+			const img = rows[i]?.querySelector<HTMLImageElement>('.frame img');
+			if (img) {
+				img.fetchPriority = 'low';
+				img.loading = 'eager';
+			}
+		}
+	};
+	const idleId =
+		'requestIdleCallback' in window
+			? window.requestIdleCallback(warmRest, { timeout: 2000 })
+			: window.setTimeout(warmRest, 300);
 
 	let front = -1; // buffer currently on top (-1 until first show)
 	let shownRow = -1; // row index currently on the stage
@@ -181,6 +193,8 @@ function setup() {
 	// page is swapped out, or it keeps running against a detached image.
 	teardown = () => {
 		window.clearTimeout(dwell);
+		if ('cancelIdleCallback' in window) window.cancelIdleCallback(idleId);
+		else window.clearTimeout(idleId);
 		lean.halt();
 		bufs.forEach((buf) => buf.getAnimations().forEach((a) => a.cancel()));
 	};

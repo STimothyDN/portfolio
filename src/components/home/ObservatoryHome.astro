@@ -65,6 +65,7 @@ const avatar = await responsive(portraitSrc, {
 							width="48"
 							height="64"
 							alt=""
+							fetchpriority="high"
 							decoding="async"
 						/>
 						<span>
@@ -107,27 +108,14 @@ const avatar = await responsive(portraitSrc, {
 
 <style>
 	/* ── Dock progress ────────────────────────────────────────────────────
-	 * --dock-p: 0 → 1 over the first --dock-range px of scroll. A scroll
-	 * timeline drives it where supported; observatory.ts measures the range
-	 * and geometry (and drives --dock-p itself elsewhere). */
+	 * --dock-p: 0 → 1 over the first --dock-range px of scroll for the JS
+	 * fallback; where scroll timelines are supported, compositor keyframes
+	 * drive each element directly so <body> never triggers full-tree style
+	 * recalculation during scroll. */
 	@property --dock-p {
 		syntax: '<number>';
 		inherits: true;
 		initial-value: 0;
-	}
-
-	@keyframes dock-progress {
-		to {
-			--dock-p: 1;
-		}
-	}
-
-	@supports (animation-timeline: scroll()) {
-		:global(body) {
-			animation: dock-progress linear both;
-			animation-timeline: scroll(self block);
-			animation-range: 0px var(--dock-range, 18rem);
-		}
 	}
 
 	/* ── Layout ───────────────────────────────────────────────────────── */
@@ -229,18 +217,79 @@ const avatar = await responsive(portraitSrc, {
 	}
 
 	/* ── Docking ──────────────────────────────────────────────────────────
-	 * All from --dock-p: the name shrinks and slides into the nav logo
-	 * (fading in the last 4%, as the nav's own text fades in), "Navarro."
-	 * tips off the line in the first 40%, the byline lifts away by 33%. */
+	 * The name shrinks and slides into the nav logo (fading in the last 4%,
+	 * as the nav's own text fades in), "Navarro." tips off the line in the
+	 * first 40%, the byline lifts away by 33%. Driven by compositor scroll
+	 * timelines where supported, or --dock-p in the JS fallback. */
+	@keyframes dock-move {
+		0% {
+			translate: 0 0;
+			scale: 1;
+			opacity: 1;
+		}
+		96% {
+			opacity: 1;
+		}
+		100% {
+			translate: var(--dock-dx) var(--dock-dy);
+			scale: var(--dock-s);
+			opacity: 0;
+		}
+	}
+
+	@keyframes dock-word-fall {
+		from {
+			translate: 0 0;
+			rotate: 0deg;
+			opacity: 1;
+		}
+		to {
+			translate: 0 0.45em;
+			rotate: 7deg;
+			opacity: 0;
+		}
+	}
+
+	@keyframes dock-byline-fade {
+		from {
+			translate: 0 0;
+			opacity: 1;
+		}
+		to {
+			translate: 0 -1rem;
+			opacity: 0;
+		}
+	}
+
 	@media (prefers-reduced-motion: no-preference) {
-		:global(body[data-dock]) .dock {
+		:global(body[data-dock='scroll']) .dock {
+			transform-origin: var(--dock-ox) var(--dock-oy);
+			animation: dock-move linear both;
+			animation-timeline: scroll(nearest block);
+			animation-range: 0px var(--dock-range, 18rem);
+		}
+
+		:global(body[data-dock='scroll']) .dock :global(.word:not(.brand-word)) {
+			transform-origin: left bottom;
+			animation: dock-word-fall linear both;
+			animation-timeline: scroll(nearest block);
+			animation-range: 0px calc(var(--dock-range, 18rem) * 0.4);
+		}
+
+		:global(body[data-dock='scroll']) [data-dock-fade] {
+			animation: dock-byline-fade linear both;
+			animation-timeline: scroll(nearest block);
+			animation-range: 0px calc(var(--dock-range, 18rem) / 3);
+		}
+
+		:global(body[data-dock='js']) .dock {
 			transform-origin: var(--dock-ox) var(--dock-oy);
 			translate: calc(var(--dock-dx) * var(--dock-p)) calc(var(--dock-dy) * var(--dock-p));
 			scale: calc(1 + (var(--dock-s) - 1) * var(--dock-p));
 			opacity: clamp(0, (1 - var(--dock-p)) * 25, 1);
 		}
 
-		:global(body[data-dock]) .dock :global(.word:not(.brand-word)) {
+		:global(body[data-dock='js']) .dock :global(.word:not(.brand-word)) {
 			--fall: clamp(0, var(--dock-p) * 2.5, 1);
 
 			transform-origin: left bottom;
@@ -249,7 +298,7 @@ const avatar = await responsive(portraitSrc, {
 			opacity: calc(1 - var(--fall));
 		}
 
-		:global(body[data-dock]) [data-dock-fade] {
+		:global(body[data-dock='js']) [data-dock-fade] {
 			translate: 0 calc(clamp(0, var(--dock-p) * 3, 1) * -1rem);
 			opacity: calc(1 - clamp(0, var(--dock-p) * 3, 1));
 		}

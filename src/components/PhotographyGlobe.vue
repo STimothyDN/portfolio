@@ -39,8 +39,10 @@ const DEFAULT_DIST = 4.15; // camera distance for the birds-eye default view
 const MIN_DIST = 1.35; // hard max-zoom cap — a state-sized cluster fills the frame here
 const GENERAL_ZOOM_DIST = 2.4; // hover with no nearby pins
 const NEIGHBOR_RAD = 0.62; // ~35deg: pins within this of the cursor count as "vicinity"
+const COS_NEIGHBOR_RAD = Math.cos(NEIGHBOR_RAD);
 const FRAME_FILL = 0.72; // a cluster is framed to fill ~72% of the half-viewport
 const HOVER_PX = 26; // cursor-to-pin pixel radius that counts as hovering a pin
+const HOVER_PX_SQ = HOVER_PX * HOVER_PX;
 const PIVOT_Y = -0.12; // look slightly below centre so the south pole tucks into the slit
 const REV_SECONDS = 100; // museum pace: one rotation every 100s
 const EARTH_ANG = (Math.PI * 2) / REV_SECONDS;
@@ -357,8 +359,8 @@ class GlobeController {
 	};
 
 	private buildPins() {
-		const pinsGroup = new THREE.Group();
-		this.earthGroup.add(pinsGroup);
+		const count = this.pins.length;
+		if (!count) return;
 
 		const dotGeo = new THREE.SphereGeometry(0.013, 12, 12);
 		this.disposables.push(dotGeo);
@@ -374,23 +376,37 @@ class GlobeController {
 		});
 		this.disposables.push(haloMat);
 
-		for (const pin of this.pins) {
+		const dots = new THREE.InstancedMesh(dotGeo, dotMat, count);
+		const halos = new THREE.InstancedMesh(haloGeo, haloMat, count);
+		this.disposables.push(dots, halos);
+		const mat = new THREE.Matrix4();
+
+		for (let i = 0; i < count; i++) {
+			const pin = this.pins[i];
 			const dir = latLonToVec3(pin.lat, pin.lon, 1);
-			this.pinDirs.push(dir.clone());
+			this.pinDirs.push(dir);
 			const pos = dir.clone().multiplyScalar(EARTH_R * 1.008);
-			this.pinLocalPos.push(pos.clone());
+			this.pinLocalPos.push(pos);
 			this.pinImages.push(pin.images ?? []);
-			const dot = new THREE.Mesh(dotGeo, dotMat);
-			dot.position.copy(pos);
-			pinsGroup.add(dot);
-			const halo = new THREE.Mesh(haloGeo, haloMat);
-			halo.position.copy(pos);
-			pinsGroup.add(halo);
+			mat.makeTranslation(pos.x, pos.y, pos.z);
+			dots.setMatrixAt(i, mat);
+			halos.setMatrixAt(i, mat);
 		}
+		dots.instanceMatrix.needsUpdate = true;
+		halos.instanceMatrix.needsUpdate = true;
+		this.earthGroup.add(dots, halos);
 	}
 
 	private lookTarget = new THREE.Vector3();
 	private surfTmp = new THREE.Vector3();
+	private earthSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), EARTH_R);
+	private hitTmp = new THREE.Vector3();
+	private localHitTmp = new THREE.Vector3();
+	private centroidTmp = new THREE.Vector3();
+	private aimTmp = new THREE.Vector3();
+	private pointerDirty = false;
+	private lastClientX = 0;
+	private lastClientY = 0;
 
 	private placeCamera() {
 		// At rest, look at the low pivot so the south pole tucks into the slit; as we
@@ -408,25 +424,32 @@ class GlobeController {
 
 	/* ---- pointer / hover-zoom --------------------------------------- */
 	private onPointerMove = (e: PointerEvent) => {
+		this.lastClientX = e.clientX;
+		this.lastClientY = e.clientY;
+		this.pointerDirty = true;
+	};
+
+	private processPointer() {
+		this.pointerDirty = false;
 		const rect = this.host.getBoundingClientRect();
-		this.pointerPx.set(e.clientX - rect.left, e.clientY - rect.top);
+		if (rect.width === 0 || rect.height === 0) return;
+		this.pointerPx.set(this.lastClientX - rect.left, this.lastClientY - rect.top);
 		this.pointer.x = (this.pointerPx.x / rect.width) * 2 - 1;
 		this.pointer.y = -(this.pointerPx.y / rect.height) * 2 + 1;
 		this.selectPinAtPointer();
 		this.raycaster.setFromCamera(this.pointer, this.camera);
-		const hits = this.raycaster.intersectObject(this.earthMesh, false);
-		if (hits.length === 0) {
+		const hit = this.raycaster.ray.intersectSphere(this.earthSphere, this.hitTmp);
+		if (!hit) {
 			this.resetTarget();
 			return;
 		}
-		const worldPoint = hits[0].point;
-		const localHit = this.earthGroup.worldToLocal(worldPoint.clone()).normalize();
+		const localHit = this.earthGroup.worldToLocal(this.localHitTmp.copy(hit)).normalize();
 
 		// Collect the pins in the hovered vicinity (earth's current local frame).
-		const centroid = new THREE.Vector3();
+		const centroid = this.centroidTmp.set(0, 0, 0);
 		let count = 0;
 		for (const dir of this.pinDirs) {
-			if (Math.acos(THREE.MathUtils.clamp(localHit.dot(dir), -1, 1)) <= NEIGHBOR_RAD) {
+			if (localHit.dot(dir) >= COS_NEIGHBOR_RAD) {
 				centroid.add(dir);
 				count++;
 			}
@@ -434,7 +457,7 @@ class GlobeController {
 
 		if (count === 0) {
 			// nothing nearby: gently zoom toward the cursor point
-			const aim = worldPoint.clone().normalize();
+			const aim = this.aimTmp.copy(hit).normalize();
 			this.clampElevation(aim);
 			this.targetDir.copy(aim);
 			this.targetDist = GENERAL_ZOOM_DIST;
@@ -443,20 +466,22 @@ class GlobeController {
 
 		// Aim at the cluster centre and pull back just enough to frame every pin in it.
 		centroid.normalize();
-		let radius = 0;
+		let minCos = 1;
 		for (const dir of this.pinDirs) {
-			const ang = Math.acos(THREE.MathUtils.clamp(localHit.dot(dir), -1, 1));
-			if (ang <= NEIGHBOR_RAD) {
-				radius = Math.max(radius, Math.acos(THREE.MathUtils.clamp(centroid.dot(dir), -1, 1)));
+			if (localHit.dot(dir) >= COS_NEIGHBOR_RAD) {
+				const c = centroid.dot(dir);
+				if (c < minCos) minCos = c;
 			}
 		}
-		const aim = this.earthGroup.localToWorld(centroid.clone()).normalize();
+		const radius = Math.acos(THREE.MathUtils.clamp(minCos, -1, 1));
+		const aim = this.earthGroup.localToWorld(this.aimTmp.copy(centroid)).normalize();
 		this.clampElevation(aim);
 		this.targetDir.copy(aim);
 		this.targetDist = THREE.MathUtils.clamp(frameDistanceForRadius(radius), MIN_DIST, DEFAULT_DIST);
-	};
+	}
 
 	private onPointerLeave = () => {
+		this.pointerDirty = false;
 		this.setActivePin(-1);
 		this.resetTarget();
 	};
@@ -478,6 +503,7 @@ class GlobeController {
 	/* ---- pin hover tooltip ------------------------------------------ */
 	private worldTmp = new THREE.Vector3();
 	private ndcTmp = new THREE.Vector3();
+	private screenPt = { x: 0, y: 0 };
 
 	/** Project a pin to host pixels; returns null if it's on the far hemisphere. */
 	private pinScreen(i: number): { x: number; y: number } | null {
@@ -487,10 +513,9 @@ class GlobeController {
 		if (this.worldTmp.dot(this.ndcTmp) >= 0) return null; // normal faces away
 		this.ndcTmp.copy(this.worldTmp).project(this.camera);
 		if (this.ndcTmp.z > 1) return null;
-		return {
-			x: ((this.ndcTmp.x + 1) / 2) * this.hostW,
-			y: ((1 - this.ndcTmp.y) / 2) * this.hostH,
-		};
+		this.screenPt.x = ((this.ndcTmp.x + 1) / 2) * this.hostW;
+		this.screenPt.y = ((1 - this.ndcTmp.y) / 2) * this.hostH;
+		return this.screenPt;
 	}
 
 	/**
@@ -500,13 +525,17 @@ class GlobeController {
 	private selectPinAtPointer() {
 		if (!this.canHover || !this.tipEl) return;
 		let best = -1;
-		let bestDist = HOVER_PX;
+		let bestDistSq = HOVER_PX_SQ;
+		const px = this.pointerPx.x;
+		const py = this.pointerPx.y;
 		for (let i = 0; i < this.pinLocalPos.length; i++) {
 			const s = this.pinScreen(i);
 			if (!s) continue;
-			const d = Math.hypot(s.x - this.pointerPx.x, s.y - this.pointerPx.y);
-			if (d < bestDist) {
-				bestDist = d;
+			const dx = s.x - px;
+			const dy = s.y - py;
+			const dSq = dx * dx + dy * dy;
+			if (dSq < bestDistSq) {
+				bestDistSq = dSq;
 				best = i;
 			}
 		}
@@ -564,6 +593,8 @@ class GlobeController {
 		if (!this.running) return;
 		const dt = Math.min((now - this.last) / 1000, 0.05);
 		this.last = now;
+
+		if (this.pointerDirty) this.processPointer();
 
 		this.earthGroup.rotation.y += EARTH_ANG * dt;
 		this.cloudMesh.rotation.y += EARTH_ANG * (CLOUD_FACTOR - 1) * dt;

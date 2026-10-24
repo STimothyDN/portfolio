@@ -336,6 +336,18 @@ const universe = Object.fromEntries(
 
 const rollById = new Map(props.rolls.map((roll) => [roll.id, roll]));
 
+const allPhotoIndices = photos.map((_, i) => i);
+const baseCounts = Object.fromEntries(ALL_FACETS.map((f) => [f, new Map<string, number>()])) as Record<
+	FacetKey,
+	Map<string, number>
+>;
+for (let i = 0; i < photos.length; i++) {
+	for (const f of ALL_FACETS) {
+		const v = facetOf[i][f];
+		baseCounts[f].set(v, (baseCounts[f].get(v) ?? 0) + 1);
+	}
+}
+
 /* ── Filter state ───────────────────────────────────────────────────── */
 
 const selected = reactive<Record<FacetKey, string[]>>({ roll: [], camera: [], stock: [], lab: [], year: [] });
@@ -349,7 +361,7 @@ const mode = computed<'pile' | 'grid'>(() => (hasFilters.value ? 'grid' : 'pile'
 const matches = (i: number, except?: FacetKey) =>
 	facetOrder.value.every((f) => f === except || selected[f].includes(facetOf[i][f]));
 
-const filtered = computed(() => photos.map((_, i) => i).filter((i) => matches(i)));
+const filtered = computed(() => (hasFilters.value ? allPhotoIndices.filter((i) => matches(i)) : allPhotoIndices));
 
 const groups = computed(() => {
 	const f = facetOrder.value[0];
@@ -367,11 +379,17 @@ const groups = computed(() => {
 /** Per-facet option lists with counts under every *other* active facet. */
 const options = computed(() => {
 	const out = {} as Record<FacetKey, FacetOption[]>;
+	const activeCount = facetOrder.value.length;
 	for (const f of ALL_FACETS) {
-		const counts = new Map<string, number>();
-		photos.forEach((_, i) => {
-			if (matches(i, f)) counts.set(facetOf[i][f], (counts.get(facetOf[i][f]) ?? 0) + 1);
-		});
+		let counts: Map<string, number>;
+		if (activeCount === 0 || (activeCount === 1 && facetOrder.value[0] === f)) {
+			counts = baseCounts[f];
+		} else {
+			counts = new Map<string, number>();
+			for (let i = 0; i < photos.length; i++) {
+				if (matches(i, f)) counts.set(facetOf[i][f], (counts.get(facetOf[i][f]) ?? 0) + 1);
+			}
+		}
 		out[f] = universe[f].map((value) => ({
 			value,
 			label: labelOf[f].get(value) ?? value,
@@ -474,7 +492,7 @@ const rollStripRef = ref<InstanceType<typeof FilmRollStrip> | null>(null);
 const printLong = ref(200);
 const deskHeight = ref(0);
 const vertical = ref(false);
-const strips = ref<
+const strips = shallowRef<
 	{
 		key: string;
 		x: number;
@@ -486,11 +504,11 @@ const strips = ref<
 		frames: { idx: number; x: number; y: number; n: number; stock: string }[];
 	}[]
 >([]);
-const heads = ref<{ key: string; x: number; y: number; w: number; eyebrow: string; label: string; meta: string }[]>([]);
-const canisters = ref<
+const heads = shallowRef<{ key: string; x: number; y: number; w: number; eyebrow: string; label: string; meta: string }[]>([]);
+const canisters = shallowRef<
 	{ key: string; x: number; y: number; h: number; k: number; stock: string; stockLabel: string; stockBrand: string }[]
 >([]);
-const stickers = ref<
+const stickers = shallowRef<
 	{ key: string; x: number; y: number; w: number; h: number; k: number; lines: string[]; fs: number; tilt: number }[]
 >([]);
 const frameGeo = ref({ w: 0, h: 0, rail: 0, tongue: 0 });
@@ -506,7 +524,7 @@ const deskStyle = computed(() => {
 	};
 });
 /** Photo indices with a DOM print, in focus order. */
-const rendered = ref<number[]>([]);
+const rendered = shallowRef<number[]>([]);
 const pileSet = shallowRef(new Set<number>());
 const dragging = ref(false);
 
@@ -559,11 +577,18 @@ const setPrintEl = (i: number, el: unknown) => {
 	else els.delete(i);
 };
 
-const aspectOf = (i: number) => {
-	const p = photos[i];
-	return p.w && p.h ? p.w / p.h : 1.5;
+const aspects = Float32Array.from(photos, (p) => (p.w && p.h ? p.w / p.h : 1.5));
+const aspectOf = (i: number) => aspects[i];
+let cachedSizesLong = -1;
+let cachedSizes: { w: number; h: number }[] = [];
+const sizeOf = (i: number) => {
+	const long = printLong.value;
+	if (long !== cachedSizesLong) {
+		cachedSizesLong = long;
+		cachedSizes = Array.from({ length: photos.length }, (_, k) => printSize(aspects[k], long));
+	}
+	return cachedSizes[i];
 };
-const sizeOf = (i: number) => printSize(aspectOf(i), printLong.value);
 
 // CDN width for desk thumbnails — fixed once at mount so resizing never
 // re-downloads, and shared with the lightbox's blur-up placeholder.
@@ -658,13 +683,29 @@ const geo = { W: 0, H: 0, top: 0, bottom: 0, navH: 0, bottomH: 0 };
 // The pile's own desk, in desk px — larger than the screen on smaller ones.
 let world: DeskWorld = { w: 0, h: 0, long: 200, fit: 1, home: 1, max: 2 };
 
+const deskRect = { left: 0, top: 0 };
+function refreshDeskRect() {
+	const desk = deskRef.value;
+	if (!desk) return;
+	const r = desk.getBoundingClientRect();
+	deskRect.left = r.left;
+	deskRect.top = r.top;
+}
+
 function measure() {
 	const desk = deskRef.value!;
-	geo.W = desk.clientWidth;
-	geo.navH = document.querySelector<HTMLElement>('nav')?.offsetHeight ?? 0;
-	rootRef.value?.style.setProperty('--film-nav-h', `${geo.navH}px`);
-	geo.bottomH = bottomRef.value?.offsetHeight ?? 0;
+	// Read all layout properties before writing styles to avoid forced reflows.
+	const w = desk.clientWidth;
+	const navH = document.querySelector<HTMLElement>('nav')?.offsetHeight ?? 0;
+	const bottomH = bottomRef.value?.offsetHeight ?? 0;
+	const r = desk.getBoundingClientRect();
+	deskRect.left = r.left;
+	deskRect.top = r.top;
+	geo.W = w;
+	geo.navH = navH;
+	geo.bottomH = bottomH;
 	geo.H = Math.max(420, window.innerHeight);
+	rootRef.value?.style.setProperty('--film-nav-h', `${geo.navH}px`);
 	// Prints may tuck partway under the nav and under the rolls — it reads as
 	// one surface fading out beneath the controls.
 	geo.top = geo.navH * 0.8;
@@ -871,9 +912,8 @@ let zTop = 0;
 function buildPile() {
 	const rand = mulberry32((Math.random() * 2 ** 32) >>> 0);
 	const area = world;
-	const all = photos.map((_, i) => i);
 	const picked = weightedSample(
-		all,
+		allPhotoIndices,
 		(i) => priorityWeight(photos[i].p),
 		pileCapacity(area, printLong.value),
 		rand
@@ -1016,7 +1056,7 @@ async function applyLayout(kind: Kind) {
 	if (kind === 'toss') {
 		pile.forEach((e, k) => {
 			const el = els.get(e.i);
-			if (el) tossIn(el, next.get(e.i)!, k, pile.length, reduce);
+			if (el) tossIn(el, next.get(e.i)!, sizeOf(e.i).h, k, pile.length, reduce);
 		});
 		return;
 	}
@@ -1044,7 +1084,7 @@ async function applyLayout(kind: Kind) {
 		if (!el) return;
 		if (!before.has(i)) {
 			if (mode.value === 'pile') {
-				tossIn(el, t, k, order.length, reduce);
+				tossIn(el, t, sizeOf(i).h, k, order.length, reduce);
 			} else if (unseen(i, t.y, t.y + 40, t.s)) {
 				place(el, t);
 			} else {
@@ -1121,8 +1161,8 @@ function drop(i: number) {
  * bottom edge large (close to the camera), shrinks as it falls to the
  * surface, touches down a little short, and skids into place.
  */
-function tossIn(el: HTMLElement, t: Target, k: number, n: number, reduce: boolean) {
-	const lift = el.querySelector<HTMLElement>('.print-lift');
+function tossIn(el: HTMLElement, t: Target, h: number, k: number, n: number, reduce: boolean) {
+	const lift = el.firstElementChild as HTMLElement | null;
 	gsap.killTweensOf([el, lift]);
 	if (reduce) {
 		gsap.set(el, { xPercent: -50, yPercent: -50, x: t.x, y: t.y, rotation: t.r, scale: t.s, opacity: 0, zIndex: t.z * 2 });
@@ -1131,7 +1171,7 @@ function tossIn(el: HTMLElement, t: Target, k: number, n: number, reduce: boolea
 	}
 	// Thrown from below the screen's bottom edge, wherever the view is on the desk.
 	const fromX = (geo.W * (0.5 + (Math.random() - 0.5) * 0.8) - cam.x) / cam.z;
-	const fromY = (geo.H - cam.y) / cam.z + el.offsetHeight * (0.8 + Math.random() * 0.6);
+	const fromY = (geo.H - cam.y) / cam.z + h * (0.8 + Math.random() * 0.6);
 	const dx = t.x - fromX;
 	const dy = t.y - fromY;
 	const len = Math.hypot(dx, dy) || 1;
@@ -1332,8 +1372,7 @@ let lastPointerType = '';
 const LONG_PRESS = 380;
 
 function deskPoint(e: { clientX: number; clientY: number }): Point {
-	const r = deskRef.value!.getBoundingClientRect();
-	return { x: e.clientX - r.left, y: e.clientY - r.top };
+	return { x: e.clientX - deskRect.left, y: e.clientY - deskRect.top };
 }
 
 const canPan = () => cam.z > world.fit + 1e-3;
@@ -1351,6 +1390,7 @@ function onDeskDown(e: PointerEvent) {
 	if (mode.value !== 'pile' || !ready) return;
 	if (e.pointerType === 'mouse' && e.button !== 0) return;
 	lastPointerType = e.pointerType;
+	if (!pointers.size) refreshDeskRect();
 	const p = deskPoint(e);
 	pointers.set(e.pointerId, p);
 	if (pointers.size === 2 && e.pointerType === 'touch') return startPinch();
@@ -1712,7 +1752,9 @@ async function viewRoll(r: number) {
 
 /* ── Lifecycle ──────────────────────────────────────────────────────── */
 
-const layoutKey = computed(() => `${mode.value}|${facetOrder.value[0] ?? ''}|${filtered.value.join(',')}`);
+const layoutKey = computed(() =>
+	mode.value === 'pile' ? 'pile' : `grid|${facetOrder.value[0] ?? ''}|${filtered.value.join(',')}`
+);
 
 watch(layoutKey, () => {
 	if (!ready) return;

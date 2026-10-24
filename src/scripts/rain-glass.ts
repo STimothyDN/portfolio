@@ -93,10 +93,10 @@ function readWeather() {
 	slant = sky ? Math.max(-0.5, Math.min(0.5, -sky.wind[0] / 30)) : 0;
 }
 
-function fit(surface: Surface) {
+function fit(surface: Surface, w = surface.el.offsetWidth, h = surface.el.offsetHeight) {
 	const dpr = Math.min(2, devicePixelRatio || 1);
-	surface.w = surface.el.offsetWidth;
-	surface.h = surface.el.offsetHeight;
+	surface.w = w;
+	surface.h = h;
 	surface.canvas.width = Math.ceil(surface.w * dpr);
 	surface.canvas.height = Math.ceil(surface.h * dpr);
 	surface.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -120,7 +120,7 @@ function prefill(surface: Surface) {
 
 /** Merge b into a, conserving water (area). */
 const absorb = (a: Bead, b: Bead) => {
-	a.r = Math.hypot(a.r, b.r);
+	a.r = Math.sqrt(a.r * a.r + b.r * b.r);
 };
 
 function step(surface: Surface, dt: number) {
@@ -131,9 +131,17 @@ function step(surface: Surface, dt: number) {
 		const maxBeads = (area / 70) * (0.4 + 0.6 * intensity);
 		// Whatever lands on a drop feeds it.
 		const land = (bead: Bead) => {
-			const host = drops.find((d) => Math.hypot(d.x - bead.x, d.y - bead.y) < d.r + bead.r);
-			if (host) absorb(host, bead);
-			return !host;
+			for (let i = 0; i < drops.length; i++) {
+				const d = drops[i];
+				const dx = d.x - bead.x;
+				const dy = d.y - bead.y;
+				const reach = d.r + bead.r;
+				if (dx * dx + dy * dy < reach * reach) {
+					absorb(d, bead);
+					return false;
+				}
+			}
+			return true;
 		};
 		let landing = (area / 300) * intensity * dt;
 		while (landing > 0) {
@@ -149,10 +157,20 @@ function step(surface: Surface, dt: number) {
 		}
 	} else {
 		// Drying out.
-		for (const b of beads) b.r -= EVAPORATE * dt;
-		for (const d of drops) d.r -= EVAPORATE * 0.6 * dt;
-		surface.beads = beads.filter((b) => b.r > 0.25);
-		surface.drops = drops.filter((d) => d.r > 0.4);
+		let bw = 0;
+		for (let i = 0; i < beads.length; i++) {
+			const b = beads[i];
+			b.r -= EVAPORATE * dt;
+			if (b.r > 0.25) beads[bw++] = b;
+		}
+		beads.length = bw;
+		let dw = 0;
+		for (let i = 0; i < drops.length; i++) {
+			const d = drops[i];
+			d.r -= EVAPORATE * 0.6 * dt;
+			if (d.r > 0.4) drops[dw++] = d;
+		}
+		drops.length = dw;
 	}
 
 	for (let i = surface.drops.length - 1; i >= 0; i--) {
@@ -180,13 +198,22 @@ function step(surface: Surface, dt: number) {
 				d.vy = 0;
 			}
 			// It sweeps up the beads it runs through.
-			surface.beads = surface.beads.filter((b) => {
-				if (b.y > d.y - d.r * 1.1 && Math.hypot(b.x - d.x, b.y - d.y) < d.r + b.r * 0.6) {
-					absorb(d, b);
-					return false;
+			const minY = d.y - d.r * 1.1;
+			let bw = 0;
+			for (let k = 0; k < surface.beads.length; k++) {
+				const b = surface.beads[k];
+				if (b.y > minY) {
+					const dx = b.x - d.x;
+					const dy = b.y - d.y;
+					const reach = d.r + b.r * 0.6;
+					if (dx * dx + dy * dy < reach * reach) {
+						absorb(d, b);
+						continue;
+					}
 				}
-				return true;
-			});
+				surface.beads[bw++] = b;
+			}
+			surface.beads.length = bw;
 			if (d.y - d.r > h || d.x + d.r < 0 || d.x - d.r > w) {
 				surface.drops.splice(i, 1);
 				continue;
@@ -195,12 +222,15 @@ function step(surface: Surface, dt: number) {
 		// Touching drops merge into the bigger one.
 		for (let j = i - 1; j >= 0; j--) {
 			const o = surface.drops[j];
-			if (Math.hypot(o.x - d.x, o.y - d.y) < (o.r + d.r) * 0.85) {
+			const dx = o.x - d.x;
+			const dy = o.y - d.y;
+			const reach = (o.r + d.r) * 0.85;
+			if (dx * dx + dy * dy < reach * reach) {
 				const [big, small] = o.r >= d.r ? [o, d] : [d, o];
 				absorb(big, small);
 				big.vy = Math.max(big.vy, small.vy);
 				big.sliding ||= small.sliding;
-				surface.drops.splice(surface.drops.indexOf(small), 1);
+				surface.drops.splice(o.r >= d.r ? i : j, 1);
 				break;
 			}
 		}
@@ -260,8 +290,12 @@ function sync() {
 				if (surface) fit(surface);
 			}
 		});
+		const measured: { el: HTMLElement; w: number; h: number }[] = [];
 		for (const el of document.querySelectorAll<HTMLElement>('[data-glass]')) {
 			if (getComputedStyle(el).position === 'static') continue;
+			measured.push({ el, w: el.offsetWidth, h: el.offsetHeight });
+		}
+		for (const { el, w, h } of measured) {
 			const canvas = document.createElement('canvas');
 			canvas.className = 'rain-glass';
 			canvas.setAttribute('aria-hidden', 'true');
@@ -275,7 +309,7 @@ function sync() {
 			});
 			el.append(canvas);
 			const surface: Surface = { el, canvas, ctx: canvas.getContext('2d')!, w: 0, h: 0, beads: [], drops: [], slide: 3 };
-			fit(surface);
+			fit(surface, w, h);
 			prefill(surface);
 			surfaces.push(surface);
 			resize.observe(el);
@@ -303,3 +337,4 @@ document.addEventListener('astro:before-swap', teardown);
 window.addEventListener('sky:weather', () => sync());
 // The theme lives on <html>, which outlives every page.
 new MutationObserver(() => sync()).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+sync();

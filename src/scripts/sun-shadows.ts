@@ -103,3 +103,4 @@ window.addEventListener('sky:sunlight', (event) => {
 	sunlight = (event as CustomEvent<number>).detail;
 	if ('daylight' in document.body.dataset) update(document.body);
 });
+init();

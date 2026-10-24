@@ -27,49 +27,78 @@ const supported = () =>
 	CSS.supports('backdrop-filter', 'url(#a)') &&
 	!matchMedia('(prefers-reduced-transparency: reduce)').matches;
 
+const mapCache = new Map<string, string>();
+let scratchCanvas: HTMLCanvasElement | null = null;
+let scratchCtx: CanvasRenderingContext2D | null = null;
+
 /** Inward displacement map for a w×h rounded rect, as a PNG data URL (R = x, G = y; 128 = none). */
 function displacementMap(w: number, h: number, radius: number, bezel: number) {
-	const canvas = document.createElement('canvas');
+	const key = `${w}x${h}:${radius}:${bezel.toFixed(2)}`;
+	const cached = mapCache.get(key);
+	if (cached) return cached;
+
+	if (!scratchCanvas) {
+		scratchCanvas = document.createElement('canvas');
+		scratchCtx = scratchCanvas.getContext('2d');
+	}
+	const canvas = scratchCanvas;
+	const ctx = scratchCtx!;
 	canvas.width = w;
 	canvas.height = h;
-	const ctx = canvas.getContext('2d')!;
 	const image = ctx.createImageData(w, h);
 	const data = image.data;
+	// Pre-fill every pixel to neutral displacement (R=128, G=128, B=128, A=255).
+	new Uint32Array(data.buffer).fill(0xff808080);
+
 	const r = Math.min(radius, w / 2, h / 2);
 	const hx = w / 2 - r;
 	const hy = h / 2 - r;
+	const innerBezel = r - bezel;
 	for (let y = 0; y < h; y++) {
+		const py = y + 0.5 - h / 2;
+		const qy = Math.abs(py) - hy;
+		const sy = py < 0 ? -1 : 1;
+		const rowOffset = y * w;
 		for (let x = 0; x < w; x++) {
 			const px = x + 0.5 - w / 2;
-			const py = y + 0.5 - h / 2;
 			const qx = Math.abs(px) - hx;
-			const qy = Math.abs(py) - hy;
-			// Signed distance to the rounded rect (negative inside).
-			const sdf = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
-			// Bevel: nothing in the flat middle, steepening toward the rim.
-			const t = Math.min(1, Math.max(0, 1 + sdf / bezel));
-			const strength = t * t;
-			// Outward normal of the nearest edge; displacement points the other way.
+			// Fast-skip the flat middle where sdf <= -bezel (t === 0, strength === 0).
+			if (qx <= -bezel && qy <= -bezel) continue;
+
+			const sx = px < 0 ? -1 : 1;
+			let sdf: number;
 			let nx = 0;
 			let ny = 0;
 			if (qx > 0 && qy > 0) {
-				const len = Math.hypot(qx, qy) || 1;
-				nx = (qx / len) * Math.sign(px);
-				ny = (qy / len) * Math.sign(py);
+				const len = Math.hypot(qx, qy);
+				sdf = len - r;
+				if (sdf <= -bezel) continue;
+				const inv = len > 0 ? 1 / len : 0;
+				nx = qx * inv * sx;
+				ny = qy * inv * sy;
 			} else if (qx > qy) {
-				nx = Math.sign(px);
+				if (qx <= innerBezel) continue;
+				sdf = qx - r;
+				nx = sx;
 			} else {
-				ny = Math.sign(py);
+				if (qy <= innerBezel) continue;
+				sdf = qy - r;
+				ny = sy;
 			}
-			const i = (y * w + x) * 4;
-			data[i] = 128 - nx * strength * 127;
-			data[i + 1] = 128 - ny * strength * 127;
-			data[i + 2] = 128;
-			data[i + 3] = 255;
+
+			// Bevel: nothing in the flat middle, steepening toward the rim.
+			const t = Math.min(1, Math.max(0, 1 + sdf / bezel));
+			const strength = t * t * 127;
+			const i = (rowOffset + x) * 4;
+			data[i] = 128 - nx * strength;
+			data[i + 1] = 128 - ny * strength;
 		}
 	}
 	ctx.putImageData(image, 0, 0);
-	return canvas.toDataURL();
+	const url = canvas.toDataURL();
+	if (mapCache.size > 24) mapCache.clear();
+	mapCache.set(key, url);
+	return url;
 }
 
 function el<K extends keyof SVGElementTagNameMap>(name: K, attrs: Record<string, string | number>) {
@@ -117,50 +146,84 @@ function init() {
 	svg.style.position = 'absolute';
 	document.body.append(svg);
 
-	const build = (target: HTMLElement, index: number) => {
-		const w = Math.round(target.offsetWidth);
-		const h = Math.round(target.offsetHeight);
-		if (!w || !h) return;
-		const id = `liquid-glass-${index}`;
-		const style = getComputedStyle(target);
-		const radius = parseFloat(style.borderTopLeftRadius) || 0;
-		const bezel = Number(target.dataset.glassBezel) || Math.min(18, h * 0.42);
-		const scale = Number(target.dataset.glassScale) || 30;
-		const blur = Number(target.dataset.glassBlur ?? 4);
+	const targetIndex = new Map(targets.map((t, i) => [t, i]));
+	const builtSignature = new WeakMap<HTMLElement, string>();
 
-		svg!.querySelector(`#${id}`)?.remove();
-		const filter = el('filter', {
-			id,
-			x: 0,
-			y: 0,
-			width: w,
-			height: h,
-			filterUnits: 'userSpaceOnUse',
-			primitiveUnits: 'userSpaceOnUse',
-			'color-interpolation-filters': 'sRGB',
-		}) as SVGFilterElement;
-		filter.append(
-			el('feImage', {
-				href: displacementMap(w, h, radius, bezel),
+	const buildBatch = (batch: Iterable<HTMLElement>) => {
+		const measurements: {
+			target: HTMLElement;
+			index: number;
+			w: number;
+			h: number;
+			radius: number;
+			bezel: number;
+			scale: number;
+			blur: number;
+			sig: string;
+		}[] = [];
+
+		// Read phase: measure all targets before touching the DOM.
+		for (const target of batch) {
+			const w = Math.round(target.offsetWidth);
+			const h = Math.round(target.offsetHeight);
+			if (!w || !h) continue;
+			const radius = parseFloat(getComputedStyle(target).borderTopLeftRadius) || 0;
+			const bezel = Number(target.dataset.glassBezel) || Math.min(18, h * 0.42);
+			const scale = Number(target.dataset.glassScale) || 30;
+			const blur = Number(target.dataset.glassBlur ?? 4);
+			const sig = `${w}x${h}:${radius}:${bezel}:${scale}:${blur}`;
+			if (builtSignature.get(target) === sig) continue;
+			builtSignature.set(target, sig);
+			measurements.push({
+				target,
+				index: targetIndex.get(target) ?? 0,
+				w,
+				h,
+				radius,
+				bezel,
+				scale,
+				blur,
+				sig,
+			});
+		}
+
+		// Write phase: build and attach SVG filters.
+		for (const { target, index, w, h, radius, bezel, scale, blur } of measurements) {
+			const id = `liquid-glass-${index}`;
+			svg!.querySelector(`#${id}`)?.remove();
+			const filter = el('filter', {
+				id,
 				x: 0,
 				y: 0,
 				width: w,
 				height: h,
-				preserveAspectRatio: 'none',
-				result: 'map',
-			})
-		);
-		channel(filter, scale, 0);
-		channel(filter, scale * 0.92, 1);
-		channel(filter, scale * 0.84, 2);
-		filter.append(
-			el('feComposite', { in: 'c0', in2: 'c1', operator: 'arithmetic', k2: 1, k3: 1, result: 'rg' }),
-			el('feComposite', { in: 'rg', in2: 'c2', operator: 'arithmetic', k2: 1, k3: 1 })
-		);
-		svg!.append(filter);
-		const value = `url(#${id}) blur(${blur}px) saturate(1.5)`;
-		target.style.backdropFilter = value;
-		target.style.setProperty('-webkit-backdrop-filter', value);
+				filterUnits: 'userSpaceOnUse',
+				primitiveUnits: 'userSpaceOnUse',
+				'color-interpolation-filters': 'sRGB',
+			}) as SVGFilterElement;
+			filter.append(
+				el('feImage', {
+					href: displacementMap(w, h, radius, bezel),
+					x: 0,
+					y: 0,
+					width: w,
+					height: h,
+					preserveAspectRatio: 'none',
+					result: 'map',
+				})
+			);
+			channel(filter, scale, 0);
+			channel(filter, scale * 0.92, 1);
+			channel(filter, scale * 0.84, 2);
+			filter.append(
+				el('feComposite', { in: 'c0', in2: 'c1', operator: 'arithmetic', k2: 1, k3: 1, result: 'rg' }),
+				el('feComposite', { in: 'rg', in2: 'c2', operator: 'arithmetic', k2: 1, k3: 1 })
+			);
+			svg!.append(filter);
+			const value = `url(#${id}) blur(${blur}px) saturate(1.5)`;
+			target.style.backdropFilter = value;
+			target.style.setProperty('-webkit-backdrop-filter', value);
+		}
 	};
 
 	let frame = 0;
@@ -169,7 +232,7 @@ function init() {
 		entries.forEach((entry) => pending.add(entry.target as HTMLElement));
 		frame ||= requestAnimationFrame(() => {
 			frame = 0;
-			pending.forEach((target) => build(target, targets.indexOf(target)));
+			buildBatch(pending);
 			pending.clear();
 		});
 	});

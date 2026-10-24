@@ -314,7 +314,7 @@ export class SkyRenderer {
 				this.night = msg.night;
 				if (msg.starColor !== this.starColor) {
 					this.starColor = msg.starColor;
-					this.createStarSprites();
+					this.starSprites = [];
 				}
 				this.sync();
 				break;
@@ -346,7 +346,7 @@ export class SkyRenderer {
 				break;
 			case 'scroll':
 				this.scrollTop = msg.top;
-				this.lastInput = performance.now();
+				if (this.width >= 768) this.lastInput = performance.now();
 				break;
 			case 'meteor':
 				// Asked for by a page (the 404's welcome): always a bright one.
@@ -431,7 +431,8 @@ export class SkyRenderer {
 
 		const nextWidth = Math.max(1, Math.ceil(width));
 		const nextHeight = Math.max(1, Math.ceil(height));
-		const nextDpr = clamp(dpr || 1, 1, MAX_DPR);
+		const maxDpr = nextWidth < 768 ? 1.5 : MAX_DPR;
+		const nextDpr = clamp(dpr || 1, 1, maxDpr);
 		const sizeChanged = nextWidth !== this.width || nextHeight !== this.height || nextDpr !== this.dpr;
 
 		if (!sizeChanged && !forceRebuild) return;
@@ -442,13 +443,14 @@ export class SkyRenderer {
 		this.canvas.width = Math.ceil(nextWidth * nextDpr);
 		this.canvas.height = Math.ceil(nextHeight * nextDpr);
 		this.ctx.setTransform(nextDpr, 0, 0, nextDpr, 0, 0);
-		this.createStarSprites();
+		this.starSprites = [];
 		this.realSky?.setDpr(nextDpr);
 		this.glSky?.resize(nextWidth, nextHeight, nextDpr);
-		this.createSunlightSprite();
-		this.createAuroraSprite();
-		this.reconcileStars(forceRebuild);
-		this.reconcileClouds(forceRebuild || sizeChanged);
+		this.sunlightSprite = null;
+		this.auroraSprite = null;
+		if (forceRebuild) this.stars = [];
+		else if (this.stars.length) this.reconcileStars(false);
+		this.clouds = [];
 	}
 
 	private reconcileStars(forceRebuild: boolean) {
@@ -556,17 +558,18 @@ export class SkyRenderer {
 	}
 
 	private drawAurora(elapsedSeconds: number) {
-		if (!this.ctx || !this.auroraSprite) return;
+		if (!this.ctx) return;
+		if (!this.auroraSprite) this.createAuroraSprite();
 		const driftX = Math.sin(elapsedSeconds * 0.05) * this.width * 0.05;
 		const driftY = Math.cos(elapsedSeconds * 0.037) * this.height * 0.02;
 		this.ctx.save();
 		this.ctx.globalCompositeOperation = 'screen';
 		this.ctx.drawImage(
-			this.auroraSprite.canvas,
+			this.auroraSprite!.canvas,
 			driftX - this.width * 0.03,
 			driftY - this.height * 0.04,
-			this.auroraSprite.width * 1.1,
-			this.auroraSprite.height
+			this.auroraSprite!.width * 1.1,
+			this.auroraSprite!.height
 		);
 		this.ctx.restore();
 	}
@@ -588,16 +591,16 @@ export class SkyRenderer {
 	private loadRealSky() {
 		if (this.realSky || this.realSkyLoading) return;
 		this.realSkyLoading = true;
+		this.loadGL();
 		void import('./realsky').then(({ RealSky }) => {
 			this.realSky = new RealSky(this.site.lat, this.site.lon);
 			this.realSky.setDpr(this.dpr);
 			this.realSky.setRadiant(this.shower);
 			this.drawStaticFrame();
-			this.loadGL();
 		});
 	}
 
-	/** The GPU star layer: loaded after the real sky; any failure leaves the 2D stars in charge. */
+	/** The GPU star layer: loaded alongside the real sky; any failure leaves the 2D stars in charge. */
 	private loadGL() {
 		if (!this.glCanvas || this.glState !== 'none') return;
 		this.glState = 'loading';
@@ -605,7 +608,7 @@ export class SkyRenderer {
 			.then(({ GLSky }) => {
 				this.glSky = new GLSky(this.glCanvas!, this.site.lat, this.site.lon);
 				this.glSky.resize(this.width, this.height, this.dpr);
-				this.glSky.weather.reducedMotion = this.reducedMotion;
+				this.glSky.setReducedMotion(this.reducedMotion);
 				// Weather that arrived first is simply there; later changes ease in.
 				this.glSky.setWeather(this.weather, true);
 				this.glState = 'ready';
@@ -834,8 +837,13 @@ export class SkyRenderer {
 			this.lensY += (this.pointerTargetY - this.lensY) * follow;
 			this.lensAmount += ((this.lensOn ? 1 : 0) - this.lensAmount) * approach(5, deltaSeconds);
 			// Scroll velocity (px/s), smoothed so a single jumpy frame can't flash a streak.
-			const velocity = deltaSeconds > 0 ? (this.scrollTop - this.lastScrollTop) / deltaSeconds : 0;
-			this.warp += (velocity - this.warp) * approach(10, deltaSeconds);
+			// Disabled on mobile viewports so touch scrolling doesn't stretch star quads.
+			if (this.width >= 768) {
+				const velocity = deltaSeconds > 0 ? (this.scrollTop - this.lastScrollTop) / deltaSeconds : 0;
+				this.warp += (velocity - this.warp) * approach(10, deltaSeconds);
+			} else {
+				this.warp = 0;
+			}
 		} else {
 			this.lensAmount = 0;
 			this.warp = 0;
@@ -1008,6 +1016,8 @@ export class SkyRenderer {
 
 	private drawStars(elapsedSeconds: number) {
 		if (!this.ctx) return;
+		if (!this.starSprites.length) this.createStarSprites();
+		this.reconcileStars(false);
 
 		const scrollTop = this.reducedMotion ? 0 : this.scrollTop;
 

@@ -72,26 +72,38 @@ function seeded(seed: number) {
 
 /** Tileable gradient noise, `cells` per side, mapped to roughly 0–1. */
 function perlin(size: number, cells: number, rand: () => number) {
-	const angles = Array.from({ length: cells * cells }, () => rand() * Math.PI * 2);
+	const count = cells * cells;
+	const gx = new Float32Array(count);
+	const gy = new Float32Array(count);
+	for (let i = 0; i < count; i++) {
+		const a = rand() * Math.PI * 2;
+		gx[i] = Math.cos(a);
+		gy[i] = Math.sin(a);
+	}
 	const fade = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
 	const dot = (ix: number, iy: number, dx: number, dy: number) => {
-		const a = angles[((iy + cells) % cells) * cells + ((ix + cells) % cells)];
-		return Math.cos(a) * dx + Math.sin(a) * dy;
+		const idx = ((iy + cells) % cells) * cells + ((ix + cells) % cells);
+		return gx[idx] * dx + gy[idx] * dy;
 	};
 	const out = new Float32Array(size * size);
 	for (let y = 0; y < size; y++) {
+		const py = ((y + 0.5) / size) * cells;
+		const iy = Math.floor(py);
+		const fy = py - iy;
+		const v = fade(fy);
+		const row = y * size;
 		for (let x = 0; x < size; x++) {
 			const px = ((x + 0.5) / size) * cells;
-			const py = ((y + 0.5) / size) * cells;
 			const ix = Math.floor(px);
-			const iy = Math.floor(py);
 			const fx = px - ix;
-			const fy = py - iy;
 			const u = fade(fx);
-			const v = fade(fy);
-			const top = dot(ix, iy, fx, fy) + (dot(ix + 1, iy, fx - 1, fy) - dot(ix, iy, fx, fy)) * u;
-			const bottom = dot(ix, iy + 1, fx, fy - 1) + (dot(ix + 1, iy + 1, fx - 1, fy - 1) - dot(ix, iy + 1, fx, fy - 1)) * u;
-			out[y * size + x] = clamp01(0.5 + (top + (bottom - top) * v) * 0.85);
+			const d00 = dot(ix, iy, fx, fy);
+			const d10 = dot(ix + 1, iy, fx - 1, fy);
+			const d01 = dot(ix, iy + 1, fx, fy - 1);
+			const d11 = dot(ix + 1, iy + 1, fx - 1, fy - 1);
+			const top = d00 + (d10 - d00) * u;
+			const bottom = d01 + (d11 - d01) * u;
+			out[row + x] = clamp01(0.5 + (top + (bottom - top) * v) * 0.85);
 		}
 	}
 	return out;
@@ -99,24 +111,35 @@ function perlin(size: number, cells: number, rand: () => number) {
 
 /** Tileable inverted Worley (distance to the nearest cell point): puffs. */
 function worley(size: number, cells: number, rand: () => number) {
-	const points = Array.from({ length: cells * cells }, () => [rand(), rand()]);
+	const count = cells * cells;
+	const pxArr = new Float32Array(count);
+	const pyArr = new Float32Array(count);
+	for (let i = 0; i < count; i++) {
+		pxArr[i] = rand();
+		pyArr[i] = rand();
+	}
 	const out = new Float32Array(size * size);
 	for (let y = 0; y < size; y++) {
+		const py = ((y + 0.5) / size) * cells;
+		const iy = Math.floor(py);
+		const row = y * size;
 		for (let x = 0; x < size; x++) {
 			const px = ((x + 0.5) / size) * cells;
-			const py = ((y + 0.5) / size) * cells;
 			const ix = Math.floor(px);
-			const iy = Math.floor(py);
-			let best = 9;
+			let bestSq = 81;
 			for (let oy = -1; oy <= 1; oy++) {
+				const cy = iy + oy;
+				const rIdx = ((cy + cells) % cells) * cells;
 				for (let ox = -1; ox <= 1; ox++) {
 					const cx = ix + ox;
-					const cy = iy + oy;
-					const p = points[((cy + cells) % cells) * cells + ((cx + cells) % cells)];
-					best = Math.min(best, Math.hypot(cx + p[0] - px, cy + p[1] - py));
+					const idx = rIdx + ((cx + cells) % cells);
+					const dx = cx + pxArr[idx] - px;
+					const dy = cy + pyArr[idx] - py;
+					const dSq = dx * dx + dy * dy;
+					if (dSq < bestSq) bestSq = dSq;
 				}
 			}
-			out[y * size + x] = clamp01(1 - best / 0.9);
+			out[row + x] = clamp01(1 - Math.sqrt(bestSq) / 0.9);
 		}
 	}
 	return out;
@@ -170,25 +193,34 @@ export class CloudField {
 	/** Bilinear, wrapping — as the GPU's LINEAR + REPEAT samples mip 0. */
 	private sample(channel: Float32Array, u: number, v: number) {
 		const size = NOISE_SIZE;
+		const mask = size - 1;
 		const x = fract(u) * size - 0.5;
 		const y = fract(v) * size - 0.5;
 		const x0 = Math.floor(x);
 		const y0 = Math.floor(y);
 		const fx = x - x0;
 		const fy = y - y0;
-		const at = (ix: number, iy: number) => channel[((iy + size) % size) * size + ((ix + size) % size)];
-		const top = at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * fx;
-		const bottom = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * fx;
+		const ix0 = x0 & mask;
+		const ix1 = (x0 + 1) & mask;
+		const r0 = (y0 & mask) * size;
+		const r1 = ((y0 + 1) & mask) * size;
+		const v00 = channel[r0 + ix0];
+		const v10 = channel[r0 + ix1];
+		const v01 = channel[r1 + ix0];
+		const v11 = channel[r1 + ix1];
+		const top = v00 + (v10 - v00) * fx;
+		const bottom = v01 + (v11 - v01) * fx;
 		return top + (bottom - top) * fy;
 	}
 
 	/** The cumulus noise at sheet position (u, v) in tiles, with the given octave offsets (see `offsets`). */
 	private billows(u: number, v: number, o: ArrayLike<number>) {
 		let n = 0;
-		OCTAVES.forEach(([channel, scale, weight], i) => {
+		for (let i = 0; i < OCTAVES.length; i++) {
+			const [channel, scale, weight] = OCTAVES[i];
 			const k = octaveOffset(i) * 2;
 			n += weight * this.sample(channel === 'g' ? this.g : this.r, u * scale + o[k], v * scale + o[k + 1]);
-		});
+		}
 		const patch = this.sample(this.r, u * 0.25 + o[2], v * 0.25 + o[3]);
 		return n - (patch - 0.5) * PATCH;
 	}
@@ -210,11 +242,13 @@ export class CloudField {
 
 	/** Sample the noise's distribution once, so cover maps to an honest threshold. */
 	private measure() {
-		const steps = 220;
+		const steps = 96;
 		const values = new Float32Array(steps * steps);
 		const zero = new Float32Array(OFFSETS * 2);
 		for (let j = 0; j < steps; j++) {
-			for (let i = 0; i < steps; i++) values[j * steps + i] = this.billows((i / steps) * 4, (j / steps) * 4, zero);
+			const v = (j / steps) * 4;
+			const row = j * steps;
+			for (let i = 0; i < steps; i++) values[row + i] = this.billows((i / steps) * 4, v, zero);
 		}
 		values.sort();
 		return Float32Array.from({ length: 101 }, (_, p) => values[Math.min(values.length - 1, Math.floor((p / 100) * values.length))]);
@@ -243,9 +277,15 @@ export class CloudField {
 	/** Ease toward the reading, drift with the wind, run the lightning. */
 	advance(dt: number, width: number, height: number) {
 		const k = approach(EASE_RATE, dt);
-		for (const key of Object.keys(this.state) as (keyof Eased)[]) {
-			this.state[key] += (this.target[key] - this.state[key]) * k;
-		}
+		const s = this.state;
+		const tgt = this.target;
+		s.cover += (tgt.cover - s.cover) * k;
+		s.overcast += (tgt.overcast - s.overcast) * k;
+		s.altitude += (tgt.altitude - s.altitude) * k;
+		s.cirrus += (tgt.cirrus - s.cirrus) * k;
+		s.rain += (tgt.rain - s.rain) * k;
+		s.snow += (tgt.snow - s.snow) * k;
+		s.fog += (tgt.fog - s.fog) * k;
 		const [we, wn] = this.wind;
 		if (!this.drift) {
 			// Start where the wind would have carried it by now: the same sky on every reload.
@@ -286,12 +326,12 @@ export class CloudField {
 		out[1] = wrap(dy, 1);
 		out[2] = wrap(dx, 0.25);
 		out[3] = wrap(dy, 0.25);
-		OCTAVES.forEach(([, scale], i) => {
-			if (!i) return;
+		for (let i = 1; i < OCTAVES.length; i++) {
+			const scale = OCTAVES[i][1];
 			const k = octaveOffset(i) * 2;
 			out[k] = wrap(ex, scale);
 			out[k + 1] = wrap(ey, scale);
-		});
+		}
 		out[14] = fract(-this.cirrusDrift / CIRRUS_LEN);
 		out[15] = fract((-this.cirrusDrift * 2) / CIRRUS_LEN);
 		out[16] = fract((-this.cirrusDrift * 0.25) / CIRRUS_LEN);

@@ -110,9 +110,17 @@ const observatory = sky === 'observatory';
 			import '../scripts/motion';
 			// Observatory chrome; switches itself off outside observatory pages.
 			import '../scripts/liquid-glass';
-			// Daylight observatory: no-ops unless the page sets `daylight`.
-			import '../scripts/sun-shadows';
-			import '../scripts/rain-glass';
+			// Daylight observatory: loaded on demand only when a page sets `daylight`.
+			let daylightLoaded = false;
+			const syncDaylight = () => {
+				if (!daylightLoaded && 'daylight' in document.body.dataset) {
+					daylightLoaded = true;
+					void import('../scripts/sun-shadows');
+					void import('../scripts/rain-glass');
+				}
+			};
+			syncDaylight();
+			document.addEventListener('astro:page-load', syncDaylight);
 		</script>
 
 		<style>
@@ -148,6 +156,7 @@ const observatory = sky === 'observatory';
 				inset: 0;
 				width: 100%;
 				height: 100vh;
+				height: 100lvh;
 				pointer-events: none;
 				z-index: 1;
 				transition: opacity 600ms ease;

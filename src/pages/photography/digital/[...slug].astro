@@ -58,7 +58,7 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 					</div>
 				</div>
 				<div class="wrapper stage-body">
-					<PhotoGrid shootSlug={id} photos={data.photos} />
+					<PhotoGrid shootSlug={id} photos={data.photos} eager />
 					<LightboxData shoots={[entry]} />
 					<PhotoLightbox client:idle />
 				</div>

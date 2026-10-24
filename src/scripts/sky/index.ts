@@ -80,8 +80,9 @@ function workerCanvasSupported() {
 }
 
 class SkyController {
-	private send: (msg: SkyMessage, transfer?: Transferable[]) => void;
-	private readonly inWorker: boolean;
+	private send: (msg: SkyMessage, transfer?: Transferable[]) => void = () => {};
+	private inWorker = false;
+	private backendReady = false;
 	private canvas: HTMLCanvasElement | null = null;
 	private night = false;
 	private photo = false;
@@ -92,8 +93,35 @@ class SkyController {
 	private tapStart: { x: number; y: number; t: number } | null = null;
 	private tiltOn = false;
 	private tiltBase: { beta: number; gamma: number } | null = null;
+	private lastW = 0;
+	private lastH = 0;
 
 	constructor() {
+		// Theme and section live on <html>, which survives every swap; only
+		// changes that alter the sky are forwarded (not anim-ready etc.).
+		new MutationObserver(this.syncTheme).observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ['class', 'data-section'],
+		});
+		document.addEventListener('visibilitychange', this.syncActive);
+		window.addEventListener('resize', this.queueResize, { passive: true });
+		// <body> is the scroll container and is replaced on every swap; a
+		// capturing document listener outlives them all.
+		document.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
+		if (!reducedMotion) {
+			window.addEventListener('pointermove', this.onPointer, { passive: true });
+			window.addEventListener('pointerout', this.onPointerOut, { passive: true });
+			document.addEventListener('pointerdown', this.onPointerDown, { passive: true });
+			document.addEventListener('pointerup', this.onPointerUp, { passive: true });
+		}
+		document.addEventListener('astro:after-swap', this.bind);
+		window.addEventListener('sky:weather', this.syncWeather);
+		this.bind();
+	}
+
+	private ensureBackend() {
+		if (this.backendReady) return;
+		this.backendReady = true;
 		let worker: Worker | null = null;
 		if (workerCanvasSupported()) {
 			try {
@@ -118,27 +146,6 @@ class SkyController {
 				this.send = (msg) => renderer.handle(msg);
 			});
 		}
-
-		// Theme and section live on <html>, which survives every swap; only
-		// changes that alter the sky are forwarded (not anim-ready etc.).
-		new MutationObserver(this.syncTheme).observe(document.documentElement, {
-			attributes: true,
-			attributeFilter: ['class', 'data-section'],
-		});
-		document.addEventListener('visibilitychange', this.syncActive);
-		window.addEventListener('resize', this.queueResize, { passive: true });
-		// <body> is the scroll container and is replaced on every swap; a
-		// capturing document listener outlives them all.
-		document.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
-		if (!reducedMotion) {
-			window.addEventListener('pointermove', this.onPointer, { passive: true });
-			window.addEventListener('pointerout', this.onPointerOut, { passive: true });
-			document.addEventListener('pointerdown', this.onPointerDown, { passive: true });
-			document.addEventListener('pointerup', this.onPointerUp, { passive: true });
-		}
-		document.addEventListener('astro:after-swap', this.bind);
-		window.addEventListener('sky:weather', this.syncWeather);
-		this.bind();
 	}
 
 	/** The live weather, on daylight pages only (anywhere else the sky stays clear). */
@@ -195,23 +202,34 @@ class SkyController {
 	}
 
 	private bind = () => {
+		const night = document.documentElement.classList.contains('theme-dark');
+		const photo = document.documentElement.dataset.section === 'photography';
+		this.observatory = document.body.dataset.sky === 'observatory';
+		if (photo && !this.backendReady) {
+			this.night = night;
+			this.photo = photo;
+			return;
+		}
+		this.ensureBackend();
 		const canvas = document.querySelector<HTMLCanvasElement>('.twinkling-stars');
 		if (canvas && canvas !== this.canvas) {
 			// First load, or a page that didn't carry the persisted canvas.
 			this.canvas = canvas;
-			this.night = document.documentElement.classList.contains('theme-dark');
-			this.photo = document.documentElement.dataset.section === 'photography';
+			this.night = night;
+			this.photo = photo;
 			const target = this.inWorker ? canvas.transferControlToOffscreen() : canvas;
 			// The GPU star layer's canvas (observatory pages draw on it); persisted alongside.
 			const glElement = document.querySelector<HTMLCanvasElement>('.sky-gl');
 			const glTarget = glElement && this.inWorker ? glElement.transferControlToOffscreen() : glElement;
+			this.lastW = window.innerWidth;
+			this.lastH = window.innerHeight;
 			this.send(
 				{
 					type: 'attach',
 					canvas: target,
 					glCanvas: glTarget ?? undefined,
-					width: window.innerWidth,
-					height: window.innerHeight,
+					width: this.lastW,
+					height: this.lastH,
 					dpr: window.devicePixelRatio || 1,
 					night: this.night,
 					starColor: this.starColor(),
@@ -220,9 +238,10 @@ class SkyController {
 				},
 				this.inWorker ? [target as OffscreenCanvas, ...(glTarget ? [glTarget as OffscreenCanvas] : [])] : []
 			);
+		} else {
+			this.syncTheme();
 		}
 		this.scrollTop = document.body.scrollTop;
-		this.observatory = document.body.dataset.sky === 'observatory';
 		this.send({
 			type: 'mode',
 			observatory: this.observatory,
@@ -251,6 +270,10 @@ class SkyController {
 	private syncTheme = () => {
 		const night = document.documentElement.classList.contains('theme-dark');
 		const photo = document.documentElement.dataset.section === 'photography';
+		if (!this.backendReady) {
+			if (!photo) this.bind();
+			return;
+		}
 		if (night === this.night && photo === this.photo) return;
 		this.night = night;
 		if (photo !== this.photo) {
@@ -260,23 +283,31 @@ class SkyController {
 		this.send({ type: 'theme', night, starColor: this.starColor() });
 	};
 
-	private syncActive = () => this.send({ type: 'active', active: this.isActive() });
+	private syncActive = () => {
+		if (this.backendReady) this.send({ type: 'active', active: this.isActive() });
+	};
 
 	private resizePending = false;
 	private queueResize = () => {
+		if (!this.backendReady) return;
+		const w = window.innerWidth;
+		const h = window.innerHeight;
+		if (coarsePointer.matches && w === this.lastW && Math.abs(h - this.lastH) < 140) return;
 		this.resizePending = true;
 		this.queue();
 	};
 
 	private onScroll = (event: Event) => {
+		if (!this.backendReady || this.photo) return;
 		if (event.target !== document.body && event.target !== document) return;
 		this.scrollTop = document.body.scrollTop;
 		this.queue();
 	};
 
 	private onPointer = (event: PointerEvent) => {
-		// Tilt owns the parallax on phones once it's on.
-		if (this.tiltOn && event.pointerType !== 'mouse') return;
+		if (!this.backendReady || this.photo) return;
+		// Touch gestures are for scrolling/tapping, never hover parallax; phones use tilt.
+		if (event.pointerType === 'touch' || (this.tiltOn && event.pointerType !== 'mouse')) return;
 		this.pointer = {
 			x: event.clientX / Math.max(1, window.innerWidth) - 0.5,
 			y: event.clientY / Math.max(1, window.innerHeight) - 0.5,
@@ -328,7 +359,9 @@ class SkyController {
 		this.frame = 0;
 		if (this.resizePending) {
 			this.resizePending = false;
-			this.send({ type: 'resize', width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio || 1 });
+			this.lastW = window.innerWidth;
+			this.lastH = window.innerHeight;
+			this.send({ type: 'resize', width: this.lastW, height: this.lastH, dpr: window.devicePixelRatio || 1 });
 		}
 		if (this.pointer) {
 			this.send({ type: 'pointer', ...this.pointer });

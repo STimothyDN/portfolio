@@ -6,9 +6,10 @@ import { bunnyImageUrl, bunnySrcSet } from '../utils/bunny';
 interface Props {
 	shootSlug: string;
 	photos: CollectionEntry<'photography'>['data']['photos'];
+	eager?: boolean;
 }
 
-const { shootSlug, photos } = Astro.props;
+const { shootSlug, photos, eager = false } = Astro.props;
 ---
 
 <div class="masonry" data-shoot-grid={shootSlug}>
@@ -26,7 +27,8 @@ const { shootSlug, photos } = Astro.props;
 					srcset={bunnySrcSet(shootSlug, photo.filename, [400, 800, 1200], { format: 'webp', quality: 75 })}
 					sizes="(min-width: 50em) 33vw, 50vw"
 					alt={photo.caption || ''}
-					loading="lazy"
+					loading={eager && i < 2 ? 'eager' : 'lazy'}
+					fetchpriority={eager && i === 0 ? 'high' : undefined}
 					decoding="async"
 					style={photo.width && photo.height ? `aspect-ratio: ${photo.width} / ${photo.height};` : undefined}
 				/>
@@ -71,6 +73,7 @@ const { shootSlug, photos } = Astro.props;
 		background: var(--gradient-subtle);
 		box-shadow: var(--shadow-sm);
 		break-inside: avoid;
+		contain: layout style paint;
 		cursor: pointer;
 		transition: box-shadow var(--theme-transition);
 	}

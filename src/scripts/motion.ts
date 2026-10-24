@@ -167,7 +167,14 @@ const onIntersect: IntersectionObserverCallback = (entries, observer) => {
 let enterAt88: IntersectionObserver | undefined; // 'top 88%' — element top crosses 88% of the viewport
 let enterAt92: IntersectionObserver | undefined; // 'top 92%' — long-form bodies, a touch earlier
 
-function watch(observer: IntersectionObserver, el: HTMLElement, onEnter: () => void, onSkip?: () => void) {
+function watch(observer: IntersectionObserver, threshold: number, el: HTMLElement, onEnter: () => void, onSkip?: () => void) {
+	const r = el.getBoundingClientRect();
+	if (r.top < innerHeight * threshold && (r.width > 0 || r.height > 0)) {
+		el.dataset.revealed = '';
+		if (r.bottom > 0) onEnter();
+		else onSkip?.();
+		return;
+	}
 	reveals.set(el, (animate) => {
 		el.dataset.revealed = '';
 		if (animate) onEnter();
@@ -220,12 +227,20 @@ function scrollLinked(photo: boolean, signal: AbortSignal) {
 		}
 	};
 	const queue = () => (frame ||= requestAnimationFrame(update));
+	let lastW = innerWidth;
+	let lastH = innerHeight;
 	const remeasure = () => {
 		measure();
 		queue();
 	};
+	const onResize = () => {
+		if (innerWidth === lastW && Math.abs(innerHeight - lastH) < 140) return;
+		lastW = innerWidth;
+		lastH = innerHeight;
+		remeasure();
+	};
 	scroller.addEventListener('scroll', queue, { passive: true, signal });
-	window.addEventListener('resize', remeasure, { signal });
+	window.addEventListener('resize', onResize, { signal });
 	// Late image decodes shift layout.
 	if (document.readyState !== 'complete') window.addEventListener('load', remeasure, { once: true, signal });
 	signal.addEventListener('abort', () => cancelAnimationFrame(frame), { once: true });
@@ -235,9 +250,11 @@ function scrollLinked(photo: boolean, signal: AbortSignal) {
 /* ── Lifecycle ─────────────────────────────────────────────────────────── */
 
 let controller: AbortController | null = null;
+let initializedForSwap = false;
 
 function init() {
 	teardown();
+	initializedForSwap = true;
 	if (!motionAllowed()) return;
 	controller = new AbortController();
 	const photo = isPhotography();
@@ -248,23 +265,24 @@ function init() {
 	document.querySelectorAll<HTMLElement>('[data-animate]').forEach((el) => {
 		const preset = el.dataset.animate || 'fade-up';
 		const skip = preset === 'mask-lines' && !photo ? () => unclip(el) : undefined;
-		watch(enterAt88!, el, () => entrance(el, preset, photo), skip);
+		watch(enterAt88!, 0.88, el, () => entrance(el, preset, photo), skip);
 	});
 	document
 		.querySelectorAll<HTMLElement>('[data-animate-group]')
-		.forEach((el) => watch(enterAt88!, el, () => group(el, photo)));
+		.forEach((el) => watch(enterAt88!, 0.88, el, () => group(el, photo)));
 	// Long-form bodies (markdown content): each direct child fades up on its
 	// own trigger so a tall article reveals progressively.
 	document
 		.querySelectorAll<HTMLElement>('[data-animate-body] > *')
 		.forEach((child) =>
-			watch(enterAt92!, child, () => play(child, photo ? FADE : rise(16), photo ? 0.6 : 0.7, 'power2.out'))
+			watch(enterAt92!, 0.92, child, () => play(child, photo ? FADE : rise(16), photo ? 0.6 : 0.7, 'power2.out'))
 		);
 
 	scrollLinked(photo, controller.signal);
 }
 
 function teardown() {
+	initializedForSwap = false;
 	controller?.abort();
 	controller = null;
 	enterAt88?.disconnect();
@@ -272,8 +290,20 @@ function teardown() {
 	reveals.clear();
 }
 
+// Start immediately on initial module evaluation (DOM is already parsed) so
+// above-the-fold entrances don't wait for window.load ('astro:page-load').
+init();
+// On same-world navigations, start entrances immediately on swap so JS
+// entrances stay synchronized with CSS-only entrances (e.g. Constellation).
+document.addEventListener('astro:after-swap', () => {
+	if (!document.querySelector('.flash-transition[data-active="true"], .dslr-shutdown[data-active="true"]')) {
+		init();
+	}
+});
 // Fires on first load and after every ClientRouter navigation.
-document.addEventListener('astro:page-load', init);
+document.addEventListener('astro:page-load', () => {
+	if (!initializedForSwap) init();
+});
 // The outgoing page's observers and listeners are dead weight after the swap.
 document.addEventListener('astro:before-swap', teardown);
 // Turning on reduced motion mid-session: base.css drops every pre-hide on its

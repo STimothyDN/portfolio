@@ -83,25 +83,29 @@ const sizeClass = (mag: number) => (mag < 0.5 ? 4 : mag < 1.5 ? 3 : mag < 2.8 ? 
 
 export class RealSky {
 	readonly count: number;
-	private ra: Float32Array;
-	private sinDec: Float32Array;
-	private cosDec: Float32Array;
-	private mag: Float32Array;
-	private tint: Uint8Array;
-	private size: Uint8Array;
-	private phase: Float32Array;
-	private speed: Float32Array;
+	private catalogReady = false;
+	private ra!: Float32Array;
+	private sinDec!: Float32Array;
+	private cosDec!: Float32Array;
+	private mag!: Float32Array;
+	private tint!: Uint8Array;
+	private size!: Uint8Array;
+	private phase!: Float32Array;
+	private speed!: Float32Array;
 	/** Horizon-frame unit vectors [east, north, up] per star. */
-	private vec: Float32Array;
+	private vec!: Float32Array;
 	private starsAt = -Infinity;
+	private starsComputed = false;
 	private bodiesAt = -Infinity;
 	private lst = 0;
 	private sunVec: Horizon = [0, 0, -1];
 	private moonBody: { vec: Horizon; phaseAngle: number } | null = null;
 	private planetBodies: Body[] = [];
-	private milky = galacticPlane(6).map((p) => ({ ...p, vec: [0, 0, -1] as Horizon }));
+	private milky: { ra: number; dec: number; weight: number; vec: Horizon }[] | null = null;
 	private radiantEq: { ra: number; dec: number } | null = null;
 	private radiantVec: Horizon | null = null;
+	private dpr = 1;
+	private spritesDpr = 0;
 	private sprites: StarSprite[][] = [];
 	private milkySprite: SkyCanvas | null = null;
 	private drawn = 0;
@@ -125,7 +129,14 @@ export class RealSky {
 		private lonDeg: number
 	) {
 		const data = catalog.data as number[];
-		const n = (this.count = data.length / 4);
+		this.count = data.length / 4;
+	}
+
+	private ensureCatalog() {
+		if (this.catalogReady) return;
+		this.catalogReady = true;
+		const data = catalog.data as number[];
+		const n = this.count;
 		this.ra = new Float32Array(n);
 		this.sinDec = new Float32Array(n);
 		this.cosDec = new Float32Array(n);
@@ -148,6 +159,7 @@ export class RealSky {
 			this.phase[i] = (h - Math.floor(h)) * Math.PI * 2;
 			this.speed[i] = 0.6 + Math.abs((h * 7.31) % 1) * 1.6;
 		}
+		this.milky = galacticPlane(6).map((p) => ({ ...p, vec: [0, 0, -1] as Horizon }));
 	}
 
 	setRadiant(radiant: { ra: number; dec: number } | null) {
@@ -155,8 +167,14 @@ export class RealSky {
 		this.starsAt = -Infinity;
 	}
 
-	/** Rebuild the tinted star sprites and the Milky Way blob for a pixel ratio. */
+	/** Record the pixel ratio; sprites are built lazily only if the 2D fallback draws. */
 	setDpr(dpr: number) {
+		this.dpr = dpr;
+	}
+
+	private ensureSprites() {
+		if (this.spritesDpr === this.dpr && this.milkySprite) return;
+		const dpr = (this.spritesDpr = this.dpr);
 		this.sprites = TINTS.map((tint) =>
 			STAR_SIZES.map((size) => {
 				const glow = size * 0.95 + 1.15;
@@ -201,20 +219,24 @@ export class RealSky {
 	update(now: number, stars = true) {
 		const jd = julian(now);
 		const lat = this.latDeg * DEG;
-		if (now - this.starsAt >= STARS_EVERY_MS) {
+		if (now - this.starsAt >= STARS_EVERY_MS || (stars && !this.starsComputed)) {
 			this.starsAt = now;
 			this.lst = lstHours(jd, this.lonDeg) * 15 * DEG;
-			const sinLat = Math.sin(lat);
-			const cosLat = Math.cos(lat);
-			const v = this.vec;
-			for (let i = 0; stars && i < this.count; i++) {
-				const ha = this.lst - this.ra[i];
-				const cosHa = Math.cos(ha);
-				v[i * 3] = -this.cosDec[i] * Math.sin(ha);
-				v[i * 3 + 1] = this.sinDec[i] * cosLat - this.cosDec[i] * cosHa * sinLat;
-				v[i * 3 + 2] = this.sinDec[i] * sinLat + this.cosDec[i] * cosHa * cosLat;
+			if (stars) {
+				this.ensureCatalog();
+				this.starsComputed = true;
+				const sinLat = Math.sin(lat);
+				const cosLat = Math.cos(lat);
+				const v = this.vec;
+				for (let i = 0; i < this.count; i++) {
+					const ha = this.lst - this.ra[i];
+					const cosHa = Math.cos(ha);
+					v[i * 3] = -this.cosDec[i] * Math.sin(ha);
+					v[i * 3 + 1] = this.sinDec[i] * cosLat - this.cosDec[i] * cosHa * sinLat;
+					v[i * 3 + 2] = this.sinDec[i] * sinLat + this.cosDec[i] * cosHa * cosLat;
+				}
+				for (const p of this.milky!) toHorizon(p.ra, p.dec, this.lst, lat, p.vec);
 			}
-			for (const p of this.milky) toHorizon(p.ra, p.dec, this.lst, lat, p.vec);
 			this.radiantVec = this.radiantEq ? toHorizon(this.radiantEq.ra, this.radiantEq.dec, this.lst, lat) : null;
 		}
 		if (now - this.bodiesAt >= BODIES_EVERY_MS) {
@@ -288,7 +310,9 @@ export class RealSky {
 	}
 
 	drawMilkyWay(ctx: Ctx2D) {
-		if (!this.milkySprite) return;
+		this.ensureCatalog();
+		this.ensureSprites();
+		if (!this.milkySprite || !this.milky) return;
 		const size = this.K * 0.42;
 		ctx.save();
 		for (const p of this.milky) {
@@ -301,6 +325,8 @@ export class RealSky {
 	}
 
 	drawStars(elapsed: number, draw: DrawStar) {
+		this.ensureCatalog();
+		this.ensureSprites();
 		const v = this.vec;
 		let drawn = 0;
 		for (let i = 0; i < this.count; i++) {

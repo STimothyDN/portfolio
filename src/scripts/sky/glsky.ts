@@ -52,7 +52,18 @@ type Mat3 = number[][];
 const mul = (a: Mat3, b: Mat3): Mat3 => a.map((row) => [0, 1, 2].map((j) => row[0] * b[0][j] + row[1] * b[1][j] + row[2] * b[2][j]));
 const transpose = (m: Mat3): Mat3 => [0, 1, 2].map((i) => [m[0][i], m[1][i], m[2][i]]);
 /** GLSL wants column-major. */
-const columnMajor = (m: Mat3) => new Float32Array([m[0][0], m[1][0], m[2][0], m[0][1], m[1][1], m[2][1], m[0][2], m[1][2], m[2][2]]);
+const columnMajor = (m: Mat3, out = new Float32Array(9)) => {
+	out[0] = m[0][0];
+	out[1] = m[1][0];
+	out[2] = m[2][0];
+	out[3] = m[0][1];
+	out[4] = m[1][1];
+	out[5] = m[2][1];
+	out[6] = m[0][2];
+	out[7] = m[1][2];
+	out[8] = m[2][2];
+	return out;
+};
 
 export type GLView = { r: number[]; u: number[]; f: number[]; K: number };
 /**
@@ -606,19 +617,34 @@ function buildStars(backgroundCount: number) {
 	let seed = 1337;
 	const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 	const gauss = () => Math.sqrt(-2 * Math.log(rand() + 1e-9)) * Math.cos(2 * Math.PI * rand());
-	const put = (i: number, dir: number[], mag: number, tint: number[]) => {
+	const put = (i: number, dx: number, dy: number, dz: number, mag: number, tint: number[]) => {
 		const o = i * FLOATS_PER_STAR;
-		out.set([dir[0], dir[1], dir[2], mag, tint[0], tint[1], tint[2], rand() * Math.PI * 2, 0.6 + rand() * 1.6], o);
+		out[o] = dx;
+		out[o + 1] = dy;
+		out[o + 2] = dz;
+		out[o + 3] = mag;
+		out[o + 4] = tint[0];
+		out[o + 5] = tint[1];
+		out[o + 6] = tint[2];
+		out[o + 7] = rand() * Math.PI * 2;
+		out[o + 8] = 0.6 + rand() * 1.6;
 	};
 
 	for (let i = 0; i < catalogCount; i++) {
 		const ra = (data[i * 4] / 100) * DEG;
 		const dec = (data[i * 4 + 1] / 100) * DEG;
-		put(i, [Math.cos(dec) * Math.cos(ra), Math.cos(dec) * Math.sin(ra), Math.sin(dec)], data[i * 4 + 2] / 10, tintFor(data[i * 4 + 3] / 10));
+		const cosDec = Math.cos(dec);
+		put(i, cosDec * Math.cos(ra), cosDec * Math.sin(ra), Math.sin(dec), data[i * 4 + 2] / 10, tintFor(data[i * 4 + 3] / 10));
 	}
 
 	const toEquatorial = transpose(GALACTIC);
+	const r0 = toEquatorial[0];
+	const r1 = toEquatorial[1];
+	const r2 = toEquatorial[2];
+	const bg = new Float32Array(backgroundCount * FLOATS_PER_STAR);
+	const order = new Int32Array(backgroundCount);
 	for (let k = 0; k < backgroundCount; k++) {
+		order[k] = k;
 		let l: number;
 		let b: number;
 		if (rand() < 0.6) {
@@ -630,32 +656,63 @@ function buildStars(backgroundCount: number) {
 			b = Math.asin(rand() * 2 - 1);
 			l = rand() * Math.PI * 2;
 		}
-		const g = [Math.cos(b) * Math.cos(l), Math.cos(b) * Math.sin(l), Math.sin(b)];
-		const eq = toEquatorial.map((row) => row[0] * g[0] + row[1] * g[1] + row[2] * g[2]);
+		const cosB = Math.cos(b);
+		const gx = cosB * Math.cos(l);
+		const gy = cosB * Math.sin(l);
+		const gz = Math.sin(b);
 		const mag = 6.5 + 2.6 * Math.pow(rand(), 0.55);
-		put(catalogCount + k, eq, mag, TINTS[1 + Math.floor(rand() * 4)]);
+		const tint = TINTS[1 + Math.floor(rand() * 4)];
+		const o = k * FLOATS_PER_STAR;
+		bg[o] = r0[0] * gx + r0[1] * gy + r0[2] * gz;
+		bg[o + 1] = r1[0] * gx + r1[1] * gy + r1[2] * gz;
+		bg[o + 2] = r2[0] * gx + r2[1] * gy + r2[2] * gz;
+		bg[o + 3] = mag;
+		bg[o + 4] = tint[0];
+		bg[o + 5] = tint[1];
+		bg[o + 6] = tint[2];
+		bg[o + 7] = rand() * Math.PI * 2;
+		bg[o + 8] = 0.6 + rand() * 1.6;
 	}
-	return { stars: out, count: catalogCount + backgroundCount };
+	// Sort background stars by magnitude ascending so smaller viewports can
+	// submit only the visible prefix to drawArraysInstanced.
+	order.sort((a, b) => bg[a * FLOATS_PER_STAR + 3] - bg[b * FLOATS_PER_STAR + 3]);
+	let count82 = catalogCount;
+	let count86 = catalogCount;
+	for (let k = 0; k < backgroundCount; k++) {
+		const src = order[k] * FLOATS_PER_STAR;
+		const dst = (catalogCount + k) * FLOATS_PER_STAR;
+		for (let j = 0; j < FLOATS_PER_STAR; j++) out[dst + j] = bg[src + j];
+		const mag = bg[src + 3];
+		if (mag <= 8.2) count82 = catalogCount + k + 1;
+		if (mag <= 8.6) count86 = catalogCount + k + 1;
+	}
+	return { stars: out, count: catalogCount + backgroundCount, count82, count86 };
 }
 
 export class GLSky {
 	private gl: WebGL2RenderingContext;
-	private starProgram: WebGLProgram;
-	private skyProgram: WebGLProgram;
-	private starVao: WebGLVertexArrayObject;
 	private emptyVao: WebGLVertexArrayObject;
-	private milky: WebGLTexture;
-	private count: number;
 	private uniforms: Record<string, WebGLUniformLocation | null> = {};
-	private dayProgram: WebGLProgram;
-	private lutProgram: WebGLProgram;
-	private lut: WebGLTexture;
-	private lutFramebuffer: WebGLFramebuffer;
+	private nightReady = false;
+	private starProgram!: WebGLProgram;
+	private skyProgram!: WebGLProgram;
+	private starVao!: WebGLVertexArrayObject;
+	private milky!: WebGLTexture;
+	private count = 0;
+	private count82 = 0;
+	private count86 = 0;
+	private dayReady = false;
+	private dayProgram!: WebGLProgram;
+	private lutProgram!: WebGLProgram;
+	private lut!: WebGLTexture;
+	private lutFramebuffer!: WebGLFramebuffer;
 	/** Sun altitude the sky table was last integrated for (radians). */
 	private lutSunAlt = NaN;
 	private lutFloat = false;
-	private noise: WebGLTexture;
-	readonly weather = new CloudField();
+	private noise!: WebGLTexture;
+	private _weather: CloudField | null = null;
+	private pendingWeather: { weather: SkyWeather | null; snap: boolean } | null = null;
+	private reducedMotion = false;
 	private sunlightIn = 0;
 	/** Direct sunlight reaching the ground through the clouds (0–1), refreshed twice a second. */
 	sunlight = 1;
@@ -664,6 +721,9 @@ export class GLSky {
 	private height = 1;
 	private lost = false;
 	drawn = 0;
+	private matBufA = new Float32Array(9);
+	private matBufB = new Float32Array(9);
+	private upViewBuf = new Float32Array(3);
 
 	constructor(
 		private canvas: SkyCanvas,
@@ -677,6 +737,13 @@ export class GLSky {
 			event.preventDefault();
 			this.lost = true;
 		});
+		this.emptyVao = gl.createVertexArray()!;
+	}
+
+	private ensureNight() {
+		if (this.nightReady) return;
+		this.nightReady = true;
+		const gl = this.gl;
 
 		this.starProgram = compile(gl, STAR_VS, STAR_FS);
 		this.skyProgram = compile(gl, FULLSCREEN_VS, MILKY_SKY_FS);
@@ -688,8 +755,10 @@ export class GLSky {
 		}
 
 		// Stars: a unit quad per instance.
-		const { stars, count } = buildStars(42000);
+		const { stars, count, count82, count86 } = buildStars(42000);
 		this.count = count;
+		this.count82 = count82;
+		this.count86 = count86;
 		this.starVao = gl.createVertexArray()!;
 		gl.bindVertexArray(this.starVao);
 		const corners = gl.createBuffer();
@@ -712,9 +781,22 @@ export class GLSky {
 			gl.vertexAttribDivisor(loc, 1);
 		}
 		gl.bindVertexArray(null);
-		this.emptyVao = gl.createVertexArray()!;
 
 		this.milky = this.generateMilkyWay();
+	}
+
+	private ensureDay() {
+		if (this.dayReady) return;
+		this.dayReady = true;
+		const gl = this.gl;
+
+		if (!this._weather) {
+			this._weather = new CloudField();
+			this._weather.reducedMotion = this.reducedMotion;
+			if (this.pendingWeather) {
+				this._weather.setWeather(this.pendingWeather.weather, this.pendingWeather.snap);
+			}
+		}
 
 		this.dayProgram = compile(gl, FULLSCREEN_VS, DAY_SKY_FS);
 		this.lutProgram = compile(gl, FULLSCREEN_VS, SKY_LUT_FS);
@@ -763,7 +845,7 @@ export class GLSky {
 		// sheet stays calm as it foreshortens toward the horizon.
 		this.noise = gl.createTexture()!;
 		gl.bindTexture(gl.TEXTURE_2D, this.noise);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, NOISE_SIZE, NOISE_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.weather.texture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, NOISE_SIZE, NOISE_SIZE, 0, gl.RGBA, gl.UNSIGNED_BYTE, this._weather.texture);
 		gl.generateMipmap(gl.TEXTURE_2D);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -773,9 +855,20 @@ export class GLSky {
 		if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
 	}
 
+	get weather(): CloudField {
+		this.ensureDay();
+		return this._weather!;
+	}
+
+	setReducedMotion(reduced: boolean) {
+		this.reducedMotion = reduced;
+		if (this._weather) this._weather.reducedMotion = reduced;
+	}
+
 	/** The live weather (null for a clear sky); `snap` skips the ease-in. */
 	setWeather(weather: SkyWeather | null, snap: boolean) {
-		this.weather.setWeather(weather, snap);
+		this.pendingWeather = { weather, snap };
+		this._weather?.setWeather(weather, snap);
 	}
 
 	/** Size the drawing buffer for day (≤ 1× CSS px) or night (full DPR); resizing clears it. */
@@ -832,9 +925,10 @@ export class GLSky {
 	/** The daytime sky: opaque, so it stands in for the page's light background. */
 	renderDay(frame: GLDayFrame) {
 		if (this.lost) return;
+		this.ensureDay();
 		const gl = this.gl;
 		const [x, y, z] = frame.sun;
-		const weather = this.weather;
+		const weather = this._weather!;
 		weather.advance(frame.dt, frame.width, frame.height);
 		this.sunlightIn -= frame.dt;
 		if (this.sunlightIn <= 0 || frame.dt === 0) {
@@ -902,6 +996,7 @@ export class GLSky {
 
 	render(frame: GLFrame) {
 		if (this.lost) return;
+		this.ensureNight();
 		const gl = this.gl;
 		const { view } = frame;
 		this.fit(this.dpr);
@@ -910,15 +1005,21 @@ export class GLSky {
 		// Equatorial → horizon (east, north, up) for the current sidereal time.
 		const lst = lstHours(julian(skyNow()), this.lonDeg) * 15 * DEG;
 		const lat = this.latDeg * DEG;
-		const [sl, cl, sp, cp] = [Math.sin(lst), Math.cos(lst), Math.sin(lat), Math.cos(lat)];
+		const sl = Math.sin(lst);
+		const cl = Math.cos(lst);
+		const sp = Math.sin(lat);
+		const cp = Math.cos(lat);
 		const eqToHorizon: Mat3 = [
 			[-sl, cl, 0],
 			[-sp * cl, -sp * sl, cp],
 			[cp * cl, cp * sl, sp],
 		];
 		const eqToView = mul([view.r, view.u, view.f], eqToHorizon);
-		const upView = [view.r[2], view.u[2], view.f[2]];
 		const viewToGal = mul(GALACTIC, transpose(eqToView));
+		const upView = this.upViewBuf;
+		upView[0] = view.r[2];
+		upView[1] = view.u[2];
+		upView[2] = view.f[2];
 		const area = frame.width * frame.height;
 
 		gl.enable(gl.BLEND);
@@ -930,7 +1031,7 @@ export class GLSky {
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.milky);
 		const m = (name: string) => this.uniforms[`m.${name}`];
-		gl.uniformMatrix3fv(m('uViewToGal'), false, columnMajor(viewToGal));
+		gl.uniformMatrix3fv(m('uViewToGal'), false, columnMajor(viewToGal, this.matBufA));
 		gl.uniform3fv(m('uUpView'), upView);
 		gl.uniform2f(m('uViewport'), frame.width, frame.height);
 		gl.uniform1f(m('uDpr'), this.dpr);
@@ -943,17 +1044,20 @@ export class GLSky {
 		gl.useProgram(this.starProgram);
 		gl.bindVertexArray(this.starVao);
 		const s = (name: string) => this.uniforms[`s.${name}`];
-		gl.uniformMatrix3fv(s('uEqToView'), false, columnMajor(eqToView));
+		gl.uniformMatrix3fv(s('uEqToView'), false, columnMajor(eqToView, this.matBufB));
 		gl.uniform3fv(s('uUpView'), upView);
 		gl.uniform2f(s('uViewport'), frame.width, frame.height);
 		gl.uniform1f(s('uK'), view.K);
 		gl.uniform1f(s('uTime'), frame.time);
 		gl.uniform3f(s('uLens'), frame.lens.x, frame.lens.y, frame.lens.amount);
 		gl.uniform1f(s('uWarp'), frame.warp);
-		// Smaller screens show fewer of the faintest stars.
-		gl.uniform1f(s('uLimitMag'), area >= 1.1e6 ? 9.1 : area >= 5e5 ? 8.6 : 8.2);
-		gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.count);
+		// Smaller screens show fewer of the faintest stars; background stars are
+		// sorted by magnitude so we only submit the visible prefix of instances.
+		const limitMag = area >= 1.1e6 ? 9.1 : area >= 5e5 ? 8.6 : 8.2;
+		const drawCount = area >= 1.1e6 ? this.count : area >= 5e5 ? this.count86 : this.count82;
+		gl.uniform1f(s('uLimitMag'), limitMag);
+		gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, drawCount);
 		gl.bindVertexArray(null);
-		this.drawn = this.count;
+		this.drawn = drawCount;
 	}
 }

@@ -62,7 +62,9 @@ function init() {
 	const body = document.body;
 
 	const letters: Letter[] = splitLetters(title).map((el) => ({ el, x: 0, y: 0, f: 0, style: '' }));
+	const invRadiusSq = 1 / (RADIUS * RADIUS);
 	let measured = false;
+	let hasActive = false;
 	let px = -1e5;
 	let py = -1e5;
 	let frame = 0;
@@ -84,18 +86,25 @@ function init() {
 		const atTop = body.scrollTop < 4;
 		const step = 1 - Math.exp(-EASE * dt);
 		let moving = false;
+		let anyActive = false;
 		for (const letter of letters) {
-			const d = Math.hypot(letter.x - px, letter.y - py);
-			const target = atTop ? Math.exp(-2.2 * (d / RADIUS) ** 2) : 0;
+			let target = 0;
+			if (atTop) {
+				const dx = letter.x - px;
+				const dy = letter.y - py;
+				target = Math.exp(-2.2 * (dx * dx + dy * dy) * invRadiusSq);
+			}
 			letter.f += (target - letter.f) * step;
 			if (Math.abs(target - letter.f) > 0.003) moving = true;
 			else letter.f = target;
+			if (letter.f > 0.001) anyActive = true;
 			const style = settings(letter.f);
 			if (style !== letter.style) {
 				letter.style = style;
 				letter.el.style.fontVariationSettings = style;
 			}
 		}
+		hasActive = anyActive;
 		if (moving) frame = requestAnimationFrame(tick);
 	};
 
@@ -109,7 +118,9 @@ function init() {
 		'pointermove',
 		(event) => {
 			if (event.pointerType !== 'mouse') return;
-			if (!measured && body.scrollTop < 4) measure();
+			const atTop = body.scrollTop < 4;
+			if (!atTop && !hasActive) return;
+			if (!measured && atTop) measure();
 			px = event.clientX;
 			py = event.clientY;
 			kick();
@@ -122,22 +133,34 @@ function init() {
 		(event) => {
 			if (event.relatedTarget) return;
 			px = py = -1e5;
-			kick();
+			if (hasActive) kick();
 		},
 		{ passive: true, signal }
 	);
 	// Positions go stale when the page moves or resizes; scrolling also relaxes the name.
 	const invalidate = () => {
 		measured = false;
-		kick();
+		if (hasActive) kick();
 	};
 	document.addEventListener('scroll', invalidate, { capture: true, passive: true, signal });
 	window.addEventListener('resize', invalidate, { passive: true, signal });
 	signal.addEventListener('abort', () => cancelAnimationFrame(frame));
 }
 
-document.addEventListener('astro:page-load', init);
+let initializedForSwap = false;
+
+function start() {
+	initializedForSwap = true;
+	init();
+}
+
+start();
+document.addEventListener('astro:after-swap', start);
+document.addEventListener('astro:page-load', () => {
+	if (!initializedForSwap) start();
+});
 document.addEventListener('astro:before-swap', () => {
+	initializedForSwap = false;
 	controller?.abort();
 	controller = null;
 });

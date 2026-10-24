@@ -46,6 +46,7 @@ function later(fn: () => void, ms: number) {
 
 function init() {
 	teardown();
+	initializedForSwap = true;
 	const dock = document.querySelector<HTMLElement>('[data-dock-name]');
 	const brand = dock?.querySelector<HTMLElement>('.brand-word');
 	const swapZone = brand?.querySelector<HTMLElement>('.brand-swap');
@@ -101,13 +102,21 @@ function init() {
 	/* ── Scroll: progress fallback + swap/dock state ───────────────────── */
 
 	let frame = 0;
+	let lastP = -1;
+	let docked = false;
 	const onScroll = () => {
 		frame = 0;
 		const p = Math.min(1, Math.max(0, body.scrollTop / range));
+		if (p === lastP) return;
+		lastP = p;
 		if (mode === 'js') body.style.setProperty('--dock-p', p.toFixed(4));
 		// Past halfway the (shrinking, then invisible) name shouldn't catch
 		// clicks meant for the nav.
-		body.toggleAttribute('data-docked', p > 0.6);
+		const nextDocked = p > 0.6;
+		if (nextDocked !== docked) {
+			docked = nextDocked;
+			body.toggleAttribute('data-docked', nextDocked);
+		}
 		if (reducedMotion.matches) return;
 		if (!scrolled && p > SWAP_AT) {
 			scrolled = true;
@@ -120,10 +129,22 @@ function init() {
 	const queueScroll = () => (frame ||= requestAnimationFrame(onScroll));
 	body.addEventListener('scroll', queueScroll, { passive: true, signal });
 
+	let lastW = window.innerWidth;
+	let lastH = window.innerHeight;
 	let resizeFrame = 0;
-	window.addEventListener('resize', () => (resizeFrame ||= requestAnimationFrame(() => ((resizeFrame = 0), measure()))), {
-		signal,
-	});
+	window.addEventListener(
+		'resize',
+		() => {
+			if (window.innerWidth === lastW && Math.abs(window.innerHeight - lastH) < 140) return;
+			resizeFrame ||= requestAnimationFrame(() => {
+				resizeFrame = 0;
+				lastW = window.innerWidth;
+				lastH = window.innerHeight;
+				measure();
+			});
+		},
+		{ signal }
+	);
 	signal.addEventListener('abort', () => {
 		cancelAnimationFrame(frame);
 		cancelAnimationFrame(resizeFrame);
@@ -246,12 +267,19 @@ function init() {
 	});
 }
 
+let initializedForSwap = false;
+
 function teardown() {
+	initializedForSwap = false;
 	controller?.abort();
 	controller = null;
 	timers.forEach((id) => clearTimeout(id));
 	timers.clear();
 }
 
-document.addEventListener('astro:page-load', init);
+init();
+document.addEventListener('astro:after-swap', init);
+document.addEventListener('astro:page-load', () => {
+	if (!initializedForSwap) init();
+});
 document.addEventListener('astro:before-swap', teardown);

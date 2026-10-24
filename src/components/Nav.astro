@@ -197,6 +197,23 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 		z-index: -1;
 	}
 
+	@keyframes nav-dock-fade-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	@supports (animation-timeline: scroll()) {
+		nav.is-docking::before {
+			animation: nav-dock-fade-in linear both;
+			animation-timeline: scroll(nearest block);
+			animation-range: 0px calc(var(--dock-range, 18rem) * 0.4);
+		}
+	}
+
 	/* With the bottom dock, phones get no dropdown menu at all (the dock and
 	   the command palette cover it); the theme toggle sits in the header. */
 	.header-theme {
@@ -263,6 +280,14 @@ const iconLinks: { label: string; href: string; icon: IconProps['icon'] }[] = [
 	@media (prefers-reduced-motion: no-preference) {
 		:global(html.anim-ready) .is-docking .site-title-text {
 			opacity: clamp(0, (var(--dock-p, 1) - 0.96) * 25, 1);
+		}
+
+		@supports (animation-timeline: scroll()) {
+			:global(html.anim-ready) .is-docking .site-title-text {
+				animation: nav-dock-fade-in linear both;
+				animation-timeline: scroll(nearest block);
+				animation-range: calc(var(--dock-range, 18rem) * 0.96) var(--dock-range, 18rem);
+			}
 		}
 	}
 
