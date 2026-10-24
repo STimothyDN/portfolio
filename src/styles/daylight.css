@@ -1,0 +1,30 @@
+/* ============================================================
+ * Daylight observatory (prototype; pages with body[data-daylight]).
+ *
+ * Sun-cast shadows: scripts/sun-shadows.ts writes --sun-shadow-* and
+ * --sun-text-shadow on <body> from the real Sun; in light mode the site's
+ * shadow tokens point at them, so every component that already uses
+ * --shadow-sm/md/lg casts the Sun's shadow with no changes of its own.
+ * Dark mode keeps its own shadows.
+ * ============================================================ */
+
+html:not(.theme-dark) body[data-daylight] {
+	--shadow-sm: var(--sun-shadow-sm);
+	--shadow-md: var(--sun-shadow-md);
+	--shadow-lg: var(--sun-shadow-lg);
+}
+
+/* The name stands on the page too. */
+html:not(.theme-dark) body[data-daylight] [data-dock-name] .title {
+	text-shadow: var(--sun-text-shadow);
+}
+
+/* Over a coloured sky the sticky nav's white scrim reads as a band: make it
+ * a lighter, blurred haze that fades out instead. */
+html:not(.theme-dark) body[data-daylight] nav.is-docking::before {
+	background: linear-gradient(180deg, color-mix(in oklch, var(--gray-999) 55%, transparent) 35%, transparent);
+	-webkit-backdrop-filter: blur(8px);
+	backdrop-filter: blur(8px);
+	-webkit-mask-image: linear-gradient(#000 50%, transparent);
+	mask-image: linear-gradient(#000 50%, transparent);
+}

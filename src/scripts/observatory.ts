@@ -181,9 +181,12 @@ function init() {
 		// Where the "3" starts its CSS drop: 1.7em above its landing spot.
 		const to = { x: zone.left + fontSize * 0.3, y: zone.top + zone.height / 2 - fontSize * 1.7 };
 		const night = document.documentElement.classList.contains('theme-dark');
+		// Daylight pages (the GPU sky) send a gold sun-glint streak by day
+		// rather than condensing a sprite cloud.
+		const streak = night || 'daylight' in body.dataset;
 
 		let duration: number;
-		if (night) {
+		if (streak) {
 			// Steep fall from the upper right, so the hand-off to the glyph's
 			// straight drop barely bends.
 			const angle = (64 * Math.PI) / 180;
@@ -202,7 +205,7 @@ function init() {
 			sync(); // the "3" drops in, knocks the "thy" off a beat later
 			later(() => {
 				const hit = swapZone!.getBoundingClientRect();
-				if (night) burstSparks(hit.left + hit.width * 0.45, hit.top + hit.height * 0.7);
+				if (streak) burstSparks(hit.left + hit.width * 0.45, hit.top + hit.height * 0.7);
 				brand.animate(
 					[
 						{ translate: '0 0', rotate: '0deg' },

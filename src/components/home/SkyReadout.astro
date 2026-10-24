@@ -3,6 +3,12 @@
  * Observatory readout strip: the live sky over Research Triangle Park,
  * computed in the browser with the same astronomy the sky canvas draws from
  * (src/scripts/sky/astro.ts). Server-renders placeholders; the script fills them.
+ *
+ * Two sets of items: the night sky's (sidereal time, Moon, meteor shower)
+ * and, on daylight pages in light mode, the day's — the Sun's position,
+ * sunrise and sunset, day length, golden hour — with a second row for the
+ * live weather station over the site (scripts/sky/weather.ts; ?weather=
+ * previews). The astronomy follows the sky clock (?at= previews).
  */
 const LAT = 35.9;
 const LON = -78.86;
@@ -25,21 +31,69 @@ const LON = -78.86;
 		<dt>Local</dt>
 		<dd><time data-clock>--:--:--</time> <span data-tz>ET</span></dd>
 	</div>
-	<div class="item optional">
+	<div class="item optional night-only">
 		<dt>LST</dt>
 		<dd data-lst>--h --m</dd>
 	</div>
-	<div class="item">
+	<div class="item night-only">
 		<dt>Sun</dt>
 		<dd data-sun>--°</dd>
 	</div>
-	<div class="item">
+	<div class="item night-only">
 		<dt>Moon</dt>
 		<dd data-moon>--</dd>
 	</div>
-	<div class="item optional">
+	<div class="item optional night-only">
 		<dt>Shower</dt>
 		<dd data-shower>--</dd>
+	</div>
+	<div class="item day-only">
+		<dt>Sun</dt>
+		<dd data-day-sun>--</dd>
+	</div>
+	<div class="item optional roomy day-only">
+		<dt>Sunrise</dt>
+		<dd data-sunrise>--:--</dd>
+	</div>
+	<div class="item day-only">
+		<dt>Sunset</dt>
+		<dd data-sunset>--:--</dd>
+	</div>
+	<div class="item optional wide day-only">
+		<dt>Daylight</dt>
+		<dd data-daylength>--</dd>
+	</div>
+	<div class="item day-only">
+		<dt>Golden hr</dt>
+		<dd data-golden>--</dd>
+	</div>
+	<div class="item day-only station">
+		<dt>Sky</dt>
+		<dd data-weather>--</dd>
+	</div>
+	<div class="item optional day-only station">
+		<dt>Feels</dt>
+		<dd data-feels>--</dd>
+	</div>
+	<div class="item optional day-only station">
+		<dt>Wind</dt>
+		<dd data-wind>--</dd>
+	</div>
+	<div class="item optional day-only station">
+		<dt>Humidity</dt>
+		<dd data-humidity>--</dd>
+	</div>
+	<div class="item optional day-only station">
+		<dt>Cloud</dt>
+		<dd data-cloud>--</dd>
+	</div>
+	<div class="item optional day-only station">
+		<dt>Vis</dt>
+		<dd data-visibility>--</dd>
+	</div>
+	<div class="item optional day-only station">
+		<dt>Updated</dt>
+		<dd data-observed>--</dd>
 	</div>
 	<div class="item tilt" data-tilt-item hidden>
 		<dt class="sr-only">Tilt parallax</dt>
@@ -49,7 +103,23 @@ const LON = -78.86;
 
 <script>
 	import { enableSkyTilt, skyTiltNeedsPermission, skyTilting } from '../../scripts/sky';
-	import { DEG, altitudeDeg, julian, lstHours, moonPhase, sun, toHorizon } from '../../scripts/sky/astro';
+	import { DEG, altitudeDeg, julian, lstHours, moonPhase, sun, sunDay, toHorizon } from '../../scripts/sky/astro';
+	import { skyNow, syncClockFromUrl } from '../../scripts/sky/clock';
+	import { weatherLabel, weatherNow } from '../../scripts/sky/weather';
+
+	const HOUR = 3600000;
+	const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+	const hm = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+	const time = (ms: number | null) => (ms === null ? '—' : hm.format(ms));
+	const duration = (ms: number) =>
+		ms < HOUR
+			? `${Math.floor(ms / 60000)}m`
+			: `${Math.floor(ms / HOUR)}h ${String(Math.floor((ms % HOUR) / 60000)).padStart(2, '0')}m`;
+	/** Signed minutes and seconds, e.g. "−2m 01s". */
+	const change = (ms: number) => {
+		const s = Math.round(Math.abs(ms) / 1000);
+		return `${ms < 0 ? '−' : '+'}${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
+	};
 	import { showerStatus } from '../../scripts/sky/showers';
 
 	const clockFormat = new Intl.DateTimeFormat('en-US', {
@@ -62,6 +132,37 @@ const LON = -78.86;
 	});
 
 	let timer = 0;
+
+	/** The weather station row, from the latest reading (re-run whenever it changes). */
+	function showWeather() {
+		const root = document.querySelector<HTMLElement>('[data-readout]');
+		const w = weatherNow();
+		if (!root || !w) return;
+		const set = (sel: string, text: string) => (root.querySelector<HTMLElement>(sel)!.textContent = text);
+		const fields = ['[data-weather]', '[data-feels]', '[data-wind]', '[data-humidity]', '[data-cloud]', '[data-visibility]'];
+		// Offline: say nothing rather than claim a clear sky.
+		if (w.source === 'fallback') {
+			fields.forEach((sel) => set(sel, '—'));
+			set('[data-observed]', 'offline');
+			return;
+		}
+		set('[data-weather]', `${weatherLabel(w.code)} · ${Math.round(w.temperature)}°F`);
+		set('[data-feels]', `${Math.round(w.apparent)}°F`);
+		const speed = Math.round(w.windSpeed);
+		const gusts = Math.round(w.gusts);
+		set(
+			'[data-wind]',
+			speed < 1 ? 'calm' : `${COMPASS[Math.round(w.windFrom / 22.5) % 16]} ${gusts > speed + 4 ? `${speed}–${gusts}` : speed} mph`
+		);
+		set('[data-humidity]', `${Math.round(w.humidity)}%`);
+		set('[data-cloud]', `${Math.round(w.cover)}%`);
+		const miles = w.visibility / 1609.34;
+		set('[data-visibility]', `${miles < 2 ? miles.toFixed(1) : Math.round(miles)} mi`);
+		// Open-Meteo's observation time is already site-local.
+		set('[data-observed]', w.source === 'preview' ? 'preview' : (w.time.split('T')[1] ?? '—'));
+	}
+
+	window.addEventListener('sky:weather', showWeather);
 
 	function start() {
 		clearInterval(timer);
@@ -97,8 +198,47 @@ const LON = -78.86;
 			tiltBtn.onclick = async () => tiltState(await enableSkyTilt());
 		}
 
+		syncClockFromUrl();
+		const [daySun, sunriseEl, sunsetEl, dayLengthEl, goldenEl] = [
+			'[data-day-sun]',
+			'[data-sunrise]',
+			'[data-sunset]',
+			'[data-daylength]',
+			'[data-golden]',
+		].map(el);
+		let dayKey = -1;
+
+		/** The day's items: refreshed each tick, the heavier sun-day maths once a minute. */
+		const dayTick = (ms: number, sunVec: ReturnType<typeof toHorizon>) => {
+			const az = ((Math.atan2(sunVec[0], sunVec[1]) / DEG + 360) % 360);
+			const alt = altitudeDeg(sunVec);
+			daySun.textContent = `${alt >= 0 ? '+' : '−'}${Math.abs(alt).toFixed(1)}° ${COMPASS[Math.round(az / 22.5) % 16]}`;
+			const minute = Math.floor(ms / 60000);
+			if (minute === dayKey) return;
+			dayKey = minute;
+			const today = sunDay(ms, lat, lon);
+			const yesterday = sunDay(ms - 24 * HOUR, lat, lon);
+			sunriseEl.textContent = time(today.sunrise);
+			sunsetEl.textContent = time(today.sunset);
+			if (today.sunrise !== null && today.sunset !== null) {
+				const length = today.sunset - today.sunrise;
+				const before = yesterday.sunrise !== null && yesterday.sunset !== null ? yesterday.sunset - yesterday.sunrise : length;
+				dayLengthEl.textContent = `${duration(length)} (${change(length - before)})`;
+			}
+			// Golden hour: now, or the next one (later today, else tomorrow morning).
+			const spans = [today.goldenMorning, today.goldenEvening].filter((s): s is [number, number] => !!s);
+			const current = spans.find(([from, to]) => ms >= from && ms <= to);
+			if (current) {
+				goldenEl.textContent = `now · until ${time(current[1])}`;
+			} else {
+				const next = spans.find(([from]) => from > ms)?.[0] ?? sunDay(ms + 24 * HOUR, lat, lon).goldenMorning?.[0] ?? null;
+				goldenEl.textContent =
+					next === null ? '—' : next - ms < 12 * HOUR ? `in ${duration(next - ms)}` : `tomorrow ${time(next)}`;
+			}
+		};
+
 		const tick = () => {
-			const now = new Date();
+			const now = new Date(skyNow());
 			const jd = julian(now.getTime());
 			const parts = clockFormat.formatToParts(now);
 			const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
@@ -107,12 +247,15 @@ const LON = -78.86;
 			const t = lstHours(jd, lon);
 			lstEl.textContent = `${String(Math.floor(t)).padStart(2, '0')}h ${String(Math.floor((t % 1) * 60)).padStart(2, '0')}m`;
 			const s = sun(jd);
-			const alt = altitudeDeg(toHorizon(s.ra, s.dec, t * 15 * DEG, lat * DEG));
+			const sunVec = toHorizon(s.ra, s.dec, t * 15 * DEG, lat * DEG);
+			const alt = altitudeDeg(sunVec);
+			dayTick(now.getTime(), sunVec);
 			sunEl.textContent = `${alt >= 0 ? '+' : '−'}${Math.abs(alt).toFixed(1)}°`;
 			const m = moonPhase(jd);
 			moonEl.textContent = `${m.name} ${Math.round(m.illumination * 100)}%`;
 		};
 		tick();
+		showWeather();
 		timer = window.setInterval(tick, 1000);
 	}
 
@@ -146,6 +289,44 @@ const LON = -78.86;
 
 	.item[hidden] {
 		display: none;
+	}
+
+	/* Daylight pages in light mode read the day; everywhere else, the night. */
+	.day-only {
+		display: none;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .day-only {
+		display: flex;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .night-only {
+		display: none;
+	}
+
+	/* The weather station gets a row of its own, under a hairline. */
+	:global(html:not(.theme-dark) body[data-daylight]) .readout::before {
+		content: '';
+		flex-basis: 100%;
+		order: 1;
+		border-top: 1px dashed color-mix(in oklch, var(--gray-0) 10%, transparent);
+	}
+
+	.station {
+		order: 2;
+	}
+
+	/* Narrower desktops keep the first row to one line. */
+	@media (max-width: 89.99em) {
+		:global(html:not(.theme-dark) body[data-daylight]) .day-only.wide {
+			display: none;
+		}
+	}
+
+	@media (max-width: 69.99em) {
+		:global(html:not(.theme-dark) body[data-daylight]) .day-only.roomy {
+			display: none;
+		}
 	}
 
 	dd {
@@ -205,7 +386,8 @@ const LON = -78.86;
 
 	/* Phones: two tidy rows; sidereal time is the first thing to go. */
 	@media (max-width: 49.99em) {
-		.optional {
+		.optional,
+		:global(html:not(.theme-dark) body[data-daylight]) .day-only.optional {
 			display: none;
 		}
 	}

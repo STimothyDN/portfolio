@@ -17,7 +17,8 @@
  * lenses nearby stars like a gravity well; scroll velocity streaks them into
  * warp trails; taps launch meteors; an active shower's meteors fly out from
  * its real radiant; by day the glow sits at the real Sun and planes leave
- * contrails (daylight.ts).
+ * contrails (daylight.ts). Daylight pages draw the day on the GPU instead:
+ * the atmosphere, the real Sun and the live weather (glsky.ts, clouds.ts).
  *
  * - inactive (hidden tab / photography section) → paused and cleared
  * - reduced motion → single static frame, no drift/parallax
@@ -28,8 +29,10 @@
  */
 import { Daylight } from './daylight';
 import { type Ctx2D, type SkyCanvas, context2d, createSurface } from './surface';
+import { clock, skyNow } from './clock';
 import type { DrawStar, RealSky, RealSkyStats, StarSprite } from './realsky';
 import type { GLSky } from './glsky';
+import type { SkyWeather } from './weather';
 
 export type { SkyCanvas };
 
@@ -60,6 +63,10 @@ export type SkyMessage =
 			observatory: boolean;
 			/** Sporadic meteor pace: 'calm' for long reads. */
 			pace?: 'lively' | 'calm';
+			/** Day: the GPU atmosphere and real Sun instead of the 2D clouds. */
+			daylight?: boolean;
+			/** Shift from real time (ms) — the page's ?at= preview. */
+			clockOffset?: number;
 			meteorRate: number;
 			shower?: ActiveShower | null;
 			site?: { lat: number; lon: number };
@@ -79,7 +86,12 @@ export type SkyMessage =
 	/** Day: a cloud of `width` px condenses centred on (x, y) over `duration` seconds. */
 	| { type: 'drop'; x: number; y: number; width: number; duration: number }
 	/** Start/stop posting SkyStats twice a second. */
-	| { type: 'hud'; on: boolean };
+	| { type: 'hud'; on: boolean }
+	/** Daylight pages: the live weather over the site (null: clear). */
+	| { type: 'weather'; weather: SkyWeather | null };
+
+/** Back to the page: how much direct sunlight the clouds let through (0–1), when it changes. */
+export type SkySunlight = { type: 'sunlight'; value: number };
 
 export type SkyStats = {
 	type: 'stats';
@@ -102,6 +114,10 @@ export type SkyStats = {
 	realSky: RealSkyStats | null;
 	/** What draws the stars: the GPU layer, or the 2D canvas. */
 	starRenderer: 'webgl2' | '2d';
+	/** Day: the GPU atmosphere is drawing the sky. */
+	daySky: boolean;
+	/** Day: the weather being drawn (eased values, 0–1), and the sunlight getting through. */
+	clouds: { cover: number; cirrus: number; rain: number; snow: number; fog: number; sunlight: number } | null;
 };
 
 export type ActiveShower = { name: string; ra: number; dec: number; extra: number };
@@ -166,8 +182,10 @@ const DAY_TARGET_FRAME_MS = 1000 / 18;
 const FAST_FRAME_MS = 0;
 /** How long after the last pointer/scroll input the sky keeps full rate. */
 const INTERACTIVE_MS = 700;
-/** Daytime strikes can't be white-on-white: they borrow the aurora violet. */
+/** Daytime strikes can't be white-on-white: they borrow the aurora violet... */
 const DAY_STRIKE_COLOR = '124, 58, 237';
+/** ...or, under the daylight atmosphere, a warm sun-glint gold. */
+const GLINT_STRIKE_COLOR = '226, 150, 60';
 const STRIKE_TAIL = 210;
 const SPARK_GRAVITY = 900;
 const METEORS_PER_SECOND = 0.35;
@@ -250,6 +268,7 @@ export class SkyRenderer {
 	private daylight = new Daylight();
 	private shower: ActiveShower | null = null;
 	private pace = 1;
+	private daylightSky = false;
 	private site = { lat: 35.9, lon: -78.86 };
 	private realSky: RealSky | null = null;
 	private realSkyLoading = false;
@@ -266,13 +285,16 @@ export class SkyRenderer {
 	private sunPt: Point = { x: 0, y: 0 };
 	/** Last pointer/scroll input (renderer clock): drives the full-rate window. */
 	private lastInput = -Infinity;
+	private weather: SkyWeather | null = null;
+	/** The sunlight value last sent to the page. */
+	private sunlightSent = -1;
 	// Telemetry.
 	private hud = false;
 	private statFrames = 0;
 	private statCost = 0;
 	private statSince = 0;
-	/** Where stats go: the worker posts them, the main-thread fallback dispatches them. */
-	emit: ((stats: SkyStats) => void) | null = null;
+	/** Where reports go: the worker posts them, the main-thread fallback dispatches them. */
+	emit: ((report: SkyStats | SkySunlight) => void) | null = null;
 
 	handle(msg: SkyMessage) {
 		switch (msg.type) {
@@ -303,6 +325,8 @@ export class SkyRenderer {
 			case 'mode':
 				this.observatory = msg.observatory;
 				this.pace = msg.pace === 'calm' ? CALM_PACE : 1;
+				this.daylightSky = !!msg.daylight;
+				clock.offset = msg.clockOffset ?? 0;
 				this.meteorRate = Math.max(0, msg.meteorRate);
 				this.shower = msg.shower ?? null;
 				if (msg.site) this.site = msg.site;
@@ -347,6 +371,11 @@ export class SkyRenderer {
 					const width = Math.max(80, msg.width);
 					this.daylight.startDrop(this.createCloudSprite(width, width * 0.42, 0.88), msg.x, msg.y, msg.duration);
 				}
+				break;
+			case 'weather':
+				this.weather = msg.weather;
+				this.glSky?.setWeather(msg.weather, this.reducedMotion);
+				this.drawStaticFrame();
 				break;
 			case 'hud':
 				this.hud = msg.on;
@@ -576,6 +605,9 @@ export class SkyRenderer {
 			.then(({ GLSky }) => {
 				this.glSky = new GLSky(this.glCanvas!, this.site.lat, this.site.lon);
 				this.glSky.resize(this.width, this.height, this.dpr);
+				this.glSky.weather.reducedMotion = this.reducedMotion;
+				// Weather that arrived first is simply there; later changes ease in.
+				this.glSky.setWeather(this.weather, true);
 				this.glState = 'ready';
 			})
 			.catch(() => {
@@ -589,9 +621,9 @@ export class SkyRenderer {
 		return this.glState === 'ready' && this.glSky?.ok ? this.glSky : null;
 	}
 
-	/** This frame's stars go to the GPU layer (night, observatory, layer ready). */
+	/** This frame's sky goes to the GPU layer: stars by night, or (daylight pages) the atmosphere by day. */
 	private get usingGL() {
-		return this.night && !!this.sky && !!this.gl;
+		return (this.night || this.daylightSky) && !!this.sky && !!this.gl;
 	}
 
 	private clearGL() {
@@ -728,7 +760,22 @@ export class SkyRenderer {
 	private get capFrameMs() {
 		if (this.strikes.length || this.sparks.length || this.daylight.busy) return FAST_FRAME_MS;
 		if (this.observatory && performance.now() - this.lastInput < INTERACTIVE_MS) return FAST_FRAME_MS;
-		return this.night ? TARGET_FRAME_MS : DAY_TARGET_FRAME_MS;
+		if (this.night) return TARGET_FRAME_MS;
+		// Lightning flickers at full rate; falling rain and snow need 30.
+		const weather = this.dayWeather;
+		if (weather?.busy) return FAST_FRAME_MS;
+		return weather?.falling ? TARGET_FRAME_MS : DAY_TARGET_FRAME_MS;
+	}
+
+	/** The GPU day sky's weather, while it's the one drawing. */
+	private get dayWeather() {
+		return !this.night && this.usingGL ? this.gl!.weather : null;
+	}
+
+	/** Clouds thick enough that no plane shows above them. */
+	private get skyClosed() {
+		const w = this.dayWeather && this.weather;
+		return !!w && (w.cover > 0.6 || w.rain > 0 || w.snow > 0 || w.fog > 0.4);
 	}
 
 	private recordFrame(now: number, cost: number) {
@@ -755,10 +802,19 @@ export class SkyRenderer {
 			shower: this.shower?.name ?? null,
 			realSky: this.sky?.stats() ?? null,
 			starRenderer: this.usingGL ? 'webgl2' : '2d',
+			daySky: !this.night && this.usingGL,
+			clouds: this.cloudStats(),
 		});
 		this.statFrames = 0;
 		this.statCost = 0;
 		this.statSince = now;
+	}
+
+	private cloudStats(): SkyStats['clouds'] {
+		const weather = this.dayWeather;
+		if (!weather) return null;
+		const [rain, snow, fog] = weather.precipitation;
+		return { ...weather.coverage, rain, snow, fog, sunlight: this.gl!.sunlight };
 	}
 
 	private render(deltaSeconds: number, elapsedSeconds: number) {
@@ -808,7 +864,7 @@ export class SkyRenderer {
 		}
 
 		if (!this.night) {
-			this.daylight.update(deltaSeconds, this.width, this.height, this.observatory);
+			this.daylight.update(deltaSeconds, this.width, this.height, this.observatory && !this.skyClosed);
 			this.daylight.draw(this.ctx);
 		}
 
@@ -832,7 +888,8 @@ export class SkyRenderer {
 
 	/** The colour strikes and sparks are drawn in: starlight by night, violet by day. */
 	private get strikeColor() {
-		return this.night ? this.starColor : DAY_STRIKE_COLOR;
+		if (this.night) return this.starColor;
+		return this.usingGL ? GLINT_STRIKE_COLOR : DAY_STRIKE_COLOR;
 	}
 
 	private drawStrikes(deltaSeconds: number) {
@@ -1015,7 +1072,7 @@ export class SkyRenderer {
 
 	/** Where the real sky is looking: down the page lowers the gaze; the pointer looks around. */
 	private aimRealSky(sky: RealSky) {
-		sky.update(Date.now(), !this.gl);
+		sky.update(skyNow(), !this.gl);
 		sky.setView(this.width, this.height, this.reducedMotion ? 0 : this.scrollTop, this.pointerX, this.pointerY);
 	}
 
@@ -1137,9 +1194,32 @@ export class SkyRenderer {
 
 	private drawDaySky(deltaSeconds: number, elapsedSeconds: number) {
 		if (!this.ctx) return;
+		this.meteors = [];
+
+		// Daylight pages: the GPU atmosphere and the real Sun replace the
+		// cloud sprites and the fixed glow (contrails etc. still draw on top).
+		const sky = this.sky;
+		const gl = this.gl;
+		if (this.usingGL && sky && gl) {
+			this.aimRealSky(sky);
+			gl.renderDay({
+				view: sky.view,
+				width: this.width,
+				height: this.height,
+				sun: sky.sunVector,
+				dt: deltaSeconds,
+				time: elapsedSeconds,
+			});
+			this.glPainted = true;
+			// Tell the page when the light changes enough to matter (a cloud over the Sun).
+			if (Math.abs(gl.sunlight - this.sunlightSent) > 0.04) {
+				this.sunlightSent = gl.sunlight;
+				this.emit?.({ type: 'sunlight', value: gl.sunlight });
+			}
+			return;
+		}
 
 		this.reconcileClouds(false);
-		this.meteors = [];
 		this.drawSunlight();
 
 		for (const cloud of this.clouds) {

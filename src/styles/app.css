@@ -17,6 +17,7 @@
 @import './tokens.css';
 @import './base.css' layer(base);
 @import './transitions.css';
+@import './daylight.css';
 
 /* Layout primitives as Tailwind utilities so they compose with variants */
 @utility wrapper {

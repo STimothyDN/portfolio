@@ -26,6 +26,11 @@ interface Props {
 	sky?: 'observatory' | 'plain';
 	/** Meteor pace on observatory pages: 'calm' (~20/min) suits long reads. */
 	skyPace?: 'lively' | 'calm';
+	/**
+	 * Daylight observatory (prototype): by day, the GPU atmosphere and the real
+	 * Sun, sun-cast shadows, and the daytime readout.
+	 */
+	daylight?: boolean;
 	/** Phones get the bottom nav dock instead of the hamburger menu. */
 	mobileDock?: boolean;
 	/** Mount the command palette (⌘K) and its desktop nav trigger. */
@@ -49,6 +54,7 @@ const {
 	noindex = false,
 	sky = mainSite ? 'observatory' : 'plain',
 	skyPace = 'lively',
+	daylight = false,
 	mobileDock = mainSite,
 	palette = mainSite,
 } = Astro.props;
@@ -59,7 +65,11 @@ const observatory = sky === 'observatory';
 	<head>
 		<MainHead title={title} description={description} noindex={noindex} />
 	</head>
-	<body data-sky={observatory ? 'observatory' : undefined} data-sky-pace={observatory && skyPace === 'calm' ? 'calm' : undefined}>
+	<body
+		data-sky={observatory ? 'observatory' : undefined}
+		data-sky-pace={observatory && skyPace === 'calm' ? 'calm' : undefined}
+		data-daylight={observatory && daylight ? '' : undefined}
+	>
 		{/*
 			The canvas renders ambient sky effects: clouds in light mode and
 			stars/meteors in dark mode (src/scripts/sky, drawn off the main thread
@@ -100,6 +110,9 @@ const observatory = sky === 'observatory';
 			import '../scripts/motion';
 			// Observatory chrome; switches itself off outside observatory pages.
 			import '../scripts/liquid-glass';
+			// Daylight observatory: no-ops unless the page sets `daylight`.
+			import '../scripts/sun-shadows';
+			import '../scripts/rain-glass';
 		</script>
 
 		<style>

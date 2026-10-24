@@ -219,3 +219,71 @@ export function galacticPlane(stepDeg: number) {
 	}
 	return points;
 }
+
+/* ── The Sun's day ───────────────────────────────────────────────────── */
+
+const DAY_MS = 86400000;
+
+/** The Sun's altitude (degrees) at a moment, for a site. */
+export function sunAltitudeAt(ms: number, latDeg: number, lonDeg: number) {
+	const jd = julian(ms);
+	const s = sun(jd);
+	return altitudeDeg(toHorizon(s.ra, s.dec, lstHours(jd, lonDeg) * 15 * DEG, latDeg * DEG));
+}
+
+/** When altitude(t) crosses `target` within [a, b] (it must be monotonic there); null if it doesn't. */
+function crossing(a: number, b: number, target: number, altitude: (ms: number) => number) {
+	let fa = altitude(a) - target;
+	const fb = altitude(b) - target;
+	if (Math.sign(fa) === Math.sign(fb)) return null;
+	for (let i = 0; i < 40; i++) {
+		const m = (a + b) / 2;
+		const fm = altitude(m) - target;
+		if (Math.sign(fm) === Math.sign(fa)) {
+			a = m;
+			fa = fm;
+		} else b = m;
+	}
+	return (a + b) / 2;
+}
+
+export type SunDay = {
+	noon: number;
+	/** null when the Sun doesn't rise/set that day (not at this latitude, but honest). */
+	sunrise: number | null;
+	sunset: number | null;
+	/** Golden hour: the Sun between −4° and +6°, morning and evening. */
+	goldenMorning: [number, number] | null;
+	goldenEvening: [number, number] | null;
+};
+
+/**
+ * The Sun's day around the solar noon nearest `ms` (epoch ms): noon,
+ * sunrise/sunset (upper limb on the refracted horizon, −0.833°) and the
+ * golden hours.
+ */
+export function sunDay(ms: number, latDeg: number, lonDeg: number): SunDay {
+	const altitude = (t: number) => sunAltitudeAt(t, latDeg, lonDeg);
+	// Local mean noon in UTC, then refine to the highest point.
+	const meanNoon = Math.round((ms - (-lonDeg / 360) * DAY_MS - DAY_MS / 2) / DAY_MS) * DAY_MS + DAY_MS / 2 + (-lonDeg / 360) * DAY_MS;
+	let a = meanNoon - 2 * 3600000;
+	let b = meanNoon + 2 * 3600000;
+	for (let i = 0; i < 50; i++) {
+		const m1 = a + (b - a) / 3;
+		const m2 = b - (b - a) / 3;
+		if (altitude(m1) < altitude(m2)) a = m1;
+		else b = m2;
+	}
+	const noon = (a + b) / 2;
+	const morning = (target: number) => crossing(noon - DAY_MS / 2, noon, target, altitude);
+	const evening = (target: number) => crossing(noon, noon + DAY_MS / 2, target, altitude);
+	const span = (from: number | null, to: number | null): [number, number] | null =>
+		from !== null && to !== null ? [from, to] : null;
+	return {
+		noon,
+		sunrise: morning(-0.833),
+		sunset: evening(-0.833),
+		goldenMorning: span(morning(-4), morning(6)),
+		goldenEvening: span(evening(6), evening(-4)),
+	};
+}

@@ -21,9 +21,13 @@
  *   parallax on phones, contrails by day, and shower meteors from their radiant
  * - telemetry: setSkyHud(true) makes the renderer report SkyStats, re-sent
  *   as a `sky:stats` window event
+ * - daylight pages: the live weather (weather.ts) goes to the renderer; the
+ *   sunlight it reports back through the clouds is re-sent as `sky:sunlight`
  */
-import type { SkyMessage, SkyStats } from './renderer';
+import type { SkyMessage, SkyStats, SkySunlight } from './renderer';
 import { activeShower, meteorRate } from './showers';
+import { syncClockFromUrl } from './clock';
+import { skyWeather, weatherNow } from './weather';
 
 declare global {
 	interface Window {
@@ -49,7 +53,13 @@ const tiltNeedsPermission = () =>
 	typeof (globalThis.DeviceOrientationEvent as unknown as OrientationPermission | undefined)?.requestPermission ===
 	'function';
 
-const emitStats = (stats: SkyStats) => window.dispatchEvent(new CustomEvent('sky:stats', { detail: stats }));
+/** Reports from the renderer, re-sent as window events: `sky:stats` and `sky:sunlight`. */
+const emitReport = (report: SkyStats | SkySunlight) =>
+	window.dispatchEvent(
+		report.type === 'sunlight'
+			? new CustomEvent('sky:sunlight', { detail: report.value })
+			: new CustomEvent('sky:stats', { detail: report })
+	);
 
 /** Module workers and transferable canvases, detected without spawning a worker. */
 function workerCanvasSupported() {
@@ -95,7 +105,7 @@ class SkyController {
 		this.inWorker = !!worker;
 		if (worker) {
 			this.send = (msg, transfer = []) => worker.postMessage(msg, transfer);
-			worker.addEventListener('message', (event: MessageEvent<SkyStats>) => emitStats(event.data));
+			worker.addEventListener('message', (event: MessageEvent<SkyStats | SkySunlight>) => emitReport(event.data));
 		} else {
 			// Main-thread fallback: load the renderer only here (the worker
 			// bundles its own copy), queueing whatever arrives before it does.
@@ -103,7 +113,7 @@ class SkyController {
 			this.send = (msg) => queued.push(msg);
 			void import('./renderer').then(({ SkyRenderer }) => {
 				const renderer = new SkyRenderer();
-				renderer.emit = emitStats;
+				renderer.emit = emitReport;
 				queued.forEach((msg) => renderer.handle(msg));
 				this.send = (msg) => renderer.handle(msg);
 			});
@@ -127,8 +137,15 @@ class SkyController {
 			document.addEventListener('pointerup', this.onPointerUp, { passive: true });
 		}
 		document.addEventListener('astro:after-swap', this.bind);
+		window.addEventListener('sky:weather', this.syncWeather);
 		this.bind();
 	}
+
+	/** The live weather, on daylight pages only (anywhere else the sky stays clear). */
+	private syncWeather = () => {
+		const weather = 'daylight' in document.body.dataset ? weatherNow() : null;
+		this.send({ type: 'weather', weather: weather && skyWeather(weather) });
+	};
 
 	/** Public hook (e.g. the 404 page fires one on load). */
 	meteor() {
@@ -210,10 +227,13 @@ class SkyController {
 			type: 'mode',
 			observatory: this.observatory,
 			pace: document.body.dataset.skyPace === 'calm' ? 'calm' : 'lively',
+			daylight: 'daylight' in document.body.dataset,
+			clockOffset: syncClockFromUrl(),
 			meteorRate: this.observatory ? meteorRate() : 1,
 			shower: this.observatory ? activeShower() : null,
 			site: SITE,
 		});
+		this.syncWeather();
 		// Phones get tilt parallax in place of the pointer — automatically
 		// wherever no permission prompt is needed (iOS asks via enableTilt()).
 		if (this.observatory && coarsePointer.matches && !tiltNeedsPermission()) void this.enableTilt();

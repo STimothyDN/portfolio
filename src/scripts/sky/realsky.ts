@@ -262,6 +262,11 @@ export class RealSky {
 		this.u = [-sa * sl, -ca * sl, cl];
 	}
 
+	/** The Sun as a horizon-frame unit vector [east, north, up] (refreshed each minute). */
+	get sunVector() {
+		return this.sunVec;
+	}
+
 	/** The current view, for the GPU star layer (glsky.ts) to project identically. */
 	get view() {
 		return { r: this.r, u: this.u, f: this.f, K: this.K };
