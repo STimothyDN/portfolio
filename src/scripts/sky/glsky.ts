@@ -71,7 +71,20 @@ export type GLView = { r: number[]; u: number[]; f: number[]; K: number };
  * north, up], seconds since the last frame (0 for a still) and a clock (s)
  * for the rain.
  */
-export type GLDayFrame = { view: GLView; width: number; height: number; sun: number[]; dt: number; time: number };
+export type GLDayFrame = {
+	view: GLView;
+	width: number;
+	height: number;
+	sun: number[];
+	dt: number;
+	time: number;
+	/** The Moon as a horizon-frame unit vector, or null while it's not computed. */
+	moon: number[] | null;
+	/** Lens flare: the optical centre it pivots on (px) and its strength (0–1). */
+	flare: { x: number; y: number; amount: number };
+	/** A long read (skyPace 'calm'): no lightning, and softer rain and snow behind the text. */
+	calm: boolean;
+};
 
 export type GLFrame = {
 	view: GLView;
@@ -80,6 +93,8 @@ export type GLFrame = {
 	time: number;
 	lens: { x: number; y: number; amount: number };
 	warp: number;
+	/** The stars coming out after a switch to dark: 0 → 1 (brightest first); 1 when settled. */
+	twilight: number;
 };
 
 const STAR_VS = /* glsl */ `#version 300 es
@@ -97,6 +112,7 @@ uniform float uTime;
 uniform vec3 uLens;
 uniform float uWarp;
 uniform float uLimitMag;
+uniform float uTwilight;
 out vec2 vUv;
 out vec3 vColor;
 out float vAlpha;
@@ -104,7 +120,9 @@ out float vAlpha;
 void main() {
 	vec3 v = uEqToView * aDir;
 	float up = dot(v, uUpView);
-	if (aMag > uLimitMag || up < -0.01 || v.z < -0.5) {
+	// Dusk time-lapse: the limit sweeps from the brightest stars down to the faintest.
+	float limit = uTwilight < 1.0 ? mix(-1.5, uLimitMag, uTwilight) : uLimitMag;
+	if (aMag > limit || up < -0.01 || v.z < -0.5) {
 		gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
 		return;
 	}
@@ -112,6 +130,7 @@ void main() {
 	vec2 p = uViewport * 0.5 + vec2(s.x, -s.y);
 
 	float alpha = aMag < 1.0 ? 1.0 : max(0.06, 1.0 - (aMag - 1.0) / 8.5);
+	if (uTwilight < 1.0) alpha *= smoothstep(limit, limit - 0.8, aMag);
 	if (uLens.z > 0.01) {
 		vec2 d = p - uLens.xy;
 		float dist = length(d);
@@ -359,6 +378,12 @@ uniform float uSlant;
 uniform float uTime;
 // Lightning: screen point (px, y down) and brightness.
 uniform vec3 uFlash;
+// The Moon (horizon frame); w = 1 to draw it.
+uniform vec4 uMoon;
+// Lens flare: the optical centre it pivots on (px, y down) and its strength.
+uniform vec3 uFlare;
+// 1 on long reads: rain and snow streaks softened behind the text.
+uniform float uCalm;
 const float PI = 3.14159265;
 const float TILE = ${CLOUD_TILE.toFixed(1)};
 const float SOFT = ${CLOUD_SOFT.toFixed(3)};
@@ -390,6 +415,15 @@ vec3 fromOklab(vec3 c) {
 vec3 toSrgb(vec3 c) {
 	return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
 }
+// Distance to a hexagon of apothem r (the lens's six-bladed aperture).
+float hexagon(vec2 p, float r) {
+	const vec3 k = vec3(-0.866025404, 0.5, 0.577350269);
+	p = abs(p);
+	p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy;
+	p -= vec2(clamp(p.x, -k.z * r, k.z * r), r);
+	return length(p) * sign(p.y);
+}
+
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
@@ -477,6 +511,21 @@ void main() {
 	vec3 nightLab = vec3(mix(0.83, 0.94, horizon), 0.012, -0.05 + 0.02 * horizon);
 	lab = mix(graded, nightLab, night);
 
+	// The Moon, beyond the clouds: only its sunlit part shows against the
+	// day (the terminator from the true Sun direction), pale, with faint
+	// maria; brighter on the periwinkle night. Drawn ~3.5× true size, as the Sun.
+	vec3 mDir = uMoon.xyz;
+	vec3 mE1 = normalize(cross(abs(mDir.z) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 0.0, 1.0), mDir));
+	vec3 mE2 = cross(mDir, mE1);
+	vec2 mUv = vec2(dot(h, mE1), dot(h, mE2)) / uSunRadius;
+	float mR2 = dot(mUv, mUv);
+	vec3 mNormal = mUv.x * mE1 + mUv.y * mE2 - sqrt(max(0.0, 1.0 - mR2)) * mDir;
+	float mLit = smoothstep(-0.04, 0.14, dot(mNormal, uSun));
+	float maria = smoothstep(0.42, 0.72, textureLod(uNoise, mUv * 0.16 + vec2(0.31, 0.57), 0.0).g);
+	float moon = uMoon.w * step(0.0, dot(h, mDir)) * smoothstep(1.0, 0.9, sqrt(mR2)) * mLit
+		* smoothstep(-0.02, 0.03, mDir.z) * mix(0.72, 0.95, night);
+	lab = mix(lab, vec3(0.985 - 0.07 * maria, -0.002, -0.008), moon);
+
 	// Light on the clouds: white at noon, peach low; thin cloud by the Sun
 	// glows (Henyey–Greenstein forward scattering, 1 at the Sun); just after
 	// sunset the Sun lights their bases from beneath.
@@ -525,7 +574,8 @@ void main() {
 	float block = smoothstep(uCloud.x, uCloud.x + 0.12, billowsCoarse(p + sunH * 700.0)) * (1.0 - uCloud.y);
 	float lit = exp(-1.9 * thick - 1.3 * block);
 	vec3 litLab = mix(vec3(0.985, 0.002, 0.01), vec3(0.94, 0.03, 0.05), golden);
-	vec3 baseLab = vec3(0.8 - 0.07 * uCloud.y - 0.05 * uFall.x, 0.006, -0.03);
+	// Bases stay light (an overcast sky is bright), above the floor below.
+	vec3 baseLab = vec3(0.86 - 0.04 * uCloud.y - 0.03 * uFall.x, 0.006, -0.03);
 	vec3 cloud = mix(baseLab, litLab, lit * up);
 	// (Through a closed deck the Sun is only a faint brighter patch.)
 	cloud.x += (hg * (1.0 - thick) * 0.3 * (1.0 - 0.8 * uCloud.y) + 0.04 * exp(-theta / 0.25) * uCloud.y) * up;
@@ -537,6 +587,10 @@ void main() {
 	cloud += vec3(0.16 * (0.4 + thick), -0.004, -0.02) * uFlash.z * exp(-dot(toBolt, toBolt) / 135000.0);
 	float cumulus = d * exp(-t / 50000.0) * aboveHorizon * uCumulus;
 	lab = mix(lab, cloud, cumulus);
+
+	// A floor under everything: the page's text sits on this sky, and its
+	// greys (styles/daylight.css) are set to clear 4.5:1 against L 0.8.
+	lab.x = max(lab.x, 0.8);
 
 	// Fog, and the grey veil hanging under rain or snow.
 	float fog = clamp(uFall.z * mix(0.55, 1.0, horizon) + (uFall.x * 0.3 + uFall.y * 0.25) * horizon, 0.0, 0.95);
@@ -555,6 +609,36 @@ void main() {
 	colour = mix(colour, sunTint, disc * up * (1.0 - 0.97 * veil) * (1.0 - 0.55 * uFall.z));
 	colour += sunTint * glow * up * mix(0.06, 1.0, uSunT) * (1.0 - 0.8 * uFall.z) * (1.0 - colour) * 0.9;
 
+	// Lens flare (a nod to the camera), only while the Sun is out and near
+	// the frame: its six-point star, and ghosts of the six-bladed aperture
+	// strung along the line from the Sun through the optical centre — the
+	// cursor steers it — tinted like coated glass.
+	vec3 sv = vec3(dot(uSun, uR), dot(uSun, uU), dot(uSun, uF));
+	vec2 sunFc = uViewport * 0.5 + uK * sv.xy / max(1.0 + sv.z, 0.05);
+	vec2 outside = max(abs(sunFc - uViewport * 0.5) - uViewport * 0.5, 0.0);
+	float sunlit = up * uSunT * (1.0 - uFall.z) * step(-0.5, sv.z) * (1.0 - smoothstep(0.0, 220.0, length(outside)));
+	if (sunlit > 0.002) {
+		vec2 fromSun = fc - sunFc;
+		float spokes = pow(abs(cos(3.0 * (atan(fromSun.y, fromSun.x) - 0.26))), 90.0);
+		colour += sunTint * spokes * exp(-length(fromSun) / 95.0) * 0.32 * sunlit * (1.0 - colour);
+
+		vec2 axis = vec2(uFlare.x, uViewport.y - uFlare.y) - sunFc;
+		const float AT[6] = float[6](0.32, 0.58, 0.9, 1.3, 1.62, 2.15);
+		const float SIZE[6] = float[6](22.0, 11.0, 48.0, 16.0, 30.0, 74.0);
+		const float ALPHA[6] = float[6](0.2, 0.3, 0.13, 0.24, 0.17, 0.11);
+		const vec3 TINT[6] = vec3[6](
+			vec3(0.62, 0.5, 0.98), vec3(1.0, 0.78, 0.62), vec3(0.7, 0.8, 1.0),
+			vec3(0.98, 0.66, 0.82), vec3(0.6, 0.52, 0.95), vec3(1.0, 0.84, 0.7));
+		mat2 blades = mat2(0.966, 0.259, -0.259, 0.966);
+		float ghosts = 0.0;
+		for (int i = 0; i < 6; i++) {
+			float sd = hexagon(blades * (fc - (sunFc + axis * AT[i])), SIZE[i]);
+			// A soft-edged pane with a slightly brighter rim.
+			float g = smoothstep(1.5, -1.5, sd) * 0.75 + smoothstep(3.0, 0.0, abs(sd)) * 0.25;
+			colour = mix(colour, TINT[i], g * ALPHA[i] * uFlare.z * sunlit);
+		}
+	}
+
 	// Rain: three depths of streaks leaning with the wind. Snow: three of
 	// flakes. Both catch the light against a grey deck, but show dark against
 	// a bright sky (they're lit from behind).
@@ -565,19 +649,56 @@ void main() {
 		float r = rainLayer(px, 9.0, 520.0, 1.0, 0.3 * density) * 0.45
 			+ rainLayer(px, 17.0, 820.0, 7.0, 0.22 * density) * 0.7
 			+ rainLayer(px, 31.0, 1250.0, 13.0, 0.13 * density);
-		colour = mix(colour, fallColour, clamp(r * (0.25 + 0.3 * uFall.x), 0.0, 0.55));
+		colour = mix(colour, fallColour, clamp(r * (0.25 + 0.3 * uFall.x), 0.0, 0.55) * (1.0 - 0.6 * uCalm));
 	}
 	if (uFall.y > 0.002) {
 		float density = 0.35 + 0.65 * uFall.y;
 		float flakes = snowLayer(px, 40.0, 38.0, 3.0, 0.55 * density, 1.7) * 0.6
 			+ snowLayer(px, 64.0, 62.0, 11.0, 0.45 * density, 2.6) * 0.8
 			+ snowLayer(px, 100.0, 95.0, 19.0, 0.32 * density, 3.8);
-		colour = mix(colour, fallColour, clamp(flakes * (0.45 + 0.4 * uFall.y), 0.0, 0.85));
+		colour = mix(colour, fallColour, clamp(flakes * (0.45 + 0.4 * uFall.y), 0.0, 0.85) * (1.0 - 0.6 * uCalm));
 	}
 
 	colour += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
 	outColor = vec4(colour, 1.0);
 }`;
+
+const STAR_UNIFORMS = ['uEqToView', 'uUpView', 'uViewport', 'uK', 'uTime', 'uLens', 'uWarp', 'uLimitMag', 'uTwilight'] as const;
+const MILKY_UNIFORMS = ['uViewToGal', 'uUpView', 'uViewport', 'uDpr', 'uK', 'uIntensity', 'uMilky'] as const;
+const LUT_UNIFORMS = ['uSunAlt', 'uFloat'] as const;
+const DAY_UNIFORMS = [
+	'uLut',
+	'uNoise',
+	'uR',
+	'uU',
+	'uF',
+	'uSun',
+	'uViewport',
+	'uDpr',
+	'uK',
+	'uSunRadius',
+	'uCloud',
+	'uCumulus',
+	'uOff',
+	'uCirrusDir',
+	'uFall',
+	'uSunT',
+	'uSlant',
+	'uTime',
+	'uFlash',
+	'uMoon',
+	'uFlare',
+	'uCalm',
+] as const;
+
+type Uniforms<K extends string> = Record<K, WebGLUniformLocation | null>;
+
+/** A program's uniform locations, looked up once (not by name every frame). */
+function locate<K extends string>(gl: WebGL2RenderingContext, program: WebGLProgram, names: readonly K[]) {
+	const out = {} as Uniforms<K>;
+	for (const name of names) out[name] = gl.getUniformLocation(program, name);
+	return out;
+}
 
 function compile(gl: WebGL2RenderingContext, vs: string, fs: string) {
 	const program = gl.createProgram()!;
@@ -692,7 +813,10 @@ function buildStars(backgroundCount: number) {
 export class GLSky {
 	private gl: WebGL2RenderingContext;
 	private emptyVao: WebGLVertexArrayObject;
-	private uniforms: Record<string, WebGLUniformLocation | null> = {};
+	private starU!: Uniforms<(typeof STAR_UNIFORMS)[number]>;
+	private milkyU!: Uniforms<(typeof MILKY_UNIFORMS)[number]>;
+	private lutU!: Uniforms<(typeof LUT_UNIFORMS)[number]>;
+	private dayU!: Uniforms<(typeof DAY_UNIFORMS)[number]>;
 	private nightReady = false;
 	private starProgram!: WebGLProgram;
 	private skyProgram!: WebGLProgram;
@@ -711,7 +835,8 @@ export class GLSky {
 	private lutFloat = false;
 	private noise!: WebGLTexture;
 	private _weather: CloudField | null = null;
-	private pendingWeather: { weather: SkyWeather | null; snap: boolean } | null = null;
+	/** The latest weather, kept until the day sky is first built. */
+	private pendingWeather: SkyWeather | null = null;
 	private reducedMotion = false;
 	private sunlightIn = 0;
 	/** Direct sunlight reaching the ground through the clouds (0–1), refreshed twice a second. */
@@ -747,12 +872,11 @@ export class GLSky {
 
 		this.starProgram = compile(gl, STAR_VS, STAR_FS);
 		this.skyProgram = compile(gl, FULLSCREEN_VS, MILKY_SKY_FS);
-		for (const [program, names] of [
-			[this.starProgram, ['uEqToView', 'uUpView', 'uViewport', 'uK', 'uTime', 'uLens', 'uWarp', 'uLimitMag']],
-			[this.skyProgram, ['uViewToGal', 'uUpView', 'uViewport', 'uDpr', 'uK', 'uIntensity', 'uMilky']],
-		] as const) {
-			for (const name of names) this.uniforms[`${program === this.starProgram ? 's' : 'm'}.${name}`] = gl.getUniformLocation(program, name);
-		}
+		this.starU = locate(gl, this.starProgram, STAR_UNIFORMS);
+		this.milkyU = locate(gl, this.skyProgram, MILKY_UNIFORMS);
+		// Constants, set once: uniforms keep their values per program.
+		gl.useProgram(this.skyProgram);
+		gl.uniform1i(this.milkyU.uMilky, 0);
 
 		// Stars: a unit quad per instance.
 		const { stars, count, count82, count86 } = buildStars(42000);
@@ -793,38 +917,18 @@ export class GLSky {
 		if (!this._weather) {
 			this._weather = new CloudField();
 			this._weather.reducedMotion = this.reducedMotion;
-			if (this.pendingWeather) {
-				this._weather.setWeather(this.pendingWeather.weather, this.pendingWeather.snap);
-			}
+			// Nothing was on screen to ease from: the first day frame shows the weather as it is.
+			this._weather.setWeather(this.pendingWeather, true);
 		}
 
 		this.dayProgram = compile(gl, FULLSCREEN_VS, DAY_SKY_FS);
 		this.lutProgram = compile(gl, FULLSCREEN_VS, SKY_LUT_FS);
-		for (const name of [
-			'uLut',
-			'uNoise',
-			'uR',
-			'uU',
-			'uF',
-			'uSun',
-			'uViewport',
-			'uDpr',
-			'uK',
-			'uSunRadius',
-			'uCloud',
-			'uCumulus',
-			'uOff',
-			'uCirrusDir',
-			'uFall',
-			'uSunT',
-			'uSlant',
-			'uTime',
-			'uFlash',
-		]) {
-			this.uniforms[`d.${name}`] = gl.getUniformLocation(this.dayProgram, name);
-		}
-		this.uniforms['l.uSunAlt'] = gl.getUniformLocation(this.lutProgram, 'uSunAlt');
-		this.uniforms['l.uFloat'] = gl.getUniformLocation(this.lutProgram, 'uFloat');
+		this.dayU = locate(gl, this.dayProgram, DAY_UNIFORMS);
+		this.lutU = locate(gl, this.lutProgram, LUT_UNIFORMS);
+		gl.useProgram(this.dayProgram);
+		gl.uniform1i(this.dayU.uLut, 0);
+		gl.uniform1i(this.dayU.uNoise, 1);
+		gl.uniform1f(this.dayU.uSunRadius, 0.0165);
 		this.lut = gl.createTexture()!;
 		gl.bindTexture(gl.TEXTURE_2D, this.lut);
 		// Half-float where it can be rendered to: dim twilight light keeps its
@@ -867,7 +971,7 @@ export class GLSky {
 
 	/** The live weather (null for a clear sky); `snap` skips the ease-in. */
 	setWeather(weather: SkyWeather | null, snap: boolean) {
-		this.pendingWeather = { weather, snap };
+		this.pendingWeather = weather;
 		this._weather?.setWeather(weather, snap);
 	}
 
@@ -916,8 +1020,8 @@ export class GLSky {
 		gl.disable(gl.BLEND);
 		gl.useProgram(this.lutProgram);
 		gl.bindVertexArray(this.emptyVao);
-		gl.uniform1f(this.uniforms['l.uSunAlt'], sunAlt);
-		gl.uniform1f(this.uniforms['l.uFloat'], this.lutFloat ? 1 : 0);
+		gl.uniform1f(this.lutU.uSunAlt, sunAlt);
+		gl.uniform1f(this.lutU.uFloat, this.lutFloat ? 1 : 0);
 		gl.drawArrays(gl.TRIANGLES, 0, 3);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	}
@@ -929,6 +1033,7 @@ export class GLSky {
 		const gl = this.gl;
 		const [x, y, z] = frame.sun;
 		const weather = this._weather!;
+		weather.calm = frame.calm;
 		weather.advance(frame.dt, frame.width, frame.height);
 		this.sunlightIn -= frame.dt;
 		if (this.sunlightIn <= 0 || frame.dt === 0) {
@@ -945,27 +1050,28 @@ export class GLSky {
 		gl.bindTexture(gl.TEXTURE_2D, this.lut);
 		gl.activeTexture(gl.TEXTURE1);
 		gl.bindTexture(gl.TEXTURE_2D, this.noise);
-		const d = (name: string) => this.uniforms[`d.${name}`];
-		gl.uniform1i(d('uLut'), 0);
-		gl.uniform1i(d('uNoise'), 1);
-		gl.uniform3fv(d('uR'), frame.view.r);
-		gl.uniform3fv(d('uU'), frame.view.u);
-		gl.uniform3fv(d('uF'), frame.view.f);
-		gl.uniform3f(d('uSun'), x, y, z);
-		gl.uniform2f(d('uViewport'), frame.width, frame.height);
-		gl.uniform1f(d('uDpr'), this.canvas.width / Math.max(1, frame.width));
-		gl.uniform1f(d('uK'), frame.view.K);
-		gl.uniform1f(d('uSunRadius'), 0.0165);
-		gl.uniform4fv(d('uCloud'), weather.cloud);
-		gl.uniform1f(d('uCumulus'), weather.cumulusOpacity);
-		gl.uniform2fv(d('uOff'), weather.offsets());
-		gl.uniform2fv(d('uCirrusDir'), weather.cirrusDirection);
-		gl.uniform3fv(d('uFall'), weather.precipitation);
-		gl.uniform1f(d('uSunT'), this.sunlight);
-		gl.uniform1f(d('uSlant'), weather.slant(frame.view.r));
+		const u = this.dayU;
+		gl.uniform3fv(u.uR, frame.view.r);
+		gl.uniform3fv(u.uU, frame.view.u);
+		gl.uniform3fv(u.uF, frame.view.f);
+		gl.uniform3f(u.uSun, x, y, z);
+		gl.uniform2f(u.uViewport, frame.width, frame.height);
+		gl.uniform1f(u.uDpr, this.canvas.width / Math.max(1, frame.width));
+		gl.uniform1f(u.uK, frame.view.K);
+		gl.uniform4fv(u.uCloud, weather.cloud);
+		gl.uniform1f(u.uCumulus, weather.cumulusOpacity);
+		gl.uniform2fv(u.uOff, weather.offsets());
+		gl.uniform2fv(u.uCirrusDir, weather.cirrusDirection);
+		gl.uniform3fv(u.uFall, weather.precipitation);
+		gl.uniform1f(u.uSunT, this.sunlight);
+		gl.uniform1f(u.uSlant, weather.slant(frame.view.r));
 		// Wrapped so the streaks' positions keep float precision (a jump every ~17 minutes).
-		gl.uniform1f(d('uTime'), frame.time % 1000);
-		gl.uniform3fv(d('uFlash'), weather.flash);
+		gl.uniform1f(u.uTime, frame.time % 1000);
+		gl.uniform3fv(u.uFlash, weather.flash);
+		const moon = frame.moon;
+		gl.uniform4f(u.uMoon, moon?.[0] ?? 0, moon?.[1] ?? 0, moon?.[2] ?? -1, moon ? 1 : 0);
+		gl.uniform3f(u.uFlare, frame.flare.x, frame.flare.y, frame.flare.amount);
+		gl.uniform1f(u.uCalm, frame.calm ? 1 : 0);
 		gl.drawArrays(gl.TRIANGLES, 0, 3);
 		gl.bindVertexArray(null);
 		gl.activeTexture(gl.TEXTURE0);
@@ -1030,32 +1136,34 @@ export class GLSky {
 		gl.bindVertexArray(this.emptyVao);
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.milky);
-		const m = (name: string) => this.uniforms[`m.${name}`];
-		gl.uniformMatrix3fv(m('uViewToGal'), false, columnMajor(viewToGal, this.matBufA));
-		gl.uniform3fv(m('uUpView'), upView);
-		gl.uniform2f(m('uViewport'), frame.width, frame.height);
-		gl.uniform1f(m('uDpr'), this.dpr);
-		gl.uniform1f(m('uK'), view.K);
-		gl.uniform1f(m('uIntensity'), 0.32);
-		gl.uniform1i(m('uMilky'), 0);
+		const m = this.milkyU;
+		gl.uniformMatrix3fv(m.uViewToGal, false, columnMajor(viewToGal, this.matBufA));
+		gl.uniform3fv(m.uUpView, upView);
+		gl.uniform2f(m.uViewport, frame.width, frame.height);
+		gl.uniform1f(m.uDpr, this.dpr);
+		gl.uniform1f(m.uK, view.K);
+		// The Milky Way is the last thing to come out at dusk.
+		const t = frame.twilight;
+		gl.uniform1f(m.uIntensity, 0.32 * (t < 1 ? t * t * t : 1));
 		gl.drawArrays(gl.TRIANGLES, 0, 3);
 
 		// Stars.
 		gl.useProgram(this.starProgram);
 		gl.bindVertexArray(this.starVao);
-		const s = (name: string) => this.uniforms[`s.${name}`];
-		gl.uniformMatrix3fv(s('uEqToView'), false, columnMajor(eqToView, this.matBufB));
-		gl.uniform3fv(s('uUpView'), upView);
-		gl.uniform2f(s('uViewport'), frame.width, frame.height);
-		gl.uniform1f(s('uK'), view.K);
-		gl.uniform1f(s('uTime'), frame.time);
-		gl.uniform3f(s('uLens'), frame.lens.x, frame.lens.y, frame.lens.amount);
-		gl.uniform1f(s('uWarp'), frame.warp);
+		const s = this.starU;
+		gl.uniformMatrix3fv(s.uEqToView, false, columnMajor(eqToView, this.matBufB));
+		gl.uniform3fv(s.uUpView, upView);
+		gl.uniform2f(s.uViewport, frame.width, frame.height);
+		gl.uniform1f(s.uK, view.K);
+		gl.uniform1f(s.uTime, frame.time);
+		gl.uniform3f(s.uLens, frame.lens.x, frame.lens.y, frame.lens.amount);
+		gl.uniform1f(s.uWarp, frame.warp);
 		// Smaller screens show fewer of the faintest stars; background stars are
 		// sorted by magnitude so we only submit the visible prefix of instances.
 		const limitMag = area >= 1.1e6 ? 9.1 : area >= 5e5 ? 8.6 : 8.2;
 		const drawCount = area >= 1.1e6 ? this.count : area >= 5e5 ? this.count86 : this.count82;
-		gl.uniform1f(s('uLimitMag'), limitMag);
+		gl.uniform1f(s.uLimitMag, limitMag);
+		gl.uniform1f(s.uTwilight, frame.twilight);
 		gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, drawCount);
 		gl.bindVertexArray(null);
 		this.drawn = drawCount;

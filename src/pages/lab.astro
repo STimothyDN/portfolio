@@ -1,9 +1,9 @@
 ---
 /**
  * /lab — sandbox for the home page (not linked anywhere, noindex). Renders the
- * same ObservatoryHome as /; fork it here to try changes before they ship.
- * Currently trying: the Daylight observatory (light mode) — `daylight`.
- * Preview any moment with ?at=<ISO time>, e.g. /lab?at=2026-10-23T22:05:00Z.
+ * same ObservatoryHome as / (with the same props); fork it here to try
+ * changes before they ship. Preview any moment or condition with
+ * ?at=<ISO time> and ?weather=<preset>, e.g. /lab?at=2026-10-23T22:05:00Z.
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ObservatoryHome from '../components/home/ObservatoryHome.astro';
@@ -14,7 +14,6 @@ import ObservatoryHome from '../components/home/ObservatoryHome.astro';
 	description="Sandbox for the Observatory home page"
 	dockBrand
 	noindex
-	daylight
 >
 	<ObservatoryHome />
 </BaseLayout>

@@ -105,7 +105,7 @@ const LON = -78.86;
 	import { enableSkyTilt, skyTiltNeedsPermission, skyTilting } from '../../scripts/sky';
 	import { DEG, altitudeDeg, julian, lstHours, moonPhase, sun, sunDay, toHorizon } from '../../scripts/sky/astro';
 	import { skyNow, syncClockFromUrl } from '../../scripts/sky/clock';
-	import { weatherLabel, weatherNow } from '../../scripts/sky/weather';
+	type WeatherModule = typeof import('../../scripts/sky/weather');
 
 	const HOUR = 3600000;
 	const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -132,12 +132,15 @@ const LON = -78.86;
 	});
 
 	let timer = 0;
+	/** Loaded only where the station row shows (daylight pages). */
+	let weather: WeatherModule | null = null;
 
 	/** The weather station row, from the latest reading (re-run whenever it changes). */
 	function showWeather() {
 		const root = document.querySelector<HTMLElement>('[data-readout]');
-		const w = weatherNow();
-		if (!root || !w) return;
+		const w = weather?.weatherNow();
+		if (!root || !weather || !w) return;
+		const { weatherLabel } = weather;
 		const set = (sel: string, text: string) => (root.querySelector<HTMLElement>(sel)!.textContent = text);
 		const fields = ['[data-weather]', '[data-feels]', '[data-wind]', '[data-humidity]', '[data-cloud]', '[data-visibility]'];
 		// Offline: say nothing rather than claim a clear sky.
@@ -255,12 +258,32 @@ const LON = -78.86;
 			moonEl.textContent = `${m.name} ${Math.round(m.illumination * 100)}%`;
 		};
 		tick();
-		showWeather();
 		timer = window.setInterval(tick, 1000);
+		if ('daylight' in document.body.dataset) {
+			void import('../../scripts/sky/weather').then((module) => {
+				weather = module;
+				showWeather();
+			});
+		}
 	}
 
-	document.addEventListener('astro:page-load', start);
-	document.addEventListener('astro:before-swap', () => clearInterval(timer));
+	let initializedForSwap = false;
+
+	// Fill the readout at once (and on every swap) rather than after window.load.
+	function begin() {
+		initializedForSwap = true;
+		start();
+	}
+
+	begin();
+	document.addEventListener('astro:after-swap', begin);
+	document.addEventListener('astro:page-load', () => {
+		if (!initializedForSwap) begin();
+	});
+	document.addEventListener('astro:before-swap', () => {
+		initializedForSwap = false;
+		clearInterval(timer);
+	});
 </script>
 
 <style>

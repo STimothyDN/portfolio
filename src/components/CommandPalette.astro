@@ -216,7 +216,10 @@ const groups: Group[] = [
 
 	let controller: AbortController | null = null;
 
+	let initializedForSwap = false;
+
 	function init() {
+		initializedForSwap = true;
 		controller?.abort();
 		const dialog = document.querySelector<HTMLDialogElement>('[data-palette]');
 		if (!dialog) return;
@@ -378,8 +381,14 @@ const groups: Group[] = [
 		);
 	}
 
-	document.addEventListener('astro:page-load', init);
+	// Ready at once (and on every swap): ⌘K shouldn't wait for window.load.
+	init();
+	document.addEventListener('astro:after-swap', init);
+	document.addEventListener('astro:page-load', () => {
+		if (!initializedForSwap) init();
+	});
 	document.addEventListener('astro:before-swap', () => {
+		initializedForSwap = false;
 		controller?.abort();
 		controller = null;
 	});

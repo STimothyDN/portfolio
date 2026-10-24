@@ -9,11 +9,13 @@
  * cloudy, overcast, cirrus, fog, drizzle, rain, storm, snow) previews a
  * condition without fetching.
  *
- * Shared two ways: `weatherNow()` for whoever asks, and a `sky:weather`
- * window event whenever the reading changes. `skyWeather()` turns a reading
- * into what the sky draws (cloud layers, wind aloft, rain, snow, fog).
- * Daylight pages only (body[data-daylight]).
+ * Shared three ways: straight to the sky renderer (as `skyWeather()` turns
+ * it into cloud layers, wind aloft, rain, snow and fog), `weatherNow()` for
+ * whoever asks, and a `sky:weather` window event whenever it changes.
+ * Daylight pages only (body[data-daylight]); BaseLayout loads this module
+ * only there.
  */
+import { setSkyWeather } from './index';
 
 const SITE = { lat: 35.9, lon: -78.86 };
 const ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
@@ -197,9 +199,10 @@ let current: Weather | null = null;
 export const weatherNow = () => current;
 
 function publish(next: Weather) {
-	const changed = JSON.stringify(next) !== JSON.stringify(current);
+	if (JSON.stringify(next) === JSON.stringify(current)) return;
 	current = next;
-	if (changed) window.dispatchEvent(new CustomEvent<Weather>('sky:weather', { detail: next }));
+	setSkyWeather(skyWeather(next));
+	window.dispatchEvent(new CustomEvent<Weather>('sky:weather', { detail: next }));
 }
 
 type Cached = { fetchedAt: number; conditions: Conditions };
@@ -293,8 +296,10 @@ async function refresh() {
 }
 
 let timer = 0;
+let initializedForSwap = false;
 
 function init() {
+	initializedForSwap = true;
 	clearInterval(timer);
 	if (!('daylight' in document.body.dataset)) return;
 	void refresh();
@@ -304,8 +309,16 @@ function init() {
 	}, 60 * 1000);
 }
 
-document.addEventListener('astro:page-load', init);
-document.addEventListener('astro:before-swap', () => clearInterval(timer));
+// Start at once (and on every swap): the reading shouldn't wait for window.load.
+init();
+document.addEventListener('astro:after-swap', init);
+document.addEventListener('astro:page-load', () => {
+	if (!initializedForSwap) init();
+});
+document.addEventListener('astro:before-swap', () => {
+	initializedForSwap = false;
+	clearInterval(timer);
+});
 document.addEventListener('visibilitychange', () => {
 	if (!document.hidden && 'daylight' in document.body.dataset) void refresh();
 });

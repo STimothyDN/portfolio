@@ -10,6 +10,10 @@
  * Writes --sun-shadow-sm/md/lg and --sun-text-shadow on <body>;
  * styles/daylight.css points the site's shadow tokens at them in light mode,
  * so every component that already uses --shadow-* follows the Sun.
+ *
+ * Also --sky-haze: about the colour the sky grades to at the horizon at this
+ * hour (the home page's tree line recedes into it) — lavender by day, peach
+ * through golden hour, rose at dusk, periwinkle at night; greyer under cloud.
  */
 import { DEG, altitudeDeg, julian, lstHours, sun, toHorizon } from './sky/astro';
 import { skyNow, syncClockFromUrl } from './sky/clock';
@@ -72,23 +76,52 @@ function sunShadow(e: number, alt: number, az: number): Shadow {
 	return { x, y, blur: e * (0.8 + len * 0.35), rgb: [mix(60, 70, low), mix(52, 82, low), mix(96, 150, low)], alpha: mix(0.15, 0.12, low) };
 }
 
+/** Horizon haze by Sun altitude: [alt°, OKLCH L, C, hue] — hue unwrapped so it travels the brand axis (lavender ↔ rose ↔ peach). */
+const HAZE: [number, number, number, number][] = [
+	[-12, 0.9, 0.03, -78],
+	[-4, 0.9, 0.045, 8],
+	[3, 0.93, 0.05, 52],
+	[12, 0.945, 0.035, 12],
+	[30, 0.955, 0.025, -72],
+];
+
+function haze(alt: number) {
+	let i = 0;
+	while (i < HAZE.length - 2 && alt > HAZE[i + 1][0]) i++;
+	const [a0, l0, c0, h0] = HAZE[i];
+	const [a1, l1, c1, h1] = HAZE[i + 1];
+	const t = clamp((alt - a0) / (a1 - a0), 0, 1);
+	// Under cloud the haze greys (only by day: night is already muted).
+	const cloud = alt > 0 ? 0.5 + 0.5 * sunlight : 1;
+	return `oklch(${(mix(l0, l1, t) * 100).toFixed(1)}% ${(mix(c0, c1, t) * cloud).toFixed(3)} ${((mix(h0, h1, t) + 360) % 360).toFixed(0)})`;
+}
+
 const css = (s: Shadow) =>
 	`${s.x.toFixed(1)}px ${s.y.toFixed(1)}px ${s.blur.toFixed(1)}px rgba(${s.rgb.map(Math.round).join(', ')}, ${s.alpha.toFixed(3)})`;
+
+/** Set a custom property only when it changes: each write restyles the whole page. */
+function put(body: HTMLElement, name: string, value: string) {
+	if (body.style.getPropertyValue(name) !== value) body.style.setProperty(name, value);
+}
 
 function update(body: HTMLElement) {
 	const { alt, az } = sunPosition(skyNow());
 	// The cast shadow plus a tight contact shadow that grounds the element.
 	const box = (e: number) => `${css(cast(e, alt, az))}, 0 1px 2px rgba(40, 36, 70, 0.06)`;
-	body.style.setProperty('--sun-shadow-sm', box(ELEVATION.sm));
-	body.style.setProperty('--sun-shadow-md', box(ELEVATION.md));
-	body.style.setProperty('--sun-shadow-lg', box(ELEVATION.lg));
-	body.style.setProperty('--sun-text-shadow', css(cast(ELEVATION.text, alt, az)));
-	body.dataset.sunAlt = alt.toFixed(1);
+	put(body, '--sun-shadow-sm', box(ELEVATION.sm));
+	put(body, '--sun-shadow-md', box(ELEVATION.md));
+	put(body, '--sun-shadow-lg', box(ELEVATION.lg));
+	put(body, '--sun-text-shadow', css(cast(ELEVATION.text, alt, az)));
+	put(body, '--sky-haze', haze(alt));
+	const sunAlt = alt.toFixed(1);
+	if (body.dataset.sunAlt !== sunAlt) body.dataset.sunAlt = sunAlt;
 }
 
 let timer = 0;
+let initializedForSwap = false;
 
 function init() {
+	initializedForSwap = true;
 	clearInterval(timer);
 	const body = document.body;
 	if (!('daylight' in body.dataset)) return;
@@ -97,8 +130,14 @@ function init() {
 	timer = window.setInterval(() => update(body), 60000);
 }
 
-document.addEventListener('astro:page-load', init);
-document.addEventListener('astro:before-swap', () => clearInterval(timer));
+document.addEventListener('astro:after-swap', init);
+document.addEventListener('astro:page-load', () => {
+	if (!initializedForSwap) init();
+});
+document.addEventListener('astro:before-swap', () => {
+	initializedForSwap = false;
+	clearInterval(timer);
+});
 window.addEventListener('sky:sunlight', (event) => {
 	sunlight = (event as CustomEvent<number>).detail;
 	if ('daylight' in document.body.dataset) update(document.body);

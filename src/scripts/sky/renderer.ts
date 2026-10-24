@@ -30,6 +30,7 @@
 import { Daylight } from './daylight';
 import { type Ctx2D, type SkyCanvas, context2d, createSurface } from './surface';
 import { clock, skyNow } from './clock';
+import { sunDay } from './astro';
 import type { DrawStar, RealSky, RealSkyStats, StarSprite } from './realsky';
 import type { GLSky } from './glsky';
 import type { SkyWeather } from './weather';
@@ -88,7 +89,12 @@ export type SkyMessage =
 	/** Start/stop posting SkyStats twice a second. */
 	| { type: 'hud'; on: boolean }
 	/** Daylight pages: the live weather over the site (null: clear). */
-	| { type: 'weather'; weather: SkyWeather | null };
+	| { type: 'weather'; weather: SkyWeather | null }
+	/**
+	 * Daylight pages, on a theme switch: 'dawn' replays the morning sky up to
+	 * now; 'dusk' brings the stars out, brightest first. `duration` in seconds.
+	 */
+	| { type: 'lapse'; kind: 'dawn' | 'dusk'; duration: number };
 
 /** Back to the page: how much direct sunlight the clouds let through (0–1), when it changes. */
 export type SkySunlight = { type: 'sunlight'; value: number };
@@ -287,6 +293,10 @@ export class SkyRenderer {
 	/** Last pointer/scroll input (renderer clock): drives the full-rate window. */
 	private lastInput = -Infinity;
 	private weather: SkyWeather | null = null;
+	/** A theme-switch time-lapse in progress; `from` is where a dawn replay starts (sky ms). */
+	private lapse: { kind: 'dawn' | 'dusk'; start: number; duration: number; from: number } | null = null;
+	/** The day sky's lens flare, reused every frame. */
+	private flare = { x: 0, y: 0, amount: 0 };
 	/** The sunlight value last sent to the page. */
 	private sunlightSent = -1;
 	// Telemetry.
@@ -379,6 +389,17 @@ export class SkyRenderer {
 					this.daylight.startDrop(this.createCloudSprite(width, width * 0.42, 0.88), msg.x, msg.y, msg.duration);
 				}
 				break;
+			case 'lapse': {
+				if (!this.daylightSky || this.reducedMotion) break;
+				const now = skyNow();
+				// Dawn starts with the Sun ~8° down, about 50 minutes before today's sunrise
+				// (and is skipped while it's still dark: there'd be nothing to replay).
+				const sunrise = sunDay(now, this.site.lat, this.site.lon).sunrise;
+				const from = sunrise === null ? now : sunrise - 50 * 60000;
+				if (msg.kind === 'dawn' && from > now - 20 * 60000) break;
+				this.lapse = { kind: msg.kind, start: performance.now(), duration: msg.duration * 1000, from };
+				break;
+			}
 			case 'weather':
 				this.weather = msg.weather;
 				this.glSky?.setWeather(msg.weather, this.reducedMotion);
@@ -767,7 +788,7 @@ export class SkyRenderer {
 	};
 
 	private get capFrameMs() {
-		if (this.strikes.length || this.sparks.length || this.daylight.busy) return FAST_FRAME_MS;
+		if (this.lapse || this.strikes.length || this.sparks.length || this.daylight.busy) return FAST_FRAME_MS;
 		if (
 			this.observatory &&
 			(performance.now() - this.lastInput < INTERACTIVE_MS || Math.abs(this.scrollTarget - this.scrollTop) > 0.5)
@@ -1089,9 +1110,29 @@ export class SkyRenderer {
 		}
 	};
 
+	/** How far a theme-switch lapse has run (0…1), or null when there's none of this kind. */
+	private lapseAt(kind: 'dawn' | 'dusk') {
+		const lapse = this.lapse;
+		if (!lapse || lapse.kind !== kind) return null;
+		const t = (performance.now() - lapse.start) / lapse.duration;
+		if (t < 1) return Math.max(0, t);
+		this.lapse = null;
+		return null;
+	}
+
+	/**
+	 * The sky clock — unless a dawn lapse is replaying the morning by day:
+	 * eased in, so the colour of the first hour gets most of the time.
+	 */
+	private skyTime() {
+		const now = skyNow();
+		const t = this.night ? null : this.lapseAt('dawn');
+		return t === null ? now : this.lapse!.from + (now - this.lapse!.from) * t ** 2.2;
+	}
+
 	/** Where the real sky is looking: down the page lowers the gaze; the pointer looks around. */
 	private aimRealSky(sky: RealSky) {
-		sky.update(skyNow(), !this.gl);
+		sky.update(this.skyTime(), !this.gl);
 		sky.setView(this.width, this.height, this.reducedMotion ? 0 : this.scrollTop, this.pointerX, this.pointerY);
 	}
 
@@ -1109,6 +1150,7 @@ export class SkyRenderer {
 				time: elapsedSeconds,
 				lens: { x: this.lensPx, y: this.lensPy, amount: this.lensAmount },
 				warp: this.warpNow,
+				twilight: this.lapseAt('dusk') ?? 1,
 			});
 			this.glPainted = true;
 		} else {
@@ -1221,6 +1263,13 @@ export class SkyRenderer {
 		const gl = this.gl;
 		if (this.usingGL && sky && gl) {
 			this.aimRealSky(sky);
+			// The flare pivots on the screen's centre, steered toward the cursor while a mouse is over the page.
+			const flare = this.flare;
+			flare.x = this.width * 0.5 + (this.lensPx - this.width * 0.5) * this.lensAmount;
+			flare.y = this.height * 0.5 + (this.lensPy - this.height * 0.5) * this.lensAmount;
+			// Long reads keep only the sun star: no reflections drifting over the text.
+			const calm = this.pace < 1;
+			flare.amount = this.reducedMotion || calm ? 0 : 0.45 + 0.55 * this.lensAmount;
 			gl.renderDay({
 				view: sky.view,
 				width: this.width,
@@ -1228,6 +1277,9 @@ export class SkyRenderer {
 				sun: sky.sunVector,
 				dt: deltaSeconds,
 				time: elapsedSeconds,
+				moon: sky.moonVector,
+				flare,
+				calm,
 			});
 			this.glPainted = true;
 			// Tell the page when the light changes enough to matter (a cloud over the Sun).

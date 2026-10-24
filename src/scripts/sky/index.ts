@@ -21,13 +21,14 @@
  *   parallax on phones, contrails by day, and shower meteors from their radiant
  * - telemetry: setSkyHud(true) makes the renderer report SkyStats, re-sent
  *   as a `sky:stats` window event
- * - daylight pages: the live weather (weather.ts) goes to the renderer; the
- *   sunlight it reports back through the clouds is re-sent as `sky:sunlight`
+ * - daylight pages: the live weather (weather.ts, loaded only there, hands
+ *   each reading over with setSkyWeather) goes to the renderer; the sunlight
+ *   it reports back through the clouds is re-sent as `sky:sunlight`
  */
 import type { SkyMessage, SkyStats, SkySunlight } from './renderer';
 import { activeShower, meteorRate } from './showers';
 import { syncClockFromUrl } from './clock';
-import { skyWeather, weatherNow } from './weather';
+import type { SkyWeather } from './weather';
 
 declare global {
 	interface Window {
@@ -115,7 +116,6 @@ class SkyController {
 			document.addEventListener('pointerup', this.onPointerUp, { passive: true });
 		}
 		document.addEventListener('astro:after-swap', this.bind);
-		window.addEventListener('sky:weather', this.syncWeather);
 		this.bind();
 	}
 
@@ -148,11 +148,18 @@ class SkyController {
 		}
 	}
 
+	/** The latest reading, as the sky draws it (kept to re-send on returning to a daylight page). */
+	private skyWeather: SkyWeather | null = null;
+
+	weather(sky: SkyWeather | null) {
+		this.skyWeather = sky;
+		this.syncWeather();
+	}
+
 	/** The live weather, on daylight pages only (anywhere else the sky stays clear). */
-	private syncWeather = () => {
-		const weather = 'daylight' in document.body.dataset ? weatherNow() : null;
-		this.send({ type: 'weather', weather: weather && skyWeather(weather) });
-	};
+	private syncWeather() {
+		this.send({ type: 'weather', weather: 'daylight' in document.body.dataset ? this.skyWeather : null });
+	}
 
 	/** Public hook (e.g. the 404 page fires one on load). */
 	meteor() {
@@ -177,6 +184,10 @@ class SkyController {
 
 	hud(on: boolean) {
 		this.send({ type: 'hud', on });
+	}
+
+	lapse(kind: 'dawn' | 'dusk', duration: number) {
+		this.send({ type: 'lapse', kind, duration });
 	}
 
 	get thread() {
@@ -417,6 +428,19 @@ export function dropFromCloud(at: { x: number; y: number }, width: number, durat
 /** A meteor launched from a viewport point (observatory pages; both themes). */
 export function launchMeteor(x: number, y: number) {
 	window.__sky?.launch(x, y);
+}
+
+/** Daylight pages: a new weather reading (weather.ts), as the sky should draw it. */
+export function setSkyWeather(sky: SkyWeather | null) {
+	window.__sky?.weather(sky);
+}
+
+/**
+ * Daylight pages, on a theme switch: replay the morning sky ('dawn') or bring
+ * the stars out ('dusk') over `duration` seconds (ThemeToggle's sweep).
+ */
+export function skyLapse(kind: 'dawn' | 'dusk', duration: number) {
+	window.__sky?.lapse(kind, duration);
 }
 
 /** Telemetry on/off: the renderer reports as `sky:stats` window events. */

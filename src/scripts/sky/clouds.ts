@@ -162,14 +162,26 @@ export class CloudField {
 	private storm = false;
 	/** Accumulated drift, m [east, north]; double precision on the CPU, wrapped per octave for the GPU. */
 	private drift: [number, number] | null = null;
-	private cirrusDir: [number, number] | null = null;
+	private cirrusAligned = false;
 	private cirrusDrift = 0;
 	private offsetData = new Float32Array(OFFSETS * 2);
 	// Lightning: one event = one or two quick flickers somewhere in the deck.
 	private untilFlash = 6;
 	private flashAge = Infinity;
-	private flashAt: [number, number] = [0, 0];
 	reducedMotion = false;
+	/** A long read: no lightning flickering behind the text. */
+	calm = false;
+	/*
+	 * Shader inputs, rewritten in place by `advance()` (nothing allocated per frame).
+	 */
+	/** Cumulus threshold, overcast, base altitude (m), cirrus. */
+	readonly cloud = new Float32Array(4);
+	/** Rain, snow, fog. */
+	readonly precipitation = new Float32Array(3);
+	/** Lightning: screen point (px) and brightness, 0 when quiet. */
+	readonly flash = new Float32Array(3);
+	/** The cirrus streaks' heading, unit [east, north]: set by the first wind, then kept. */
+	readonly cirrusDirection = new Float32Array([1, 0]);
 
 	constructor() {
 		const rand = seeded(20261023);
@@ -294,21 +306,46 @@ export class CloudField {
 		}
 		this.drift[0] += we * dt * TIMELAPSE;
 		this.drift[1] += wn * dt * TIMELAPSE;
-		const speed = Math.hypot(we, wn);
-		if (!this.cirrusDir && speed > 0.1) this.cirrusDir = [we / speed, wn / speed];
-		const dir = this.cirrusDir ?? [1, 0];
+		const dir = this.cirrusDirection;
+		if (!this.cirrusAligned) {
+			const speed = Math.sqrt(we * we + wn * wn);
+			if (speed > 0.1) {
+				dir[0] = we / speed;
+				dir[1] = wn / speed;
+				this.cirrusAligned = true;
+			}
+		}
 		// Higher, faster: the jet-level wind runs ahead of the low clouds.
 		this.cirrusDrift += (we * dir[0] + wn * dir[1]) * 1.6 * dt * TIMELAPSE;
 
 		this.flashAge += dt;
-		if (this.storm && !this.reducedMotion && this.state.overcast > 0.5) {
+		if (this.storm && !this.reducedMotion && !this.calm && s.overcast > 0.5) {
 			this.untilFlash -= dt;
 			if (this.untilFlash <= 0) {
 				this.untilFlash = 5 + Math.random() * 11;
 				this.flashAge = 0;
-				this.flashAt = [width * (0.1 + Math.random() * 0.8), height * (0.05 + Math.random() * 0.55)];
+				this.flash[0] = width * (0.1 + Math.random() * 0.8);
+				this.flash[1] = height * (0.05 + Math.random() * 0.55);
 			}
 		}
+		// A flicker, a gap, a second flicker, a slow fade: two flashes, never more.
+		const t = this.flashAge;
+		let pulse = 0;
+		if (t < 0.06) pulse = t / 0.06;
+		else if (t < 0.14) pulse = 1 - ((t - 0.06) / 0.08) * 0.85;
+		else if (t < 0.5) pulse = 0.15 + 0.85 * Math.exp(-((t - 0.32) ** 2) / 0.004);
+		else if (t < 1.2) pulse = 0.15 * Math.exp(-(t - 0.5) / 0.15);
+		this.flash[2] = pulse;
+
+		const c = this.cloud;
+		c[0] = this.threshold(s.cover);
+		c[1] = s.overcast;
+		c[2] = s.altitude;
+		c[3] = s.cirrus;
+		const p = this.precipitation;
+		p[0] = s.rain;
+		p[1] = s.snow;
+		p[2] = s.fog;
 	}
 
 	/**
@@ -338,12 +375,6 @@ export class CloudField {
 		return out;
 	}
 
-	/** Cumulus threshold, overcast, base altitude, cirrus. */
-	get cloud(): [number, number, number, number] {
-		const s = this.state;
-		return [this.threshold(s.cover), s.overcast, s.altitude, s.cirrus];
-	}
-
 	/** A trace of cover fades in as a few faint wisps rather than stark fragments. */
 	get cumulusOpacity() {
 		return smoothstep(0.01, 0.15, this.state.cover);
@@ -354,31 +385,10 @@ export class CloudField {
 		return { cover: this.state.cover, cirrus: this.state.cirrus };
 	}
 
-	get precipitation(): [number, number, number] {
-		const s = this.state;
-		return [s.rain, s.snow, s.fog];
-	}
-
-	get cirrusDirection() {
-		return this.cirrusDir ?? [1, 0];
-	}
-
 	/** How far rain leans: the screen-horizontal wind (view right `r`) over the fall speed. */
 	slant(r: number[]) {
 		const sideways = (this.wind[0] / 1.8) * r[0] + (this.wind[1] / 1.8) * r[1];
 		return Math.max(-0.35, Math.min(0.35, sideways / 20));
-	}
-
-	/** Lightning: screen point (px) and brightness, 0 when quiet. */
-	get flash(): [number, number, number] {
-		const t = this.flashAge;
-		// A flicker, a gap, a second flicker, a slow fade: two flashes, never more.
-		let pulse = 0;
-		if (t < 0.06) pulse = t / 0.06;
-		else if (t < 0.14) pulse = 1 - ((t - 0.06) / 0.08) * 0.85;
-		else if (t < 0.5) pulse = 0.15 + 0.85 * Math.exp(-((t - 0.32) ** 2) / 0.004);
-		else if (t < 1.2) pulse = 0.15 * Math.exp(-(t - 0.5) / 0.15);
-		return [this.flashAt[0], this.flashAt[1], pulse];
 	}
 
 	/** Something on screen is moving fast enough to want full frame rate. */

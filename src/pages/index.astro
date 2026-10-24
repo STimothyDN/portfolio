@@ -1,7 +1,11 @@
 ---
 /**
- * Home: the Observatory design (src/components/home/ObservatoryHome.astro).
- * /lab renders the same page as a sandbox.
+ * Home: the Observatory design (src/components/home/ObservatoryHome.astro) —
+ * the real night sky over RTP in dark mode, and in light mode the Daylight
+ * observatory: the real Sun, sky and live weather (BaseLayout's defaults).
+ * Preview any moment or condition with ?at=<ISO time> and ?weather=<preset>
+ * (any main-site page), e.g. /?at=2026-10-23T22:05:00Z&weather=fair. /lab
+ * renders the same page as a sandbox.
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ObservatoryHome from '../components/home/ObservatoryHome.astro';

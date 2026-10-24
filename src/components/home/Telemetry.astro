@@ -44,7 +44,7 @@
 <script>
 	import { setSkyHud, skyThread } from '../../scripts/sky';
 	import type { SkyStats } from '../../scripts/sky/renderer';
-	import { weatherNow } from '../../scripts/sky/weather';
+	type WeatherModule = typeof import('../../scripts/sky/weather');
 
 	const STORAGE_KEY = 'telemetry-open';
 	const SPARK_SAMPLES = 40;
@@ -67,8 +67,12 @@
 	}
 
 	let controller: AbortController | null = null;
+	/** Loaded on opening the panel on a daylight page (the only place it reports). */
+	let weather: WeatherModule | null = null;
+	let initializedForSwap = false;
 
 	function init() {
+		initializedForSwap = true;
 		controller?.abort();
 		const panel = document.querySelector<HTMLElement>('[data-telemetry]');
 		if (!panel) return;
@@ -106,7 +110,7 @@
 			// Reduced motion / hidden: the renderer draws one static frame and stops.
 			if (performance.now() - lastStats > 1500) set('fps', 'idle');
 			// Daylight pages: where the weather came from, and how fresh it is.
-			const w = 'daylight' in document.body.dataset ? weatherNow() : null;
+			const w = 'daylight' in document.body.dataset ? (weather?.weatherNow() ?? null) : null;
 			const age = w?.fetchedAt ? Math.round((Date.now() - w.fetchedAt) / 60000) : 0;
 			set(
 				'weather',
@@ -198,6 +202,9 @@
 			rafId = requestAnimationFrame(countFrame);
 			pageMetrics();
 			pageTimer = window.setInterval(pageMetrics, 500);
+			if (!weather && 'daylight' in document.body.dataset) {
+				void import('../../scripts/sky/weather').then((module) => (weather = module));
+			}
 		};
 
 		window.addEventListener('sky:stats', onStats, { signal });
@@ -229,8 +236,14 @@
 		if (restore) setOpen(true);
 	}
 
-	document.addEventListener('astro:page-load', init);
+	// Ready at once (and on every swap): the backtick shouldn't wait for window.load.
+	init();
+	document.addEventListener('astro:after-swap', init);
+	document.addEventListener('astro:page-load', () => {
+		if (!initializedForSwap) init();
+	});
 	document.addEventListener('astro:before-swap', () => {
+		initializedForSwap = false;
 		controller?.abort();
 		controller = null;
 	});

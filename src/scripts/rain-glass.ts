@@ -287,7 +287,9 @@ function sync() {
 		resize = new ResizeObserver((entries) => {
 			for (const entry of entries) {
 				const surface = surfaces.find((s) => s.el === entry.target);
-				if (surface) fit(surface);
+				// The observer already measured it: no layout read of our own.
+				const box = entry.borderBoxSize?.[0];
+				if (surface) fit(surface, box ? box.inlineSize : undefined, box ? box.blockSize : undefined);
 			}
 		});
 		const measured: { el: HTMLElement; w: number; h: number }[] = [];
@@ -332,7 +334,8 @@ function teardown() {
 	surfaces = [];
 }
 
-document.addEventListener('astro:page-load', sync);
+// Loaded on demand (BaseLayout), so it starts itself below; after that it follows the swaps.
+document.addEventListener('astro:after-swap', sync);
 document.addEventListener('astro:before-swap', teardown);
 window.addEventListener('sky:weather', () => sync());
 // The theme lives on <html>, which outlives every page.

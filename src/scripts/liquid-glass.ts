@@ -133,9 +133,11 @@ function channel(filter: SVGFilterElement, scale: number, which: 0 | 1 | 2) {
 
 let controller: AbortController | null = null;
 let svg: SVGSVGElement | null = null;
+let initializedForSwap = false;
 
 function init() {
 	teardown();
+	initializedForSwap = true;
 	if (!supported() || document.body.dataset.sky !== 'observatory') return;
 	const targets = [...document.querySelectorAll<HTMLElement>('[data-glass]')];
 	if (!targets.length) return;
@@ -255,8 +257,16 @@ function teardown() {
 	document.documentElement.classList.remove('liquid-glass');
 }
 
-document.addEventListener('astro:page-load', init);
-document.addEventListener('astro:before-swap', teardown);
+// Refract from the first paint (and on every swap) rather than after window.load.
+init();
+document.addEventListener('astro:after-swap', init);
+document.addEventListener('astro:page-load', () => {
+	if (!initializedForSwap) init();
+});
+document.addEventListener('astro:before-swap', () => {
+	initializedForSwap = false;
+	teardown();
+});
 
 // A module, not a global script: its top-level names stay its own.
 export {};

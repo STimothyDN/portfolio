@@ -10,6 +10,12 @@
  * - Phones: the SVG hides and the same list becomes a vertical field guide —
  *   a rail down the left whose fill, and each star on it, light up as they
  *   cross the middle of the screen (CSS view timelines, no JS).
+ * - By day (daylight pages in light mode) the chart turns into a sun-path
+ *   chart: the planisphere becomes the sky overhead (zenith at the centre,
+ *   horizon on the ring, north up, east left), with today's path of the Sun
+ *   over RTP, its hours and golden hours, the solstices' paths for scale and
+ *   the Sun where it is now (scripts/sun-path.ts fills it in). The roles keep
+ *   their places as daytime stars: still there, just outshone.
  */
 import Icon from '../Icon.astro';
 import type { Props as IconProps } from '../Icon.astro';
@@ -124,6 +130,9 @@ const ticks = Array.from({ length: 36 }, (_, i) => {
 	};
 });
 
+// Sun-path chart (daylight): altitude rings, equidistant from zenith to horizon.
+const altRing = (alt: number) => (ring.r * (90 - alt)) / 90;
+
 // Entrance choreography (desktop): the line draws star to star.
 const DRAW_START = 0.7;
 const SEG_STEP = 0.13;
@@ -135,6 +144,7 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 	<header class="field-head">
 		<h2 id="field-title" class="field-title">
 			<span class="fig">Fig. 1</span><span class="sr-only">: what I do</span>
+			<span class="sunpath-caption" aria-hidden="true"><span class="sep">·</span>sun path, <span data-sun-path-date>today</span></span>
 			<span class="hint" aria-hidden="true"><span class="sep">·</span>hover a star to inspect it</span>
 		</h2>
 	</header>
@@ -149,6 +159,26 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 				{ticks.map((t) => <line {...t} />)}
 				<text x={ring.cx} y={ring.cy - ring.r - 20} text-anchor="middle">N</text>
 				<text x={ring.cx - ring.r - 22} y={ring.cy + 4} text-anchor="middle">E</text>
+			</g>
+			<g class="sunpath" data-sun-path data-cx={ring.cx} data-cy={ring.cy} data-r={ring.r}>
+				<circle class="alt-ring" cx={ring.cx} cy={ring.cy} r={altRing(30)} />
+				<circle class="alt-ring" cx={ring.cx} cy={ring.cy} r={altRing(60)} />
+				<text class="alt-label" x={ring.cx + 4} y={ring.cy - altRing(30) + 11}>30°</text>
+				<text class="alt-label" x={ring.cx + 4} y={ring.cy - altRing(60) + 11}>60°</text>
+				<text class="compass" x={ring.cx} y={ring.cy + ring.r + 29} text-anchor="middle">S</text>
+				<text class="compass" x={ring.cx + ring.r + 22} y={ring.cy + 4} text-anchor="middle">W</text>
+				<path class="solstice" data-solstice="6" />
+				<path class="solstice" data-solstice="12" />
+				<path class="today" data-today />
+				<path class="golden" data-golden="am" />
+				<path class="golden" data-golden="pm" />
+				<g class="hours" data-hours />
+				<text class="riseset" data-rise text-anchor="end" />
+				<text class="riseset" data-set />
+				<g class="sun-now" data-sun-now>
+					<circle class="sun-glow" r="15" />
+					<circle class="sun-disc" r="5.5" />
+				</g>
 			</g>
 			<g class="segs">
 				{
@@ -249,6 +279,10 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 
 	.fig {
 		color: var(--ink);
+	}
+
+	.sunpath-caption {
+		display: none;
 	}
 
 	.sep {
@@ -569,6 +603,127 @@ const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
 				animation-delay: calc(var(--d) + 0.15s);
 				animation-duration: 0.6s;
 			}
+		}
+	}
+
+	/* ── By day: the sun-path chart (daylight pages, light mode) ─────── */
+	.sunpath {
+		display: none;
+	}
+
+	/* Only where the chart is: phones get the list, not the sky. */
+	@media (min-width: 50em) {
+		:global(html:not(.theme-dark) body[data-daylight]) .sunpath-caption {
+			display: inline;
+		}
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .sunpath {
+		display: inline;
+		--sun: oklch(80% 0.13 65);
+	}
+
+	/* The planisphere's decorative inner ring gives way to altitude rings. */
+	:global(html:not(.theme-dark) body[data-daylight]) .grid .dashed {
+		display: none;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .alt-ring {
+		fill: none;
+		stroke: var(--grid);
+		stroke-dasharray: 2 5;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .alt-label,
+	:global(html:not(.theme-dark) body[data-daylight]) .compass,
+	:global(html:not(.theme-dark) body[data-daylight]) .riseset {
+		font-family: var(--font-mono);
+		font-size: 10px;
+		letter-spacing: 0.08em;
+		fill: var(--gray-400);
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .compass {
+		font-size: 11px;
+		letter-spacing: 0.1em;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .solstice {
+		fill: none;
+		stroke: color-mix(in oklch, var(--gray-0) 18%, transparent);
+		stroke-dasharray: 1 4;
+		stroke-linecap: round;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .today {
+		fill: none;
+		stroke: var(--ink);
+		stroke-width: 1.5;
+		stroke-linecap: round;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .golden {
+		fill: none;
+		stroke: var(--sun);
+		stroke-width: 3;
+		stroke-linecap: round;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .hours :global(circle) {
+		fill: var(--gray-999);
+		stroke: var(--ink);
+		stroke-width: 1.25;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .hours :global(text) {
+		font-family: var(--font-mono);
+		font-size: 9px;
+		fill: var(--gray-400);
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .sun-glow {
+		fill: var(--sun);
+		opacity: 0.35;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .sun-disc {
+		fill: var(--sun);
+		stroke: var(--gray-999);
+		stroke-width: 1.5;
+	}
+
+	/* The roles become daytime stars: still there, just outshone. */
+	:global(html:not(.theme-dark) body[data-daylight]) .seg {
+		stroke: color-mix(in oklch, var(--gray-0) 15%, transparent);
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .minor circle {
+		fill: none;
+		stroke: color-mix(in oklch, var(--gray-0) 35%, transparent);
+		stroke-width: 1;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .star::before {
+		opacity: 0.3;
+	}
+
+	:global(html:not(.theme-dark) body[data-daylight]) .star::after {
+		background: transparent;
+		box-shadow: 0 0 0 1.5px color-mix(in oklch, var(--ink) 75%, transparent);
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.sun-glow {
+			animation: sun-breathe 4s ease-in-out infinite alternate;
+			transform-box: fill-box;
+			transform-origin: center;
+		}
+	}
+
+	@keyframes sun-breathe {
+		to {
+			scale: 1.25;
+			opacity: 0.2;
 		}
 	}
 

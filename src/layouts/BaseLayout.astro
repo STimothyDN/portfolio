@@ -27,8 +27,11 @@ interface Props {
 	/** Meteor pace on observatory pages: 'calm' (~20/min) suits long reads. */
 	skyPace?: 'lively' | 'calm';
 	/**
-	 * Daylight observatory (prototype): by day, the GPU atmosphere and the real
-	 * Sun, sun-cast shadows, and the daytime readout.
+	 * Daylight observatory (light mode on observatory pages): the GPU
+	 * atmosphere, the real Sun and Moon, live RTP weather (clouds, rain on the
+	 * glass), sun-cast shadows and the sunrise/stars-out theme switch — plus,
+	 * on the home page, the weather-station readout, the sun-path Fig. 1 and
+	 * the tree-line horizon.
 	 */
 	daylight?: boolean;
 	/** Phones get the bottom nav dock instead of the hamburger menu. */
@@ -54,7 +57,7 @@ const {
 	noindex = false,
 	sky = mainSite ? 'observatory' : 'plain',
 	skyPace = 'lively',
-	daylight = false,
+	daylight = mainSite,
 	mobileDock = mainSite,
 	palette = mainSite,
 } = Astro.props;
@@ -110,17 +113,20 @@ const observatory = sky === 'observatory';
 			import '../scripts/motion';
 			// Observatory chrome; switches itself off outside observatory pages.
 			import '../scripts/liquid-glass';
-			// Daylight observatory: loaded on demand only when a page sets `daylight`.
+			// Daylight observatory: loaded on demand, only on daylight pages (not photography)
+			// (each module starts itself on load, then follows the swaps).
 			let daylightLoaded = false;
 			const syncDaylight = () => {
 				if (!daylightLoaded && 'daylight' in document.body.dataset) {
 					daylightLoaded = true;
+					void import('../scripts/sky/weather');
 					void import('../scripts/sun-shadows');
 					void import('../scripts/rain-glass');
+					void import('../scripts/sun-path');
 				}
 			};
 			syncDaylight();
-			document.addEventListener('astro:page-load', syncDaylight);
+			document.addEventListener('astro:after-swap', syncDaylight);
 		</script>
 
 		<style>

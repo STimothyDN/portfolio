@@ -1,5 +1,6 @@
 /* ============================================================
- * Daylight observatory (prototype; pages with body[data-daylight]).
+ * Daylight observatory (light mode; pages with body[data-daylight]: the
+ * whole main site, BaseLayout's default outside photography).
  *
  * Sun-cast shadows: scripts/sun-shadows.ts writes --sun-shadow-* and
  * --sun-text-shadow on <body> from the real Sun; in light mode the site's
@@ -8,7 +9,14 @@
  * Dark mode keeps its own shadows.
  * ============================================================ */
 
+/* Text greys for the sky: the page sits on the day sky (lightness ≥ 0.8 —
+ * the shader's floor) rather than white, so the text steps of the light
+ * ramp are deepened to clear WCAG 4.5:1 there (≥ 4.7:1, lavender to peach,
+ * clear to overcast). The order of the ramp is kept. */
 html:not(.theme-dark) body[data-daylight] {
+	--gray-200: oklch(35% 0.05 271);
+	--gray-300: oklch(38.5% 0.06 270);
+	--gray-400: oklch(41% 0.066 269);
 	--shadow-sm: var(--sun-shadow-sm);
 	--shadow-md: var(--sun-shadow-md);
 	--shadow-lg: var(--sun-shadow-lg);

@@ -86,6 +86,8 @@ import Icon from './Icon.astro';
 </style>
 
 <script>
+	import { skyLapse } from '../scripts/sky';
+
 	const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 	/**
@@ -93,7 +95,9 @@ import Icon from './Icon.astro';
 	 * where night falls from the top of the screen (dusk) or day rises from
 	 * the horizon (dawn), a band of sunset/sunrise colour riding the edge.
 	 * The new state is live, so the sky canvas swaps to stars or clouds under
-	 * the sweep as it passes. CSS: "7. THEME SWEEP" in transitions.css.
+	 * the sweep as it passes. On daylight pages the sky itself joins in: the
+	 * day replays its morning up to now as it rises, or the stars come out,
+	 * brightest first, as night falls. CSS: "7. THEME SWEEP" in transitions.css.
 	 */
 	function sweepTheme(dark: boolean, apply: () => void) {
 		const canSweep =
@@ -109,6 +113,7 @@ import Icon from './Icon.astro';
 		glow.dataset.direction = direction;
 		glow.append(document.createElement('span'));
 		root.classList.add('theme-sweep', `theme-sweep-${direction}`);
+		if ('daylight' in document.body.dataset) skyLapse(direction, dark ? 1.3 : 1.6);
 		const transition = document.startViewTransition(() => {
 			apply();
 			document.body.append(glow);

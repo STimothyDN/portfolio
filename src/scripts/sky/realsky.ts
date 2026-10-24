@@ -122,6 +122,7 @@ export class RealSky {
 	private r: Horizon = [-1, 0, 0];
 	private u: Horizon = [0, 0, 1];
 	private f: Horizon = [0, -1, 0];
+	private viewState = { r: this.r, u: this.u, f: this.f, K: this.K };
 	private pt: Point = { x: 0, y: 0 };
 
 	constructor(
@@ -219,7 +220,8 @@ export class RealSky {
 	update(now: number, stars = true) {
 		const jd = julian(now);
 		const lat = this.latDeg * DEG;
-		if (now - this.starsAt >= STARS_EVERY_MS || (stars && !this.starsComputed)) {
+		// Either way: an ?at= preview can move the sky clock backwards (abs, or it would stall).
+		if (Math.abs(now - this.starsAt) >= STARS_EVERY_MS || (stars && !this.starsComputed)) {
 			this.starsAt = now;
 			this.lst = lstHours(jd, this.lonDeg) * 15 * DEG;
 			if (stars) {
@@ -239,7 +241,7 @@ export class RealSky {
 			}
 			this.radiantVec = this.radiantEq ? toHorizon(this.radiantEq.ra, this.radiantEq.dec, this.lst, lat) : null;
 		}
-		if (now - this.bodiesAt >= BODIES_EVERY_MS) {
+		if (Math.abs(now - this.bodiesAt) >= BODIES_EVERY_MS) {
 			this.bodiesAt = now;
 			const s = sun(jd);
 			this.sunVec = toHorizon(s.ra, s.dec, this.lst, lat);
@@ -278,10 +280,22 @@ export class RealSky {
 
 		const az = this.viewAz * DEG;
 		const alt = this.viewAlt * DEG;
-		const [sa, ca, sl, cl] = [Math.sin(az), Math.cos(az), Math.sin(alt), Math.cos(alt)];
-		this.f = [cl * sa, cl * ca, sl];
-		this.r = [ca, -sa, 0];
-		this.u = [-sa * sl, -ca * sl, cl];
+		const sa = Math.sin(az);
+		const ca = Math.cos(az);
+		const sl = Math.sin(alt);
+		const cl = Math.cos(alt);
+		// In place: the view basis is re-aimed every frame.
+		const { f, r, u } = this;
+		f[0] = cl * sa;
+		f[1] = cl * ca;
+		f[2] = sl;
+		r[0] = ca;
+		r[1] = -sa;
+		r[2] = 0;
+		u[0] = -sa * sl;
+		u[1] = -ca * sl;
+		u[2] = cl;
+		this.viewState.K = this.K;
 	}
 
 	/** The Sun as a horizon-frame unit vector [east, north, up] (refreshed each minute). */
@@ -289,9 +303,14 @@ export class RealSky {
 		return this.sunVec;
 	}
 
-	/** The current view, for the GPU star layer (glsky.ts) to project identically. */
+	/** The Moon as a horizon-frame unit vector (refreshed each minute), or null before the first update. */
+	get moonVector() {
+		return this.moonBody?.vec ?? null;
+	}
+
+	/** The current view, for the GPU layer (glsky.ts) to project identically (live: updated in place). */
 	get view() {
-		return { r: this.r, u: this.u, f: this.f, K: this.K };
+		return this.viewState;
 	}
 
 	/** Stereographic projection of a horizon-frame vector; false if it's behind the viewer. */
