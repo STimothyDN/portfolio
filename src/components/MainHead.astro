@@ -65,41 +65,88 @@ const cdnOrigin = import.meta.env.PUBLIC_BUNNY_CDN_URL;
 <ClientRouter />
 
 <script is:inline>
-	// This code is inlined in the head to make dark mode instant & blocking.
-	// Two independent theme scopes: the photography section keeps its own
-	// light/dark choice under a separate storage key, so toggling in one
-	// section never carries into the other. With nothing saved, the main
-	// site defaults to dark and photography defaults to light.
-	const themeKey = (isPhoto) => (isPhoto ? 'theme-photography' : 'theme');
-	const applyTheme = (root = document.documentElement, pathname = window.location.pathname) => {
-		const isPhoto = pathname.startsWith('/photography');
-		let saved = null;
+	// Inlined in the head so the theme is set before the first paint.
+	//
+	// The default, site-wide — and nothing is ever stored:
+	// 1. a dark browser or device setting (prefers-color-scheme) → dark;
+	// 2. otherwise the Sun over Durham/RTP: light while it's up, dark from
+	//    sunset to sunrise (?at=<ISO time> previews any moment).
+	// Browsers report "light" when nothing is set, so light and unset both
+	// fall through to the Sun. A toggle (ThemeToggle.astro) holds for the rest
+	// of the visit, across client-side navigations; a reload or a revisit
+	// returns to the default. Until then, the page follows the default live:
+	// the device switching modes, or the Sun rising or setting.
+	(() => {
+		const SITE = { lat: 35.9, lon: -78.86 };
+		const darkDevice = window.matchMedia('(prefers-color-scheme: dark)');
+
+		// The Sun's altitude over the site, degrees: a compact solar position,
+		// within about a minute of the sky readout's sunrise and sunset.
+		const sunAltitude = (ms) => {
+			const rad = Math.PI / 180;
+			const d = ms / 864e5 - 10957.5; // days from J2000.0
+			const g = (357.529 + 0.98560028 * d) * rad;
+			const L = (280.459 + 0.98564736 * d + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * rad;
+			const e = (23.439 - 3.6e-7 * d) * rad;
+			const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+			const dec = Math.asin(Math.sin(e) * Math.sin(L));
+			const ha = (280.46061837 + 360.98564736629 * d + SITE.lon) * rad - ra;
+			const lat = SITE.lat * rad;
+			return Math.asin(Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(ha)) / rad;
+		};
+
+		// A preview's clock runs on from its ?at= moment, as the sky's does.
+		const previewOffsets = {};
+		const skyTime = (search) => {
+			const at = new URLSearchParams(search).get('at');
+			const target = at ? Date.parse(at) : NaN;
+			if (!Number.isFinite(target)) return Date.now();
+			previewOffsets[at] ??= target - Date.now();
+			return Date.now() + previewOffsets[at];
+		};
+
+		const defaultDark = (search = location.search) =>
+			// Below the horizon: allowing for refraction and the Sun's radius.
+			darkDevice.matches || sunAltitude(skyTime(search)) <= -0.833;
+
+		const applyTheme = (root = document.documentElement, search = location.search) => {
+			const chosen = window.__themeOverride;
+			root.classList.toggle('theme-dark', chosen ? chosen === 'dark' : defaultDark(search));
+		};
+		applyTheme();
+
+		// Choices used to be saved per section; they no longer count, so clear them.
 		try {
-			saved = localStorage.getItem(themeKey(isPhoto));
+			localStorage.removeItem('theme');
+			localStorage.removeItem('theme-photography');
 		} catch {
-			/* storage unavailable — fall through to section defaults */
+			/* storage unavailable: nothing to clear */
 		}
-		const isDark = saved ? saved === 'dark' : !isPhoto;
-		root.classList[isDark ? 'add' : 'remove']('theme-dark');
-	};
-	applyTheme();
 
-	// Persistence happens only on an explicit toggle click (see ThemeToggle.astro).
-	// A MutationObserver on the class attribute used to do it, but it also fired on
-	// unrelated class changes (e.g. the `loaded` class), saving the OS-derived mode
-	// as if the user had chosen it — which then pinned the site to that mode forever.
-
-	// ClientRouter swaps the <html> attributes on navigation, which would drop
-	// `theme-dark`; stamp it onto the incoming document before swap (and
-	// re-assert after swap). Register once — this `is:inline` script re-executes
-	// on every navigation.
-	if (!window.__themeObserver) {
+		// Registered once per visit (the router keeps this script).
+		if (window.__themeObserver) return;
 		window.__themeObserver = true;
+		// ClientRouter swaps the <html> attributes on navigation, which would
+		// drop `theme-dark`: stamp it onto the incoming document, then re-assert.
 		document.addEventListener('astro:before-swap', (e) => {
-			if (e.newDocument) applyTheme(e.newDocument.documentElement, e.to?.pathname ?? window.location.pathname);
+			if (e.newDocument) applyTheme(e.newDocument.documentElement, e.to?.search);
 		});
 		document.addEventListener('astro:after-swap', () => applyTheme());
-	}
+
+		// Follow the default while no toggle has taken over. ThemeToggle plays a
+		// change as a sky event (sunrise/sunset sweep) by cancelling the event;
+		// without it, the theme just switches.
+		const follow = () => {
+			if (window.__themeOverride) return;
+			const dark = defaultDark();
+			if (dark === document.documentElement.classList.contains('theme-dark')) return;
+			const event = new CustomEvent('theme:default', { detail: { dark }, cancelable: true });
+			if (document.dispatchEvent(event)) document.documentElement.classList.toggle('theme-dark', dark);
+		};
+		darkDevice.addEventListener('change', follow);
+		document.addEventListener('visibilitychange', () => document.hidden || follow());
+		setInterval(follow, 60000);
+	})();
 </script>
 
 <script is:inline>

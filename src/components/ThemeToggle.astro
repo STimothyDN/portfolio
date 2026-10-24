@@ -88,6 +88,13 @@ import Icon from './Icon.astro';
 <script>
 	import { skyLapse } from '../scripts/sky';
 
+	declare global {
+		interface Window {
+			/** This visit's toggled theme (MainHead.astro); never stored, so a reload returns to the default. */
+			__themeOverride?: 'light' | 'dark';
+		}
+	}
+
 	const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 	/**
@@ -140,23 +147,17 @@ import Icon from './Icon.astro';
 				});
 			};
 
-			// Toggle the theme when a user clicks the button. This is the only place
-			// the preference is persisted — an explicit choice, not a page-load state.
-			// The photography section has its own storage key (see MainHead.astro),
-			// so a toggle there never leaks into the rest of the site or vice versa.
+			// A click holds for the rest of this visit (across client-side
+			// navigations, site-wide) but is never stored: a reload or a revisit
+			// returns to the default (MainHead.astro).
 			button.addEventListener('click', () => {
 				const dark = !this.isDark();
+				window.__themeOverride = dark ? 'dark' : 'light';
 				setTheme(dark);
-				const isPhoto = window.location.pathname.startsWith('/photography');
-				try {
-					localStorage.setItem(isPhoto ? 'theme-photography' : 'theme', dark ? 'dark' : 'light');
-				} catch {
-					/* storage unavailable (private mode etc.) — theme still applies */
-				}
 			});
 
-			// Initialize button state to reflect current theme (only the button —
-			// setting the class here would save a theme the user never chose).
+			// Initialize button state to reflect current theme (only the button:
+			// the theme itself is MainHead's to decide).
 			// During a ClientRouter swap this constructor runs before `astro:after-swap`
 			// reapplies `theme-dark` to the fresh <html>, so re-sync a frame later.
 			const syncButton = () => button.setAttribute('aria-pressed', String(this.isDark()));
@@ -180,4 +181,12 @@ import Icon from './Icon.astro';
 		}
 	}
 	customElements.define('theme-toggle', ThemeToggle);
+
+	// The default changing while a page is open (the device switching modes,
+	// or sunrise/sunset over Durham — MainHead.astro): the same sky event as a click.
+	document.addEventListener('theme:default', (event) => {
+		const { dark } = (event as CustomEvent<{ dark: boolean }>).detail;
+		event.preventDefault();
+		sweepTheme(dark, () => document.documentElement.classList.toggle('theme-dark', dark));
+	});
 </script>
