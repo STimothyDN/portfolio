@@ -75,7 +75,7 @@ export type SkyMessage =
 	| { type: 'pointer'; x: number; y: number; fine?: boolean }
 	| { type: 'pointer-out' }
 	/** Scroll position (the real sky lowers its gaze as you go down the page). */
-	| { type: 'scroll'; top: number }
+	| { type: 'scroll'; top: number; snap?: boolean }
 	| { type: 'meteor' }
 	/** Aimed meteor (viewport px) that arrives at `to` after `duration` seconds. */
 	| { type: 'strike'; from: Point; to: Point; duration: number }
@@ -250,6 +250,7 @@ export class SkyRenderer {
 	private starColor = '255, 255, 255';
 	private active = false;
 	private reducedMotion = false;
+	private scrollTarget = 0;
 	private scrollTop = 0;
 	// Pointer parallax: target follows the pointer, current lerps toward it.
 	private pointerTargetX = 0;
@@ -345,8 +346,14 @@ export class SkyRenderer {
 				this.lensOn = false;
 				break;
 			case 'scroll':
-				this.scrollTop = msg.top;
-				if (this.width >= 768) this.lastInput = performance.now();
+				this.scrollTarget = msg.top;
+				if (msg.snap) {
+					this.scrollTop = msg.top;
+					this.lastScrollTop = msg.top;
+					this.warp = 0;
+				} else {
+					this.lastInput = performance.now();
+				}
 				break;
 			case 'meteor':
 				// Asked for by a page (the 404's welcome): always a bright one.
@@ -431,8 +438,7 @@ export class SkyRenderer {
 
 		const nextWidth = Math.max(1, Math.ceil(width));
 		const nextHeight = Math.max(1, Math.ceil(height));
-		const maxDpr = nextWidth < 768 ? 1.5 : MAX_DPR;
-		const nextDpr = clamp(dpr || 1, 1, maxDpr);
+		const nextDpr = clamp(dpr || 1, 1, MAX_DPR);
 		const sizeChanged = nextWidth !== this.width || nextHeight !== this.height || nextDpr !== this.dpr;
 
 		if (!sizeChanged && !forceRebuild) return;
@@ -762,7 +768,11 @@ export class SkyRenderer {
 
 	private get capFrameMs() {
 		if (this.strikes.length || this.sparks.length || this.daylight.busy) return FAST_FRAME_MS;
-		if (this.observatory && performance.now() - this.lastInput < INTERACTIVE_MS) return FAST_FRAME_MS;
+		if (
+			this.observatory &&
+			(performance.now() - this.lastInput < INTERACTIVE_MS || Math.abs(this.scrollTarget - this.scrollTop) > 0.5)
+		)
+			return FAST_FRAME_MS;
 		if (this.night) return TARGET_FRAME_MS;
 		// Lightning flickers at full rate; falling rain and snow need 30.
 		const weather = this.dayWeather;
@@ -829,6 +839,10 @@ export class SkyRenderer {
 		const lerp = approach(this.observatory ? 9 : 3.5, deltaSeconds);
 		this.pointerX += (this.pointerTargetX - this.pointerX) * lerp;
 		this.pointerY += (this.pointerTargetY - this.pointerY) * lerp;
+		// Smooth scrollTop across frames so uneven main-thread scroll delivery
+		// (e.g. when a mobile browser collapses its top/bottom bar while scrolling)
+		// never makes the worker's starfield freeze for a frame and jump on the next.
+		this.scrollTop += (this.scrollTarget - this.scrollTop) * approach(22, deltaSeconds);
 
 		if (this.observatory) {
 			// The lens all but sits on the pointer (~30ms).
@@ -837,13 +851,8 @@ export class SkyRenderer {
 			this.lensY += (this.pointerTargetY - this.lensY) * follow;
 			this.lensAmount += ((this.lensOn ? 1 : 0) - this.lensAmount) * approach(5, deltaSeconds);
 			// Scroll velocity (px/s), smoothed so a single jumpy frame can't flash a streak.
-			// Disabled on mobile viewports so touch scrolling doesn't stretch star quads.
-			if (this.width >= 768) {
-				const velocity = deltaSeconds > 0 ? (this.scrollTop - this.lastScrollTop) / deltaSeconds : 0;
-				this.warp += (velocity - this.warp) * approach(10, deltaSeconds);
-			} else {
-				this.warp = 0;
-			}
+			const velocity = deltaSeconds > 0 ? (this.scrollTop - this.lastScrollTop) / deltaSeconds : 0;
+			this.warp += (velocity - this.warp) * approach(10, deltaSeconds);
 		} else {
 			this.lensAmount = 0;
 			this.warp = 0;

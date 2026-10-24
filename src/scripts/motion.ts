@@ -227,6 +227,7 @@ function scrollLinked(photo: boolean, signal: AbortSignal) {
 		}
 	};
 	const queue = () => (frame ||= requestAnimationFrame(update));
+	const coarsePointer = matchMedia('(pointer: coarse)');
 	let lastW = innerWidth;
 	let lastH = innerHeight;
 	const remeasure = () => {
@@ -234,7 +235,7 @@ function scrollLinked(photo: boolean, signal: AbortSignal) {
 		queue();
 	};
 	const onResize = () => {
-		if (innerWidth === lastW && Math.abs(innerHeight - lastH) < 140) return;
+		if (innerWidth === lastW && (coarsePointer.matches || innerHeight === lastH)) return;
 		lastW = innerWidth;
 		lastH = innerHeight;
 		remeasure();

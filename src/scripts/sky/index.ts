@@ -201,6 +201,14 @@ class SkyController {
 		return true;
 	}
 
+	private canvasSize() {
+		const c = this.canvas;
+		return {
+			width: c?.clientWidth || window.innerWidth,
+			height: Math.max(c?.clientHeight || 0, window.innerHeight),
+		};
+	}
+
 	private bind = () => {
 		const night = document.documentElement.classList.contains('theme-dark');
 		const photo = document.documentElement.dataset.section === 'photography';
@@ -217,12 +225,13 @@ class SkyController {
 			this.canvas = canvas;
 			this.night = night;
 			this.photo = photo;
+			const size = this.canvasSize();
+			this.lastW = size.width;
+			this.lastH = size.height;
 			const target = this.inWorker ? canvas.transferControlToOffscreen() : canvas;
 			// The GPU star layer's canvas (observatory pages draw on it); persisted alongside.
 			const glElement = document.querySelector<HTMLCanvasElement>('.sky-gl');
 			const glTarget = glElement && this.inWorker ? glElement.transferControlToOffscreen() : glElement;
-			this.lastW = window.innerWidth;
-			this.lastH = window.innerHeight;
 			this.send(
 				{
 					type: 'attach',
@@ -241,7 +250,8 @@ class SkyController {
 		} else {
 			this.syncTheme();
 		}
-		this.scrollTop = document.body.scrollTop;
+		this.scrollTop = null;
+		this.send({ type: 'scroll', top: document.body.scrollTop || window.scrollY, snap: true });
 		this.send({
 			type: 'mode',
 			observatory: this.observatory,
@@ -290,9 +300,10 @@ class SkyController {
 	private resizePending = false;
 	private queueResize = () => {
 		if (!this.backendReady) return;
-		const w = window.innerWidth;
-		const h = window.innerHeight;
-		if (coarsePointer.matches && w === this.lastW && Math.abs(h - this.lastH) < 140) return;
+		const { width, height } = this.canvasSize();
+		// On touch devices, height-only changes are browser toolbars/keyboards
+		// collapsing or expanding; the canvas is sized to 100lvh so it stays fixed.
+		if (width === this.lastW && (coarsePointer.matches || height === this.lastH)) return;
 		this.resizePending = true;
 		this.queue();
 	};
@@ -300,8 +311,9 @@ class SkyController {
 	private onScroll = (event: Event) => {
 		if (!this.backendReady || this.photo) return;
 		if (event.target !== document.body && event.target !== document) return;
-		this.scrollTop = document.body.scrollTop;
-		this.queue();
+		// Forward scroll immediately rather than waiting for main-thread rAF so
+		// the worker has the latest scrollTop before its own frame tick.
+		this.send({ type: 'scroll', top: document.body.scrollTop || window.scrollY });
 	};
 
 	private onPointer = (event: PointerEvent) => {
@@ -359,8 +371,9 @@ class SkyController {
 		this.frame = 0;
 		if (this.resizePending) {
 			this.resizePending = false;
-			this.lastW = window.innerWidth;
-			this.lastH = window.innerHeight;
+			const { width, height } = this.canvasSize();
+			this.lastW = width;
+			this.lastH = height;
 			this.send({ type: 'resize', width: this.lastW, height: this.lastH, dpr: window.devicePixelRatio || 1 });
 		}
 		if (this.pointer) {

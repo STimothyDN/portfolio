@@ -129,13 +129,14 @@ function init() {
 	const queueScroll = () => (frame ||= requestAnimationFrame(onScroll));
 	body.addEventListener('scroll', queueScroll, { passive: true, signal });
 
+	const coarsePointer = matchMedia('(pointer: coarse)');
 	let lastW = window.innerWidth;
 	let lastH = window.innerHeight;
 	let resizeFrame = 0;
 	window.addEventListener(
 		'resize',
 		() => {
-			if (window.innerWidth === lastW && Math.abs(window.innerHeight - lastH) < 140) return;
+			if (window.innerWidth === lastW && (coarsePointer.matches || window.innerHeight === lastH)) return;
 			resizeFrame ||= requestAnimationFrame(() => {
 				resizeFrame = 0;
 				lastW = window.innerWidth;
