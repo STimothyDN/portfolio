@@ -1,0 +1,511 @@
+---
+/**
+ * Fig. 2 — the logbook: what the rest of the site holds, counted at build
+ * time, one tile per pursuit — the work catalogue (and its repos' commits),
+ * the film rolls (and the cameras loaded most), the digital shoots and where
+ * they were — beside the ones with no data here yet
+ * (music and dance, the kitchen, the rink), told in my own words from the
+ * home page. Each tile opens where that part of the site lives.
+ *
+ * The small charts are drawn here as SVG from the same collections:
+ * commits a month across the public repos, rolls developed a week, photos
+ * per shoot, and a year ruler since I started DJing.
+ */
+import { getCollection } from 'astro:content';
+
+import Icon from '../Icon.astro';
+import type { Props as IconProps } from '../Icon.astro';
+import { filmLabel, getFilmRolls } from '../../utils/film';
+import { allTools, getProjects, signalsSyncedAt } from '../../utils/work';
+
+/* ── Copy (my own words, from the home page's Fig. 1 and Fig. 2) ───────── */
+
+const DJ_SINCE = 2021;
+const copy = {
+	dance: 'Dancing in some capacity since I was a kid',
+	cooking: 'Cooking is one of my favorite things to do off the clock.',
+	cookingDoc:
+		'https://docs.google.com/document/d/1It_OJS21vwgpbcy6P4QIGzRIacEXh6JH8Os51Dc4qtc/edit?usp=sharing',
+	soundcloud: 'https://soundcloud.com/timo_on_duty',
+	hockey: 'Currently learning how to play hockey!',
+	teams: ['Carolina Hurricanes', 'UNC Tar Heels', 'Dallas Mavericks'],
+};
+
+/* ── Counts ───────────────────────────────────────────────────────────── */
+
+const DAY = 86400000;
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+// Work: the catalogue, and commits a month across its public repos over the
+// last 18 months of the snapshot.
+const projects = await getProjects();
+const commits = projects.flatMap((p) => p.github?.commits ?? []).map((c) => new Date(c));
+const MONTHS = 18;
+const end = signalsSyncedAt;
+const monthIndex = (d: Date) => (end.getUTCFullYear() - d.getUTCFullYear()) * 12 + end.getUTCMonth() - d.getUTCMonth();
+const sharedTools = allTools(projects).filter((t) => t.projects.length > 1).map((t) => t.name);
+const perMonth = new Array(MONTHS).fill(0);
+for (const d of commits) {
+	const back = monthIndex(d);
+	if (back >= 0 && back < MONTHS) perMonth[MONTHS - 1 - back]++;
+}
+
+// Film: rolls, frames and gear; rolls developed a week since the first.
+const rolls = await getFilmRolls();
+const frames = rolls.reduce((sum, r) => sum + r.data.photos.length, 0);
+const cameras = new Set(rolls.map((r) => r.data.camera)).size;
+const stocks = new Set(rolls.map((r) => r.data.stock)).size;
+const rollsPerCamera = new Map<string, number>();
+for (const r of rolls) rollsPerCamera.set(r.data.camera, (rollsPerCamera.get(r.data.camera) ?? 0) + 1);
+const topCameras = [...rollsPerCamera]
+	.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+	.slice(0, 3)
+	.map(([camera]) => filmLabel('cameras', camera));
+const developed = rolls.map((r) => r.data.developed.valueOf()).sort((a, b) => a - b);
+const firstRoll = developed[0] ?? Date.now();
+const weeks = Math.max(1, Math.floor(((developed.at(-1) ?? firstRoll) - firstRoll) / (7 * DAY)) + 1);
+const perWeek = new Array(weeks).fill(0);
+for (const t of developed) perWeek[Math.floor((t - firstRoll) / (7 * DAY))]++;
+const monthYear = (t: number) =>
+	new Date(t).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+// Digital: shoots, photos and where they were; photos per shoot by date.
+const shoots = (await getCollection('photography')).sort((a, b) => a.data.date.valueOf() - b.data.date.valueOf());
+const photos = shoots.reduce((sum, s) => sum + s.data.photos.length, 0);
+const places = [...new Set(shoots.map((s) => s.data.location).filter((l): l is string => !!l))];
+
+// Music: a ruler from the first year to this one.
+const thisYear = new Date().getFullYear();
+const djYears = Array.from({ length: thisYear - DJ_SINCE + 1 }, (_, i) => DJ_SINCE + i);
+
+/** Bars for a small chart: heights scaled to the busiest bin. */
+function bars(values: number[], h = 28) {
+	const max = Math.max(1, ...values);
+	return values.map((v, i) => ({ x: i + 0.15, w: 0.7, h: v ? Math.max(1.5, (v / max) * h) : 0, y: h - (v ? Math.max(1.5, (v / max) * h) : 0) }));
+}
+
+type Tile = {
+	key: string;
+	title: string;
+	icon: IconProps['icon'];
+	/** A big number and its label (read label first when `leading`). */
+	stat?: { value: string; unit: string; leading?: boolean };
+	sub?: string;
+	chart?: { values: number[]; caption: string; label: string };
+	quote?: string;
+	chips?: { label: string; items: string[] };
+	ruler?: number[];
+	link?: { href: string; label: string; external?: boolean };
+};
+
+const tiles: Tile[] = [
+	{
+		key: 'code',
+		title: 'Code',
+		icon: 'code',
+		stat: { value: pad2(projects.length), unit: 'projects' },
+		sub: `${commits.length} commits logged · ${allTools(projects).length} tools`,
+		chart: {
+			values: perMonth,
+			caption: `Commits a month · last ${MONTHS} months`,
+			label: `Commits per month over the last ${MONTHS} months, peaking at ${Math.max(...perMonth)}`,
+		},
+		chips: sharedTools.length ? { label: 'Across projects', items: sharedTools } : undefined,
+		link: { href: '/work/', label: 'Open the catalogue' },
+	},
+	{
+		key: 'film',
+		title: 'Film',
+		icon: 'camera',
+		stat: { value: pad2(rolls.length), unit: 'rolls' },
+		sub: `${frames} frames · ${cameras} cameras · ${stocks} stocks`,
+		chart: {
+			values: perWeek,
+			caption: `Rolls developed a week · since ${monthYear(firstRoll)}`,
+			label: `Rolls developed per week since ${monthYear(firstRoll)}`,
+		},
+		chips: { label: 'Loaded most', items: topCameras },
+		link: { href: '/photography/', label: 'To the film desk' },
+	},
+	{
+		key: 'digital',
+		title: 'Digital',
+		icon: 'camera',
+		stat: { value: pad2(shoots.length), unit: 'shoots' },
+		sub: `${photos} photos`,
+		chips: { label: 'Shot in', items: places },
+		chart: {
+			values: shoots.map((s) => s.data.photos.length),
+			caption: 'Photos per shoot · oldest first',
+			label: 'Photos per shoot, oldest first',
+		},
+		link: { href: '/photography/digital/', label: 'See the shoots' },
+	},
+	{
+		key: 'music',
+		title: 'Music & dance',
+		icon: 'producer',
+		stat: { value: String(DJ_SINCE), unit: 'DJ since', leading: true },
+		sub: copy.dance,
+		ruler: djYears,
+		link: { href: copy.soundcloud, label: 'Listen on SoundCloud', external: true },
+	},
+	{
+		key: 'kitchen',
+		title: 'Kitchen',
+		icon: 'cook',
+		quote: copy.cooking,
+		link: { href: copy.cookingDoc, label: 'Open my cooking doc', external: true },
+	},
+	{
+		key: 'sports',
+		title: 'Rink & stands',
+		icon: 'trophy',
+		quote: copy.hockey,
+		chips: { label: 'Talk to me about', items: copy.teams },
+	},
+];
+---
+
+<section class="logbook" aria-labelledby="logbook-title">
+	<h2 id="logbook-title" class="caption" data-animate="fade">
+		<span class="fig">Fig. 2</span><span class="sep" aria-hidden="true">·</span>Logbook<span class="quiet"
+			><span class="sep" aria-hidden="true">·</span>counted from the rest of this site</span
+		>
+	</h2>
+	<div class="tiles" data-animate-group data-stagger="0.08">
+		{
+			tiles.map((t) => (
+				<article class:list={['tile', `tile-${t.key}`, { linked: t.link }]}>
+					<header class="tile-head">
+						<Icon icon={t.icon} size="1.1rem" />
+						<h3>{t.title}</h3>
+					</header>
+					{t.stat && (
+						<p class="stat">
+							{t.stat.leading && <span class="unit">{t.stat.unit}</span>}
+							<span class="num">{t.stat.value}</span>
+							{!t.stat.leading && <span class="unit">{t.stat.unit}</span>}
+						</p>
+					)}
+					{t.sub && <p class="sub">{t.sub}</p>}
+					{t.quote && <p class="quote">{t.quote}</p>}
+					{t.chart && (
+						<figure class="chart">
+							<svg viewBox={`0 0 ${t.chart.values.length} 28`} preserveAspectRatio="none" role="img" aria-label={t.chart.label}>
+								<line class="floor" x1="0" y1="27.5" x2={t.chart.values.length} y2="27.5" />
+								{bars(t.chart.values).map((b) => b.h > 0 && <rect x={b.x} y={b.y} width={b.w} height={b.h} />)}
+							</svg>
+							<figcaption>{t.chart.caption}</figcaption>
+						</figure>
+					)}
+					{t.ruler && (
+						<figure class="ruler" aria-hidden="true">
+							<div class="ruler-track">
+								{t.ruler.map((y) => (
+									<span class="ruler-year">
+										<span class="tick" />
+										{y === t.ruler!.at(-1) ? 'now' : String(y).slice(2).padStart(3, '’')}
+									</span>
+								))}
+							</div>
+						</figure>
+					)}
+					{t.chips && (
+						<div class="chips">
+							<p class="chips-label">{t.chips.label}</p>
+							<ul>
+								{t.chips.items.map((item) => (
+									<li>{item}</li>
+								))}
+							</ul>
+						</div>
+					)}
+					{t.link && (
+						<a
+							class="tile-link"
+							href={t.link.href}
+							{...(t.link.external ? { target: '_blank', rel: 'noopener' } : {})}
+						>
+							{t.link.label}
+							{t.link.external && <span class="sr-only"> (opens in a new tab)</span>}
+							<span aria-hidden="true">{` ${t.link.external ? '↗' : '→'}`}</span>
+						</a>
+					)}
+				</article>
+			))
+		}
+	</div>
+</section>
+
+<style>
+	.logbook {
+		--ink: var(--link-color);
+		--hairline: color-mix(in oklch, var(--gray-0) 12%, transparent);
+
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.caption {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-200);
+	}
+
+	.fig {
+		color: var(--ink);
+	}
+
+	.sep {
+		margin-inline: 0.5em;
+		color: var(--gray-400);
+	}
+
+	.quiet {
+		color: var(--gray-400);
+		text-transform: none;
+		letter-spacing: 0.02em;
+	}
+
+	.tiles {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.tile {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		min-width: 0;
+		padding: 1.25rem;
+		border: 1px solid var(--hairline);
+		border-radius: 1rem;
+		background: var(--gray-999_65);
+		box-shadow: var(--shadow-sm);
+		transition: border-color 0.25s;
+	}
+
+	.tile.linked:hover,
+	.tile.linked:has(.tile-link:focus-visible) {
+		border-color: color-mix(in oklch, var(--ink) 60%, transparent);
+	}
+
+	.tile:has(.tile-link:focus-visible) {
+		outline: 2px solid var(--ink);
+		outline-offset: 2px;
+	}
+
+	.tile-head {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--ink);
+	}
+
+	h3 {
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-200);
+	}
+
+	.stat {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+	}
+
+	.num {
+		font-family: var(--font-brand);
+		font-size: var(--text-4xl);
+		font-weight: 600;
+		line-height: 1;
+		letter-spacing: -0.02em;
+		font-variant-numeric: tabular-nums;
+		color: var(--gray-0);
+	}
+
+	.unit,
+	.chips-label,
+	.chart figcaption,
+	.tile-link {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.unit {
+		color: var(--gray-400);
+	}
+
+	.sub {
+		color: var(--gray-300);
+	}
+
+	.quote {
+		font-family: var(--font-brand);
+		font-size: var(--text-xl);
+		font-weight: 500;
+		line-height: 1.25;
+		color: var(--gray-100);
+		text-wrap: pretty;
+	}
+
+	.chart {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		margin: 0;
+	}
+
+	.chart svg {
+		display: block;
+		width: 100%;
+		height: 2.25rem;
+		overflow: visible;
+	}
+
+	.chart rect {
+		fill: var(--ink);
+	}
+
+	.floor {
+		stroke: color-mix(in oklch, var(--gray-0) 16%, transparent);
+		stroke-width: 1;
+		vector-effect: non-scaling-stroke;
+	}
+
+	.chart figcaption {
+		color: var(--gray-400);
+	}
+
+	/* Music: one tick a year since the first, on a lit track. */
+	.ruler {
+		margin: 0.25rem 0 0;
+	}
+
+	.ruler-track {
+		position: relative;
+		display: flex;
+		justify-content: space-between;
+		padding-top: 0.75rem;
+		font-family: var(--font-mono);
+		font-size: 0.625rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--gray-400);
+	}
+
+	.ruler-track::before {
+		position: absolute;
+		top: 0.2rem;
+		left: 0;
+		right: 0;
+		height: 3px;
+		border-radius: 999rem;
+		content: '';
+		background: linear-gradient(90deg, color-mix(in oklch, var(--ink) 35%, transparent), var(--ink));
+		box-shadow: 0 0 8px color-mix(in oklch, var(--ink) 60%, transparent);
+	}
+
+	.ruler-year {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.ruler-year:first-child {
+		align-items: flex-start;
+	}
+
+	.ruler-year:last-child {
+		align-items: flex-end;
+		color: var(--ink);
+	}
+
+	.tick {
+		position: absolute;
+		top: -0.75rem;
+		width: 1px;
+		height: 0.55rem;
+		background: currentColor;
+	}
+
+	.chips {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+
+	.chips-label {
+		color: var(--gray-400);
+	}
+
+	.chips ul {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.chips li {
+		padding: 0.15rem 0.6rem;
+		border: 1px solid var(--hairline);
+		border-radius: 999rem;
+		background: color-mix(in oklch, var(--gray-0) 4%, transparent);
+		font-size: var(--text-sm);
+		line-height: 1.4;
+		color: var(--gray-100);
+	}
+
+	.tile-link {
+		align-self: flex-start;
+		margin-top: auto;
+		padding-top: 0.25rem;
+		color: var(--ink);
+		text-decoration: none;
+	}
+
+	/* The whole tile is the link's hit area. */
+	.tile-link::after {
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		content: '';
+	}
+
+	.tile-link:focus-visible {
+		outline: none;
+	}
+
+	@media (min-width: 40em) {
+		.tiles {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (min-width: 64em) {
+		.tiles {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 1.25rem;
+		}
+
+		.tile {
+			padding: 1.5rem;
+			border-radius: 1.25rem;
+		}
+	}
+</style>

@@ -1,134 +1,344 @@
 ---
+/**
+ * About, in the Observatory language of the home and work pages:
+ * - Readout: where I'm based, my local time (live), where I work and studied.
+ * - Hero: the title, tagline and opening line beside Plate I.
+ * - Fig. 1, the path so far: the schools and the job as stations on a trail
+ *   (components/about/Path.astro).
+ * - Background: the rest of my own write-up.
+ * - Fig. 2, the logbook: what the rest of the site holds, counted at build
+ *   time (components/about/Logbook.astro).
+ * All copy lives in the data below, in my own words; a station's `years`
+ * appear once they're filled in.
+ */
+import '@fontsource-variable/geist-mono';
+
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 import ContactCTA from '../components/ContactCTA.astro';
 import Hero from '../components/Hero.astro';
+import Readout from '../components/Readout.astro';
+import Logbook from '../components/about/Logbook.astro';
+import Path, { type Station } from '../components/about/Path.astro';
 
-import atWorkSrc from '../assets/at-work.jpg';
+import plateSrc from '../assets/at-work.jpg';
 import { responsive } from '../utils/images';
 
+/* ── Copy ─────────────────────────────────────────────────────────────── */
+
+const tagline = 'Thanks for stopping by. Read below to learn more about myself and my background.';
+
+const opening =
+	'I am currently a Full Stack Software Developer at the Center for Data Science and AI at RTI International. I graduated with a Computer Science B.S. and Economics B.A. at the University of North Carolina Chapel Hill.';
+
+const background = [
+	'Academically passionate and charismatic software engineer with extensive experience in professional communication and computer science skills always striving to continue growth and learning through solving interdisciplinary challenges by applying data analytics and the burgeoning field of AI to different fields of research.',
+	'Adept at problem solving and critical thinking extemporaneously with a history of organizational and logistics management in extracurricular positions and volunteer work. Conducted research at the North Carolina School of Science and Mathematics and the University of North Carolina Chapel Hill in Combinatorics and Game Theory and Computational Linguistics respectively.',
+	'Passions outside of my professional experience include music, sports, and dancing. Talk to me about the Carolina Hurricanes, UNC Tar Heels, or the Dallas Mavericks!',
+];
+
+const stations: Station[] = [
+	{
+		place: 'North Carolina School of Science and Mathematics',
+		facts: [{ label: 'Research', value: 'Combinatorics and Game Theory' }],
+	},
+	{
+		place: 'University of North Carolina Chapel Hill',
+		facts: [
+			{ label: 'B.S.', value: 'Computer Science' },
+			{ label: 'B.A.', value: 'Economics' },
+			{ label: 'Research', value: 'Computational Linguistics' },
+		],
+	},
+	{
+		place: 'RTI International',
+		unit: 'Center for Data Science and AI',
+		facts: [{ label: 'Role', value: 'Full Stack Software Developer' }],
+		now: true,
+		link: { href: '/work/', label: 'See the work' },
+	},
+];
+
+/* ── Plate I ──────────────────────────────────────────────────────────── */
+
 const photoWidths = [480, 640, 800, 1024, 1280, 1600];
-const [photoAvif, photoWebp] = await Promise.all([
-	responsive(atWorkSrc, { widths: photoWidths, format: 'avif' }),
-	responsive(atWorkSrc, { widths: photoWidths, format: 'webp' }),
+const [plateAvif, plateWebp] = await Promise.all([
+	responsive(plateSrc, { widths: photoWidths, format: 'avif' }),
+	responsive(plateSrc, { widths: photoWidths, format: 'webp' }),
 ]);
-// The hero spans the 60% middle column of the 83rem wrapper on desktop.
-const photoSizes = '(min-width: 83rem) 768px, (min-width: 50em) calc(60vw - 1.8rem), calc(100vw - 3rem)';
+// The plate takes the hero's right column on desktop (≈45% of the 83rem
+// wrapper), drawn ~12% oversize for its parallax.
+const plateSizes = '(min-width: 83rem) 640px, (min-width: 50em) 50vw, calc(112vw - 3.4rem)';
 ---
 
 <BaseLayout title="About | Timothy Navarro" description="About Timothy Navarro">
 	<div class="stack gap-20">
-		<main class="wrapper about">
-			<Hero
-				title="About"
-				tagline="Thanks for stopping by. Read below to learn more about myself and my background."
-			>
-				<div class="about-photo" data-animate="clip" data-parallax="0.05">
-					<picture>
-						<source type="image/avif" srcset={photoAvif.srcset} sizes={photoSizes} />
-						<img
-							width={photoWebp.width}
-							height={photoWebp.height}
-							src={photoWebp.src}
-							srcset={photoWebp.srcset}
-							sizes={photoSizes}
-							alt="Timothy Navarro at work"
-							fetchpriority="high"
-							decoding="async"
-						/>
-					</picture>
+		<main class="wrapper stack gap-14 lg:gap-20">
+			<div class="stack gap-8 lg:gap-12">
+				<div data-animate="fade" data-animate-delay="0.2">
+					<Readout
+						label="Observer"
+						items={[
+							{ dt: 'Based', dd: 'Research Triangle Park, NC' },
+							{ dt: 'Post', dd: 'RTI International' },
+							{ dt: 'Unit', dd: 'Center for Data Science and AI', optional: true },
+							{ dt: 'Alma mater', dd: 'UNC Chapel Hill', optional: true },
+						]}
+					>
+						<div class="item" slot="start">
+							<dt>Local</dt>
+							<dd><time data-about-clock>--:--:--</time> <span data-about-tz>ET</span></dd>
+						</div>
+					</Readout>
 				</div>
-			</Hero>
 
-			<section>
-				<h2 class="section-title" data-animate="fade-up">Background</h2>
-				<div class="content" data-animate-body>
-					<p>
-						I am currently a Full Stack Software Developer at the Center for Data Science and AI at RTI International. I graduated with a Computer Science B.S. and Economics B.A. at the University of North Carolina Chapel Hill. 
-					</p>
+				<div class="intro">
+					<Hero title="About." tagline={tagline} align="start">
+						<p class="opening" data-animate="fade-up" data-animate-delay="0.6">{opening}</p>
+					</Hero>
 
-					<p>
-						<br>
-						Academically passionate and charismatic software engineer with extensive experience in professional communication and computer science skills always striving to continue growth and learning through solving interdisciplinary challenges by applying data analytics and the burgeoning field of AI to different fields of research. 
-						<br>
-						<br>
-						Adept at problem solving and critical thinking extemporaneously with a history of organizational and logistics management in extracurricular positions and volunteer work. Conducted research at the North Carolina School of Science and Mathematics and the University of North Carolina Chapel Hill in Combinatorics and Game Theory and Computational Linguistics respectively.
-						<br>
-						<br>
-						Passions outside of my professional experience include music, sports, and dancing. Talk to me about the Carolina Hurricanes, UNC Tar Heels, or the Dallas Mavericks!
-					</p>
+					<figure class="plate" data-animate="clip" data-animate-delay="0.3">
+						<div class="plate-frame">
+							<picture data-parallax="0.06">
+								<source type="image/avif" srcset={plateAvif.srcset} sizes={plateSizes} />
+								<img
+									width={plateWebp.width}
+									height={plateWebp.height}
+									src={plateWebp.src}
+									srcset={plateWebp.srcset}
+									sizes={plateSizes}
+									alt="Timothy Navarro smiling over lowered sunglasses on a canyon rim, a river bending around a sandstone butte far below"
+									fetchpriority="high"
+									decoding="async"
+								/>
+							</picture>
+							<span class="corners" aria-hidden="true"></span>
+						</div>
+						<figcaption><span class="fig">Plate I</span><span class="sep" aria-hidden="true">·</span>In the field</figcaption>
+					</figure>
+				</div>
+			</div>
+
+			<Path stations={stations} />
+
+			<section class="background" aria-labelledby="background-title">
+				<header class="background-head" data-animate="fade">
+					<p class="caption">In my own words</p>
+					<h2 id="background-title">Background</h2>
+				</header>
+				<div class="prose" data-animate-body>
+					{background.map((paragraph) => <p>{paragraph}</p>)}
 				</div>
 			</section>
+
+			<Logbook />
 		</main>
 
 		<ContactCTA />
 	</div>
 </BaseLayout>
 
+<script>
+	import { skyNow, syncClockFromUrl } from '../scripts/sky/clock';
+
+	// My local time, ticking (on the sky clock, so ?at= previews move it too).
+	const format = new Intl.DateTimeFormat('en-US', {
+		timeZone: 'America/New_York',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hourCycle: 'h23',
+		timeZoneName: 'short',
+	});
+
+	let timer = 0;
+
+	function start() {
+		clearInterval(timer);
+		const clock = document.querySelector<HTMLElement>('[data-about-clock]');
+		const tz = document.querySelector<HTMLElement>('[data-about-tz]');
+		if (!clock || !tz) return;
+		syncClockFromUrl();
+		const tick = () => {
+			const parts = format.formatToParts(skyNow());
+			const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+			clock.textContent = `${part('hour')}:${part('minute')}:${part('second')}`;
+			tz.textContent = part('timeZoneName');
+		};
+		tick();
+		timer = window.setInterval(tick, 1000);
+	}
+
+	let initializedForSwap = false;
+
+	function begin() {
+		initializedForSwap = true;
+		start();
+	}
+
+	begin();
+	document.addEventListener('astro:after-swap', begin);
+	document.addEventListener('astro:page-load', () => {
+		if (!initializedForSwap) begin();
+	});
+	document.addEventListener('astro:before-swap', () => {
+		initializedForSwap = false;
+		clearInterval(timer);
+	});
+</script>
+
 <style>
-	.about {
-		display: flex;
-		flex-direction: column;
-		gap: 3.5rem;
-	}
-
-	img {
-		margin-top: 1.5rem;
-		border-radius: 1.5rem;
-		box-shadow: var(--shadow-md);
-	}
-
-	section {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
+	.caption,
+	.plate figcaption {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
 		color: var(--gray-200);
 	}
 
-	.section-title {
-		grid-column-start: 1;
-		font-size: var(--text-xl);
+	.fig {
+		color: var(--link-color);
+	}
+
+	.sep {
+		margin-inline: 0.5em;
+		color: var(--gray-400);
+	}
+
+	/* ── Hero + Plate I ───────────────────────────────────────────── */
+	.intro {
+		display: flex;
+		flex-direction: column;
+		gap: 2.5rem;
+	}
+
+	.opening {
+		max-width: 40ch;
+		margin-inline: auto;
+		font-family: var(--font-brand);
+		font-size: var(--text-lg);
+		font-weight: 500;
+		line-height: 1.3;
+		color: var(--gray-100);
+		text-wrap: pretty;
+	}
+
+	.plate {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		margin: 0;
+	}
+
+	.plate-frame {
+		position: relative;
+		overflow: hidden;
+		aspect-ratio: 4 / 3;
+		border: 1px solid color-mix(in oklch, var(--gray-0) 14%, transparent);
+		border-radius: 1.25rem;
+		background: var(--gray-999);
+		box-shadow: var(--shadow-md);
+	}
+
+	.plate picture,
+	.plate img {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+
+	/* Oversized for the parallax, so its edges never show. */
+	.plate img {
+		object-fit: cover;
+		object-position: 50% 60%;
+		scale: 1.12;
+	}
+
+	/* Instrument framing: corner ticks over the plate. */
+	.corners {
+		position: absolute;
+		inset: 0.75rem;
+		pointer-events: none;
+		--tick: color-mix(in oklch, white 85%, transparent);
+		background:
+			linear-gradient(var(--tick), var(--tick)) top left / 1rem 1px,
+			linear-gradient(var(--tick), var(--tick)) top left / 1px 1rem,
+			linear-gradient(var(--tick), var(--tick)) top right / 1rem 1px,
+			linear-gradient(var(--tick), var(--tick)) top right / 1px 1rem,
+			linear-gradient(var(--tick), var(--tick)) bottom left / 1rem 1px,
+			linear-gradient(var(--tick), var(--tick)) bottom left / 1px 1rem,
+			linear-gradient(var(--tick), var(--tick)) bottom right / 1rem 1px,
+			linear-gradient(var(--tick), var(--tick)) bottom right / 1px 1rem;
+		background-repeat: no-repeat;
+		filter: drop-shadow(0 0 2px rgb(0 0 0 / 0.5));
+	}
+
+	/* ── Background ───────────────────────────────────────────────── */
+	.background {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.background-head {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.background-head h2 {
+		font-size: var(--text-3xl);
 		color: var(--gray-0);
 	}
 
-	.content {
-		grid-column: 2 / 4;
-	}
-
-	/* Dark mode only: a card behind the text keeps it readable over the stars.
-	 * Lives on .content (a real grid item) — `section` is display: contents on
-	 * desktop, so it can't paint a background there. Light mode reads fine as-is. */
-	:global(.theme-dark) .content {
-		background-color: var(--gray-999_65);
-		border: 1px solid var(--gray-800);
-		border-radius: 0.75rem;
-		padding: 1.5rem;
-	}
-
-	.content :global(a) {
-		text-decoration: 1px solid underline transparent;
-		text-underline-offset: 0.25em;
-		transition: text-decoration-color var(--theme-transition);
-	}
-
-	.content :global(a:hover),
-	.content :global(a:focus) {
-		text-decoration-color: currentColor;
+	.prose {
+		display: flex;
+		flex-direction: column;
+		gap: 1.1rem;
+		padding: 1.25rem;
+		border: 1px solid color-mix(in oklch, var(--gray-0) 12%, transparent);
+		border-radius: 1rem;
+		background: var(--gray-999_65);
+		box-shadow: var(--shadow-sm);
+		color: var(--gray-200);
 	}
 
 	@media (min-width: 50em) {
-		.about {
+		.intro {
 			display: grid;
-			grid-template-columns: 1fr 60% 1fr;
+			grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+			align-items: center;
+			gap: 4rem;
 		}
 
-		.about > :global(:first-child) {
-			grid-column-start: 2;
+		.opening {
+			margin-inline: 0;
+			margin-top: 0.5rem;
+			font-size: var(--text-xl);
 		}
 
-		section {
-			display: contents;
+		.background {
+			display: grid;
+			grid-template-columns: minmax(10rem, 1fr) minmax(0, 2.4fr);
+			align-items: start;
+			gap: 2.5rem;
+		}
+
+		/* The heading stays beside the text as it scrolls by. */
+		.background-head {
+			position: sticky;
+			top: 9rem;
+			padding-top: 2rem;
+		}
+
+		.prose {
+			gap: 1.4rem;
+			padding: 2rem 2.25rem;
+			border-radius: 1.25rem;
 			font-size: var(--text-lg);
+			line-height: 1.6;
 		}
 	}
 </style>

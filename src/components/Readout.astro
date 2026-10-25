@@ -1,9 +1,10 @@
 ---
 /**
- * The work pages' instrument strip, in the home page's readout style
+ * The instrument strip of the work and about pages, in the home page's readout style
  * (home/SkyReadout.astro): mono label/value pairs between hairlines.
- * `optional` items drop out on phones. Extra items (live controls) go in the
- * default slot, each as a `<div class="item">`.
+ * `optional` items drop out on phones. Extra items (live values, controls)
+ * go in the default slot (after the items) or the `start` slot (before them),
+ * each as a `<div class="item">`.
  */
 interface Item {
 	dt: string;
@@ -21,6 +22,7 @@ const { items, label } = Astro.props;
 ---
 
 <dl class="readout" aria-label={label}>
+	<slot name="start" />
 	{
 		items.map(({ dt, dd, optional, href }) => (
 			<div class:list={['item', { optional }]}>

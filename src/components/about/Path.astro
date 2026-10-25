@@ -1,0 +1,412 @@
+---
+/**
+ * Fig. 1 — the path so far: where I studied and where I work, as stations on
+ * a trail (the stack map's dotted path, carried over from the work page).
+ * The copy lives with the about page; a station's `years` shows once it's
+ * given, and until then the stations are just numbered in order. The last
+ * station's star pulses: that's now.
+ *
+ * - Desktop: one row, the trail running through the stars and fading out past
+ *   the last one (the path goes on).
+ * - Phones: a vertical rail down the left, its fill and each star lighting as
+ *   they cross the middle of the screen (CSS view timelines, as on the home
+ *   page's field guide).
+ */
+export interface Station {
+	place: string;
+	/** Department, school or team within the place. */
+	unit?: string;
+	years?: string;
+	facts: { label: string; value: string }[];
+	now?: boolean;
+	link?: { href: string; label: string };
+}
+
+interface Props {
+	stations: Station[];
+}
+
+const { stations } = Astro.props;
+---
+
+<section class="path" aria-labelledby="path-title">
+	<h2 id="path-title" class="caption" data-animate="fade">
+		<span class="fig">Fig. 1</span><span class="sep" aria-hidden="true">·</span>The path so far
+	</h2>
+	<ol class="stations" style={`--count:${stations.length}`}>
+		{
+			stations.map((s, i) => (
+				<li class:list={['station', { now: s.now }]} style={`--i:${i}`}>
+					<span class="star" aria-hidden="true" />
+					<div class="card">
+						<p class="when">
+							{s.now ? (
+								<>
+									<span class="pulse" aria-hidden="true" />
+									{s.years ? `${s.years} · now` : 'Now'}
+								</>
+							) : (
+								(s.years ?? String(i + 1).padStart(2, '0'))
+							)}
+						</p>
+						<h3 class="place">{s.place}</h3>
+						{s.unit && <p class="unit">{s.unit}</p>}
+						<dl class="facts">
+							{s.facts.map((f) => (
+								<div>
+									<dt>{f.label}</dt>
+									<dd>{f.value}</dd>
+								</div>
+							))}
+						</dl>
+						{s.link && (
+							<a class="station-link" href={s.link.href}>
+								{s.link.label} <span aria-hidden="true">→</span>
+							</a>
+						)}
+					</div>
+				</li>
+			))
+		}
+	</ol>
+</section>
+
+<style>
+	.path {
+		--ink: var(--link-color);
+		--line: color-mix(in oklch, var(--gray-0) 22%, transparent);
+		--hairline: color-mix(in oklch, var(--gray-0) 12%, transparent);
+		--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.caption {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-200);
+	}
+
+	.fig {
+		color: var(--ink);
+	}
+
+	.sep {
+		margin-inline: 0.5em;
+		color: var(--gray-400);
+	}
+
+	.stations {
+		position: relative;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.station {
+		position: relative;
+	}
+
+	/* A station's star: soft accent halo around a hard core, as on the maps. */
+	.star {
+		position: absolute;
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
+	.star::before,
+	.star::after {
+		position: absolute;
+		border-radius: 50%;
+		content: '';
+	}
+
+	.star::before {
+		inset: -0.35rem;
+		background: radial-gradient(circle, color-mix(in oklch, var(--ink) 55%, transparent), transparent 68%);
+		opacity: 0.75;
+	}
+
+	.star::after {
+		inset: 0.375rem;
+		background: var(--gray-0);
+		box-shadow: 0 0 0 0.2rem color-mix(in oklch, var(--ink) 40%, transparent);
+	}
+
+	.card {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		height: 100%;
+		padding: 1.25rem;
+		border: 1px solid var(--hairline);
+		border-radius: 1rem;
+		background: var(--gray-999_65);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.when,
+	.facts dt,
+	.station-link {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.when {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+		color: var(--gray-400);
+	}
+
+	.now .when {
+		color: var(--ink);
+	}
+
+	.place {
+		font-size: var(--text-xl);
+		color: var(--gray-0);
+		text-wrap: balance;
+	}
+
+	.unit {
+		color: var(--gray-300);
+	}
+
+	.facts {
+		display: grid;
+		gap: 0.4rem;
+		margin: 0.25rem 0 0;
+	}
+
+	.facts div {
+		display: grid;
+		grid-template-columns: 5.5rem minmax(0, 1fr);
+		align-items: baseline;
+		gap: 0.75rem;
+	}
+
+	.facts dt {
+		color: var(--gray-400);
+	}
+
+	.facts dd {
+		margin: 0;
+		color: var(--gray-100);
+	}
+
+	.station-link {
+		align-self: flex-start;
+		margin-top: auto;
+		padding-top: 0.5rem;
+		color: var(--ink);
+		text-decoration: none;
+	}
+
+	.station-link:hover,
+	.station-link:focus-visible {
+		text-decoration: underline;
+		text-underline-offset: 0.2em;
+	}
+
+	.pulse {
+		position: relative;
+		width: 0.5em;
+		height: 0.5em;
+		border-radius: 50%;
+		background: currentColor;
+	}
+
+	.pulse::after {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		content: '';
+		background: currentColor;
+		opacity: 0;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.pulse::after,
+		.now .star::before {
+			animation: station-pulse 2.4s ease-out infinite;
+		}
+	}
+
+	@keyframes station-pulse {
+		0% {
+			scale: 1;
+			opacity: 0.6;
+		}
+		70%,
+		100% {
+			scale: 2.6;
+			opacity: 0;
+		}
+	}
+
+	/* ── Desktop: one row on a trail ───────────────────────────────── */
+	@media (min-width: 50em) {
+		.stations {
+			display: grid;
+			grid-template-columns: repeat(var(--count, 3), minmax(0, 1fr));
+			gap: 1.25rem;
+			padding-top: 2.25rem;
+		}
+
+		/* The trail: from the first star to past the last, fading out. */
+		.stations::before {
+			position: absolute;
+			top: 0.625rem;
+			left: 0.625rem;
+			right: -1.5rem;
+			height: 0;
+			border-top: 2px dotted color-mix(in oklch, var(--ink) 65%, transparent);
+			content: '';
+			-webkit-mask-image: linear-gradient(90deg, #000 80%, transparent);
+			mask-image: linear-gradient(90deg, #000 80%, transparent);
+			transform-origin: left;
+		}
+
+		.star {
+			top: -2.25rem;
+			left: 0;
+		}
+
+		/* A tick from each star down to its card. */
+		.station::before {
+			position: absolute;
+			top: -1rem;
+			left: 0.625rem;
+			width: 1px;
+			height: 1rem;
+			content: '';
+			background: var(--line);
+		}
+
+		.card {
+			padding: 1.5rem;
+			border-radius: 1.25rem;
+		}
+
+		/* Entrance: the trail draws left to right, each star and card
+		   arriving as it passes. JS + motion only (anim-ready). */
+		@media (prefers-reduced-motion: no-preference) {
+			:global(html.anim-ready) .stations::before {
+				animation: trail-draw 1.4s 0.2s var(--ease-out) backwards;
+			}
+
+			:global(html.anim-ready) .star {
+				animation: station-pop 0.7s calc(0.35s + var(--i) * 0.35s) var(--ease-out) backwards;
+			}
+
+			:global(html.anim-ready) .card,
+			:global(html.anim-ready) .station::before {
+				animation: station-rise 0.8s calc(0.45s + var(--i) * 0.35s) var(--ease-out) backwards;
+			}
+		}
+	}
+
+	@keyframes trail-draw {
+		from {
+			scale: 0 1;
+		}
+	}
+
+	@keyframes station-pop {
+		from {
+			scale: 0;
+			opacity: 0;
+		}
+		60% {
+			opacity: 1;
+		}
+	}
+
+	@keyframes station-rise {
+		from {
+			opacity: 0;
+			translate: 0 1rem;
+		}
+	}
+
+	/* ── Phones: a scroll-lit rail ─────────────────────────────────── */
+	@media (max-width: 49.99em) {
+		.stations {
+			--rail-x: 0.625rem;
+
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+			padding-left: 2.25rem;
+		}
+
+		.stations::before,
+		.stations::after {
+			position: absolute;
+			top: 0.5rem;
+			bottom: 0;
+			left: var(--rail-x);
+			width: 1px;
+			content: '';
+		}
+
+		.stations::before {
+			background: var(--line);
+		}
+
+		.stations::after {
+			width: 2px;
+			margin-left: -0.5px;
+			background: linear-gradient(180deg, var(--ink), transparent);
+			box-shadow: 0 0 8px var(--ink);
+			transform-origin: top;
+		}
+
+		.star {
+			top: 1.1rem;
+			left: calc(var(--rail-x) - 2.25rem - 0.625rem);
+		}
+	}
+
+	@supports (animation-timeline: view()) {
+		@media (max-width: 49.99em) and (prefers-reduced-motion: no-preference) {
+			.stations {
+				view-timeline: --path-rail block;
+				view-timeline-inset: 50% 50%;
+			}
+
+			.stations::after {
+				animation: rail-fill linear both;
+				animation-timeline: --path-rail;
+				animation-range: cover 0% cover 100%;
+			}
+
+			.station:not(.now) .star {
+				animation: star-light linear both;
+				animation-timeline: view(block 50% 50%);
+				animation-range: cover 0% cover 100%;
+			}
+		}
+	}
+
+	@keyframes rail-fill {
+		from {
+			scale: 1 0;
+		}
+	}
+
+	@keyframes star-light {
+		from {
+			opacity: 0.35;
+			scale: 0.7;
+		}
+	}
+</style>
