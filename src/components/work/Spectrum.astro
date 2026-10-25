@@ -1,0 +1,262 @@
+---
+/**
+ * A screenshot's emission spectrum: its colour by OKLCH hue, measured at sync
+ * time (scripts/sync-work.mjs). Each line glows in its own hue, as bright as
+ * that hue is common in the frame; the whole spectrum dims as the frame gets
+ * greyer, so a near-monochrome app shows only faint lines (the macOS window
+ * buttons, say). Drawn on a dark instrument strip in both themes, since
+ * coloured light doesn't read on a pale sky.
+ *
+ * `band`: just the strip (catalogue rows). `figure`: the strip with a hue
+ * scale, the frame's palette and a readout.
+ */
+import type { Spectrum } from '../../utils/work';
+
+interface Props {
+	spectrum: Spectrum;
+	variant?: 'band' | 'figure';
+}
+
+const { spectrum, variant = 'band' } = Astro.props;
+const N = spectrum.bins.length;
+const step = 360 / N;
+// Colourful frames shine at full strength; near-grey ones barely glow.
+const strength = Math.min(1, Math.max(0.18, Math.sqrt(spectrum.chroma / 0.04)));
+const lines = spectrum.bins
+	.map((v, i) => ({ i, hue: (i + 0.5) * step, opacity: Math.min(1, Math.sqrt(v) * strength * 1.25) }))
+	.filter((l) => l.opacity > 0.02);
+
+const HUES: [number, string][] = [
+	[15, 'rose'],
+	[45, 'red'],
+	[75, 'orange'],
+	[100, 'amber'],
+	[125, 'yellow'],
+	[165, 'green'],
+	[215, 'cyan'],
+	[250, 'azure'],
+	[285, 'blue'],
+	[320, 'violet'],
+	[360, 'magenta'],
+];
+const hueName = (h: number) => HUES.find(([to]) => h < to)![1];
+const peakAt = spectrum.bins.indexOf(Math.max(...spectrum.bins));
+const peakHue = Math.round((peakAt + 0.5) * step);
+const ticks = [
+	{ h: 29, label: 'R' },
+	{ h: 110, label: 'Y' },
+	{ h: 142, label: 'G' },
+	{ h: 195, label: 'C' },
+	{ h: 264, label: 'B' },
+	{ h: 328, label: 'M' },
+];
+const pct = (v: number) => `${Math.round(v * 100)}%`;
+---
+
+<figure class:list={['spectrum', variant]}>
+	<div class="strip">
+		<svg viewBox={`0 0 ${N} 1`} preserveAspectRatio="none" aria-hidden="true">
+			<rect class="reference" width={N} height="1" />
+			<g class="lines">
+				{lines.map((l) => <rect x={l.i} width="1" height="1" style={`fill:oklch(80% 0.15 ${l.hue});opacity:${l.opacity.toFixed(3)}`} />)}
+			</g>
+		</svg>
+		{
+			variant === 'figure' && (
+				<svg class="glow" viewBox={`0 0 ${N} 1`} preserveAspectRatio="none" aria-hidden="true">
+					{lines.map((l) => <rect x={l.i} width="1" height="1" style={`fill:oklch(80% 0.15 ${l.hue});opacity:${l.opacity.toFixed(3)}`} />)}
+				</svg>
+			)
+		}
+	</div>
+	{
+		variant === 'figure' ? (
+			<>
+				<div class="scale" aria-hidden="true">
+					{ticks.map((t) => <span style={`left:${((t.h / 360) * 100).toFixed(2)}%`}>{t.label}</span>)}
+				</div>
+				<div class="mix" aria-hidden="true">
+					{spectrum.palette.map((c) => (
+						<span style={`--swatch:${c.hex};flex-grow:${c.share}`} />
+					))}
+				</div>
+				<ul class="palette" aria-label="Palette, by share of the frame">
+					{spectrum.palette.map((c) => (
+						<li style={`--swatch:${c.hex}`}>
+							<span class="hex">{c.hex}</span>
+							<span class="share">{pct(c.share)}</span>
+						</li>
+					))}
+				</ul>
+				<figcaption>
+					<dl class="readout">
+						<div>
+							<dt>Peak</dt>
+							<dd>
+								{peakHue}° {hueName(peakHue)}
+							</dd>
+						</div>
+						<div>
+							<dt>Neutral</dt>
+							<dd>{pct(spectrum.neutral)}</dd>
+						</div>
+						<div>
+							<dt>Key</dt>
+							<dd>
+								L {spectrum.lightness.toFixed(2)} · {spectrum.lightness < 0.45 ? 'dark' : 'light'} UI
+							</dd>
+						</div>
+					</dl>
+				</figcaption>
+			</>
+		) : (
+			<figcaption class="sr-only">
+				Screenshot colour: mostly {hueName(peakHue)}, {pct(spectrum.neutral)} neutral
+			</figcaption>
+		)
+	}
+</figure>
+
+<style>
+	.spectrum {
+		margin: 0;
+	}
+
+	.strip {
+		position: relative;
+		overflow: hidden;
+		border-radius: 0.25rem;
+		background: oklch(16% 0.02 280);
+		box-shadow: inset 0 0 0 1px oklch(100% 0 0 / 0.08);
+	}
+
+	.strip svg {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+
+	/* The hue scale the lines sit on, barely there. */
+	.reference {
+		fill: oklch(60% 0.1 280 / 0.06);
+	}
+
+	.band .strip {
+		height: 0.625rem;
+	}
+
+	.figure {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.figure .strip {
+		height: 3.5rem;
+		border-radius: 0.5rem;
+	}
+
+	.glow {
+		position: absolute;
+		inset: 0;
+		filter: blur(6px);
+		mix-blend-mode: screen;
+	}
+
+	.scale {
+		position: relative;
+		height: 1rem;
+		font-family: var(--font-mono);
+		font-size: 0.625rem;
+		letter-spacing: 0.08em;
+		color: var(--gray-400);
+	}
+
+	.scale span {
+		position: absolute;
+		top: 0;
+		translate: -50% 0;
+	}
+
+	.scale span::before {
+		position: absolute;
+		top: -0.5rem;
+		left: 50%;
+		width: 1px;
+		height: 0.3rem;
+		content: '';
+		background: currentColor;
+	}
+
+	/* The palette: one bar split by share, then each colour's value. */
+	.mix {
+		display: flex;
+		height: 0.625rem;
+		margin-top: 0.25rem;
+		overflow: hidden;
+		border-radius: 0.25rem;
+		box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--gray-0) 14%, transparent);
+	}
+
+	.mix span {
+		flex-basis: 0;
+		min-width: 2px;
+		background: var(--swatch);
+	}
+
+	.palette {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+		gap: 0.25rem 0.75rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.04em;
+		color: var(--gray-400);
+	}
+
+	.palette li {
+		display: flex;
+		align-items: center;
+		gap: 0.45em;
+	}
+
+	.palette li::before {
+		flex: none;
+		width: 0.75em;
+		height: 0.75em;
+		border-radius: 50%;
+		content: '';
+		background: var(--swatch);
+		box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--gray-0) 20%, transparent);
+	}
+
+	.hex {
+		color: var(--gray-200);
+		text-transform: uppercase;
+	}
+
+	.readout {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1.25rem;
+		margin: 0.25rem 0 0;
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-400);
+	}
+
+	.readout div {
+		display: flex;
+		gap: 0.5em;
+	}
+
+	.readout dd {
+		margin: 0;
+		color: var(--gray-200);
+	}
+</style>

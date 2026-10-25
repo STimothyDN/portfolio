@@ -1,5 +1,15 @@
 ---
-import { type CollectionEntry, getCollection, render } from 'astro:content';
+/**
+ * A project's observation log: the readout (catalogue number, dates, where
+ * it lives), the hero (its title, year, tags and description morph in from
+ * the work index), the screenshot in an instrument viewport, then the
+ * figures — its stack by layer, its screenshot's spectrum, its repo's light
+ * curve and languages, and its nearest neighbours in the catalogue — and the
+ * catalogue's older/newer entries. Data: utils/work.ts.
+ */
+import '@fontsource-variable/geist-mono';
+
+import { render } from 'astro:content';
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
@@ -7,89 +17,289 @@ import ContactCTA from '../../components/ContactCTA.astro';
 import Hero from '../../components/Hero.astro';
 import Icon from '../../components/Icon.astro';
 import Pill from '../../components/Pill.astro';
+import LightCurve from '../../components/work/LightCurve.astro';
+import Readout from '../../components/work/Readout.astro';
+import Spectrum from '../../components/work/Spectrum.astro';
 import { WORK_IMAGE_SIZES, workImage } from '../../utils/images';
+import { type Project, allTools, byLayer, catalogueNo, getProjects, related } from '../../utils/work';
 
 interface Props {
-	entry: CollectionEntry<'work'>;
+	project: Project;
+	projects: Project[];
 }
 
-// This is a dynamic route that generates a page for every Markdown file in src/content/
-// Read more about dynamic routes and this `getStaticPaths` function in the Astro docs:
-// https://docs.astro.build/en/core-concepts/routing/#dynamic-routes
 export async function getStaticPaths() {
-	const work = await getCollection('work');
-	return work.map((entry) => ({
-		params: { slug: entry.id },
-		props: { entry },
+	const projects = await getProjects();
+	return projects.map((project) => ({
+		params: { slug: project.slug },
+		props: { project, projects },
 	}));
 }
 
-const { entry } = Astro.props;
+const { project, projects } = Astro.props;
+const { entry, slug, github, spectrum } = project;
 const { Content } = await render(entry);
-const year = entry.data.publishDate.getFullYear();
+const hasBody = !!entry.body?.trim();
 // Same variants as the work index thumb, so the morph lands on a cached file.
 const featured = await workImage(entry.data.img);
+
+const uses = new Map(allTools(projects).map((t) => [t.slug, t.projects.length]));
+const layers = byLayer(project.tools);
+const neighbours = related(project, projects);
+const chrono = [...projects].sort((a, b) => a.no - b.no);
+const older = chrono[project.no - 2];
+const newer = chrono[project.no];
+const logged = project.date.toLocaleDateString('en-US', {
+	month: 'short',
+	day: 'numeric',
+	year: 'numeric',
+	timeZone: 'UTC',
+});
+
+let fig = 0;
+const nextFig = () => `Fig. ${++fig}`;
 ---
 
 <BaseLayout title={entry.data.title} description={entry.data.description} skyPace="calm">
 	<div class="stack gap-20">
-		<div class="stack gap-15">
-			<header>
-				<div class="wrapper stack gap-2">
-					<a class="back-link" href="/work/"><Icon icon="arrow-left" /> Work</a>
-					<Hero
-						title={entry.data.title}
-						align="start"
-						animateTitle={false}
-						titleTransitionName={`work-title-${entry.id}`}
-					>
-						<div class="details">
-							<div class="meta-stack">
-								<p class="year" transition:name={`work-year-${entry.id}`}>{year}</p>
-								<div class="tags">
-									{entry.data.tags.map((t, i) => <div class="tag-transition" transition:name={`work-tag-${entry.id}-${i}`}><Pill>{t}</Pill></div>)}
-								</div>
+		<div class="stack gap-12 lg:gap-16">
+			<header class="wrapper stack gap-6 lg:gap-8">
+				<a class="back-link" href="/work/"><Icon icon="arrow-left" /> Work</a>
+				<div data-animate="fade" data-animate-delay="0.1">
+					<Readout
+						label="Observation log"
+						items={[
+							{ dt: 'No.', dd: `${catalogueNo(project.no)} of ${catalogueNo(projects.length)}` },
+							{ dt: 'Logged', dd: logged },
+							{ dt: 'Type', dd: project.isRepo ? 'Open source' : 'Live site' },
+							{ dt: 'Stack', dd: `${project.tools.length} tools`, optional: true },
+							...(github ? [{ dt: 'Commits', dd: String(github.commits.length), optional: true }] : []),
+							{ dt: project.isRepo ? 'Source' : 'Site', dd: project.host, href: entry.data.link, optional: true },
+							...(github?.homepage
+								? [{ dt: 'Demo', dd: new URL(github.homepage).host, href: github.homepage }]
+								: []),
+						]}
+					/>
+				</div>
+				<Hero
+					title={entry.data.title}
+					align="start"
+					animateTitle={false}
+					titleTransitionName={`work-title-${slug}`}
+				>
+					<div class="details">
+						<div class="meta-stack">
+							<p class="year" transition:name={`work-year-${slug}`}>{project.year}</p>
+							<div class="tags">
+								{
+									entry.data.tags.map((t, i) => (
+										<div class="tag-transition" transition:name={`work-tag-${slug}-${i}`}>
+											<Pill>{t}</Pill>
+										</div>
+									))
+								}
 							</div>
-							<p class="description" transition:name={`work-description-${entry.id}`}>{entry.data.description}</p>
 						</div>
-					</Hero>
-				</div>
-			</header>
-			<main class="wrapper">
-				<div class="stack gap-10 content">
-						{entry.data.img && (
-							<a href={entry.data.link}>
-								{/* Parallax lives on the wrapper — transforming the
-								    transition:name element itself would corrupt the
-								    view-transition morph geometry. */}
-								<div class="featured" data-parallax="0.05">
-									<img
-										src={featured.src}
-										srcset={featured.srcset}
-										sizes={WORK_IMAGE_SIZES}
-										width={featured.width}
-										height={featured.height}
-										alt={entry.data.img_alt || ''}
-										fetchpriority="high"
-										transition:name={`work-image-${entry.id}`}
-									/>
-								</div>
-							</a>
-						)}
-					<div class="content" data-animate-body>
-						<Content />
+						<p class="description" transition:name={`work-description-${slug}`}>{entry.data.description}</p>
 					</div>
+				</Hero>
+			</header>
+
+			<main class="wrapper stack gap-12 lg:gap-16">
+				{/* The screenshot in an instrument viewport. It loads the index
+				    thumb's file (so the view-transition morph lands on a cached
+				    image), then the script below sharpens it for its real width. */}
+				<a class="viewport" href={entry.data.link} target="_blank" rel="noopener">
+					<span class="viewport-bar" aria-hidden="true">
+						<span class="lights"><span></span><span></span><span></span></span>
+						<span class="address">{project.host}</span>
+						<span class="open">↗</span>
+					</span>
+					<span class="sr-only">Open {project.host} (opens in a new tab)</span>
+					<div class="featured">
+						<img
+							src={featured.src}
+							srcset={featured.srcset}
+							sizes={WORK_IMAGE_SIZES}
+							width={featured.width}
+							height={featured.height}
+							alt={entry.data.img_alt || ''}
+							fetchpriority="high"
+							transition:name={`work-image-${slug}`}
+						/>
+					</div>
+					<span class="corners" aria-hidden="true"></span>
+				</a>
+
+				<div class="figures">
+					<section class="figure-card" aria-labelledby="fig-stack" data-animate="fade-up">
+						<h2 id="fig-stack" class="caption">
+							<span class="fig">{nextFig()}</span><span class="sep" aria-hidden="true">·</span>Stack
+						</h2>
+						<dl class="layers">
+							{
+								layers.map(({ layer, tools }) => (
+									<div class="layer">
+										<dt>{layer}</dt>
+										<dd>
+											<ul class="chips">
+												{tools.map((t) => {
+													const n = uses.get(t.slug) ?? 1;
+													return (
+														<li>
+															<a href={`/work/?stack=${t.slug}`} class:list={{ shared: n > 1 }}>
+																{t.name}
+																{n > 1 && (
+																	<span class="uses">
+																		<span aria-hidden="true">×{n}</span>
+																		<span class="sr-only">, used in {n} projects</span>
+																	</span>
+																)}
+															</a>
+														</li>
+													);
+												})}
+											</ul>
+										</dd>
+									</div>
+								))
+							}
+						</dl>
+						<p class="note">Each tool opens the catalogue filtered to the projects that used it.</p>
+					</section>
+
+					{
+						spectrum && (
+							<section class="figure-card" aria-labelledby="fig-spectrum" data-animate="fade-up" data-animate-delay="0.08">
+								<h2 id="fig-spectrum" class="caption">
+									<span class="fig">{nextFig()}</span>
+									<span class="sep" aria-hidden="true">·</span>Spectrum
+									<span class="quiet">
+										<span class="sep" aria-hidden="true">·</span>the screenshot's colour, by hue
+									</span>
+								</h2>
+								<Spectrum spectrum={spectrum} variant="figure" />
+							</section>
+						)
+					}
+
+					{
+						github && (
+							<section class="figure-card" aria-labelledby="fig-activity" data-animate="fade-up">
+								<h2 id="fig-activity" class="caption">
+									<span class="fig">{nextFig()}</span>
+									<span class="sep" aria-hidden="true">·</span>Light curve
+									<span class="quiet">
+										<span class="sep" aria-hidden="true">·</span>commits on {github.repo}
+									</span>
+								</h2>
+								<LightCurve github={github} variant="figure" />
+							</section>
+						)
+					}
+
+					<section class="figure-card" aria-labelledby="fig-nearby" data-animate="fade-up" data-animate-delay="0.08">
+						<h2 id="fig-nearby" class="caption">
+							<span class="fig">{nextFig()}</span><span class="sep" aria-hidden="true">·</span>Nearby
+							<span class="quiet"><span class="sep" aria-hidden="true">·</span>by shared tools</span>
+						</h2>
+						<ol class="nearby">
+							{
+								neighbours.map(({ project: p, shared, score }) => (
+									<li>
+										<a href={`/work/${p.slug}/`}>
+											<span class="nearby-no" aria-hidden="true">
+												{catalogueNo(p.no)}
+											</span>
+											<span class="nearby-title">{p.title}</span>
+											<span class="nearby-year">{p.year}</span>
+										</a>
+										<p class="nearby-why">
+											{shared.length ? (
+												<>
+													<span class="meter" style={`--score:${score.toFixed(3)}`} aria-hidden="true" />
+													Shares {shared.map((t) => t.name).join(', ')}
+												</>
+											) : (
+												<>Nothing shared · nearest in time</>
+											)}
+										</p>
+									</li>
+								))
+							}
+						</ol>
+					</section>
 				</div>
+
+				{
+					hasBody && (
+						<div class="content" data-animate-body>
+							<Content />
+						</div>
+					)
+				}
+
+				<nav class="pager" aria-label="Catalogue">
+					{
+						older ? (
+							<a class="pager-link older" href={`/work/${older.slug}/`}>
+								<span class="pager-dir">
+									<span aria-hidden="true">←</span> Older
+								</span>
+								<span class="pager-title">
+									<span class="pager-no" aria-hidden="true">
+										{catalogueNo(older.no)}
+									</span>
+									{older.title}
+								</span>
+							</a>
+						) : (
+							<span />
+						)
+					}
+					{
+						newer && (
+							<a class="pager-link newer" href={`/work/${newer.slug}/`}>
+								<span class="pager-dir">
+									Newer <span aria-hidden="true">→</span>
+								</span>
+								<span class="pager-title">
+									<span class="pager-no" aria-hidden="true">
+										{catalogueNo(newer.no)}
+									</span>
+									{newer.title}
+								</span>
+							</a>
+						)
+					}
+				</nav>
 			</main>
 		</div>
 		<ContactCTA />
 	</div>
 </BaseLayout>
 
+<script>
+	// The featured image shares the index thumb's srcset and sizes so the
+	// morph in hits the cache; once it's on screen, re-pick a candidate for
+	// the width it actually renders at. The current file stays up until the
+	// sharper one has loaded.
+	function sharpen() {
+		const img = document.querySelector<HTMLImageElement>('.viewport .featured img');
+		if (!img) return;
+		const width = Math.ceil(img.getBoundingClientRect().width);
+		if (width) img.sizes = `${width}px`;
+	}
+
+	document.addEventListener('astro:page-load', sharpen);
+</script>
+
 <style>
 	header {
+		--hairline: color-mix(in oklch, var(--gray-0) 12%, transparent);
+
 		padding-bottom: 2.5rem;
-		border-bottom: 1px solid var(--gray-800);
+		border-bottom: 1px solid var(--hairline);
 	}
 
 	.back-link {
@@ -132,7 +342,351 @@ const featured = await workImage(entry.data.img);
 		max-width: 54ch;
 	}
 
+	/* ── Viewport ─────────────────────────────────────────────────── */
+	.viewport {
+		--frame: color-mix(in oklch, var(--gray-0) 14%, transparent);
+
+		position: relative;
+		display: block;
+		overflow: hidden;
+		border: 1px solid var(--frame);
+		border-radius: 1rem;
+		background: var(--gray-999);
+		box-shadow: var(--shadow-md);
+		text-decoration: none;
+	}
+
+	.viewport-bar {
+		position: relative;
+		z-index: 1;
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.6rem 0.9rem;
+		border-bottom: 1px solid var(--frame);
+		background: var(--gray-999_40);
+		-webkit-backdrop-filter: blur(10px);
+		backdrop-filter: blur(10px);
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.04em;
+		color: var(--gray-300);
+	}
+
+	.lights {
+		display: flex;
+		gap: 0.4rem;
+	}
+
+	.lights span {
+		width: 0.6rem;
+		height: 0.6rem;
+		border-radius: 50%;
+		background: color-mix(in oklch, var(--gray-0) 18%, transparent);
+	}
+
+	.address {
+		overflow: hidden;
+		padding: 0.2rem 0.9rem;
+		border-radius: 999rem;
+		background: color-mix(in oklch, var(--gray-0) 6%, transparent);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.open {
+		justify-self: end;
+		color: var(--link-color);
+	}
+
+	.featured {
+		overflow: hidden;
+	}
+
+	.featured img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	/* Instrument framing: corner ticks over the image. */
+	.corners {
+		position: absolute;
+		inset: 3rem 0.75rem 0.75rem;
+		pointer-events: none;
+		background:
+			linear-gradient(var(--link-color), var(--link-color)) top left / 1rem 1px,
+			linear-gradient(var(--link-color), var(--link-color)) top left / 1px 1rem,
+			linear-gradient(var(--link-color), var(--link-color)) top right / 1rem 1px,
+			linear-gradient(var(--link-color), var(--link-color)) top right / 1px 1rem,
+			linear-gradient(var(--link-color), var(--link-color)) bottom left / 1rem 1px,
+			linear-gradient(var(--link-color), var(--link-color)) bottom left / 1px 1rem,
+			linear-gradient(var(--link-color), var(--link-color)) bottom right / 1rem 1px,
+			linear-gradient(var(--link-color), var(--link-color)) bottom right / 1px 1rem;
+		background-repeat: no-repeat;
+		opacity: 0;
+		transition: opacity 0.3s;
+	}
+
+	.viewport:is(:hover, :focus-visible) .corners {
+		opacity: 1;
+	}
+
+	.viewport:focus-visible {
+		outline: 2px solid var(--link-color);
+		outline-offset: 4px;
+	}
+
+	/* ── Figures ──────────────────────────────────────────────────── */
+	.figures {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.figure-card {
+		display: flex;
+		flex-direction: column;
+		gap: 1.1rem;
+		min-width: 0;
+		padding: 1.25rem;
+		border: 1px solid color-mix(in oklch, var(--gray-0) 12%, transparent);
+		border-radius: 1rem;
+		background: var(--gray-999_65);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.caption {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-200);
+	}
+
+	.fig {
+		color: var(--link-color);
+	}
+
+	.sep {
+		margin-inline: 0.5em;
+		color: var(--gray-400);
+	}
+
+	.quiet {
+		color: var(--gray-400);
+		text-transform: none;
+		letter-spacing: 0.02em;
+	}
+
+	.layers {
+		display: grid;
+		gap: 0.75rem;
+		margin: 0;
+	}
+
+	.layer {
+		display: grid;
+		grid-template-columns: 6rem minmax(0, 1fr);
+		align-items: baseline;
+		gap: 0.75rem;
+	}
+
+	.layer dt {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--gray-400);
+	}
+
+	.layer dd {
+		margin: 0;
+	}
+
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.chips a {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.4em;
+		padding: 0.2rem 0.65rem;
+		border: 1px solid color-mix(in oklch, var(--gray-0) 12%, transparent);
+		border-radius: 999rem;
+		background: color-mix(in oklch, var(--gray-0) 4%, transparent);
+		font-size: var(--text-sm);
+		line-height: 1.4;
+		color: var(--gray-100);
+		text-decoration: none;
+		transition:
+			border-color 0.2s,
+			background-color 0.2s;
+	}
+
+	.chips a.shared {
+		border-color: color-mix(in oklch, var(--link-color) 55%, transparent);
+	}
+
+	.chips a:hover,
+	.chips a:focus-visible {
+		border-color: var(--link-color);
+		background: var(--accent-subtle-overlay);
+	}
+
+	.chips a:focus-visible {
+		outline: 2px solid var(--link-color);
+		outline-offset: 2px;
+	}
+
+	.uses {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		color: var(--link-color);
+	}
+
+	.note {
+		font-size: var(--text-sm);
+		color: var(--gray-400);
+	}
+
+	.nearby {
+		display: grid;
+		gap: 0.25rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.nearby li {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		padding-block: 0.6rem;
+		border-top: 1px solid color-mix(in oklch, var(--gray-0) 10%, transparent);
+	}
+
+	.nearby li:first-child {
+		border-top: 0;
+		padding-top: 0;
+	}
+
+	.nearby a {
+		display: flex;
+		align-items: baseline;
+		gap: 0.6rem;
+		color: var(--gray-0);
+		text-decoration: none;
+	}
+
+	.nearby a:hover .nearby-title,
+	.nearby a:focus-visible .nearby-title {
+		color: var(--link-color);
+	}
+
+	.nearby-no,
+	.nearby-year,
+	.nearby-why,
+	.pager-dir,
+	.pager-no {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	.nearby-no,
+	.pager-no {
+		color: var(--link-color);
+	}
+
+	.nearby-title {
+		font-family: var(--font-brand);
+		font-size: var(--text-lg);
+		font-weight: 600;
+		transition: color 0.2s;
+	}
+
+	.nearby-year {
+		margin-left: auto;
+		color: var(--gray-400);
+	}
+
+	.nearby-why {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding-left: 1.6rem;
+		text-transform: none;
+		letter-spacing: 0.02em;
+		color: var(--gray-300);
+	}
+
+	/* How alike, by shared tools (Jaccard): a short bar. */
+	.meter {
+		flex: none;
+		width: 2.5rem;
+		height: 0.25rem;
+		border-radius: 999rem;
+		background: linear-gradient(90deg, var(--link-color) calc(var(--score) * 100%), color-mix(in oklch, var(--gray-0) 12%, transparent) 0);
+	}
+
+	/* ── Pager ────────────────────────────────────────────────────── */
+	.pager {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
+	}
+
+	.pager-link {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		padding: 1rem 1.25rem;
+		border: 1px solid color-mix(in oklch, var(--gray-0) 12%, transparent);
+		border-radius: 1rem;
+		color: var(--gray-0);
+		text-decoration: none;
+		transition:
+			border-color 0.2s,
+			background-color 0.2s;
+	}
+
+	.pager-link.newer {
+		grid-column: 2;
+		align-items: flex-end;
+		text-align: end;
+	}
+
+	.pager-link:hover,
+	.pager-link:focus-visible {
+		border-color: var(--link-color);
+		background: var(--gray-999_65);
+	}
+
+	.pager-dir {
+		color: var(--gray-400);
+	}
+
+	.pager-title {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		font-family: var(--font-brand);
+		font-size: var(--text-lg);
+		font-weight: 600;
+	}
+
+	/* ── Long-form body (when a project has one) ──────────────────── */
 	.content {
+		width: 100%;
 		max-width: 65ch;
 		margin-inline: auto;
 	}
@@ -180,6 +734,16 @@ const featured = await workImage(entry.data.img);
 		text-decoration-color: currentColor;
 	}
 
+	@media (max-width: 49.99em) {
+		.pager {
+			grid-template-columns: 1fr;
+		}
+
+		.pager-link.newer {
+			grid-column: auto;
+		}
+	}
+
 	@media (min-width: 50em) {
 		.back-link {
 			display: block;
@@ -190,6 +754,21 @@ const featured = await workImage(entry.data.img);
 			flex-direction: row;
 			gap: 2.5rem;
 			align-items: flex-start;
+		}
+
+		.figures {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 1.25rem;
+		}
+
+		/* An odd one out spans the row. */
+		.figure-card:last-child:nth-child(odd) {
+			grid-column: 1 / -1;
+		}
+
+		.figure-card {
+			padding: 1.75rem;
+			border-radius: 1.25rem;
 		}
 
 		.content :global(blockquote) {

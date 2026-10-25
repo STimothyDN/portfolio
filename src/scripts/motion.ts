@@ -112,7 +112,7 @@ function entrance(el: HTMLElement, preset: string, photo: boolean) {
 			// lifts up with a small internal stagger (see WorkIndexRow.astro).
 			const hairline = el.querySelector('.hairline');
 			if (hairline) play(hairline, DRAW, 0.9, 'power2.out', delay);
-			el.querySelectorAll('.title, .thumb').forEach((bit, i) =>
+			el.querySelectorAll('.no, .body, .signals, .thumb').forEach((bit, i) =>
 				play(bit, rise(18), 0.7, 'power3.out', delay + 0.1 + i * 0.06)
 			);
 			break;

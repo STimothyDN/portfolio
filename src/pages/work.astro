@@ -1,15 +1,30 @@
 ---
-import { getCollection } from 'astro:content';
+/**
+ * The work index, as an observatory catalogue:
+ * - Readout: the catalogue's numbers (and the filter's state).
+ * - Fig. 1, the stack map: projects and the tools they share, as a star chart
+ *   laid out at build time (components/work/StackMap.astro). Picking a tool
+ *   filters the catalogue (?stack=<tool> in the URL, so a filter can be shared).
+ * - Fig. 2, the catalogue: one row per project with its signals (repo light
+ *   curve, screenshot spectrum); the screenshot follows the cursor on desktop.
+ * Project data: utils/work.ts (frontmatter + src/data/work-signals.json).
+ */
+import '@fontsource-variable/geist-mono';
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 import ContactCTA from '../components/ContactCTA.astro';
-import WorkIndexRow from '../components/WorkIndexRow.astro';
 import Hero from '../components/Hero.astro';
+import WorkIndexRow from '../components/WorkIndexRow.astro';
+import Readout from '../components/work/Readout.astro';
+import StackMap from '../components/work/StackMap.astro';
+import { allTools, getProjects, signalsSyncedAt } from '../utils/work';
 
-const projects = (await getCollection('work')).sort(
-	(a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf()
-);
+const projects = await getProjects();
+const years = projects.map((p) => p.year);
+const repos = projects.filter((p) => p.isRepo).length;
+const commits = projects.reduce((sum, p) => sum + (p.github?.commits.length ?? 0), 0);
+const synced = signalsSyncedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 ---
 
 <BaseLayout
@@ -17,21 +32,80 @@ const projects = (await getCollection('work')).sort(
 	description="Learn about Timothy Navarro's most recent projects"
 >
 	<div class="stack gap-20">
-		<main class="wrapper stack gap-8">
-			<Hero
-				title="My Work"
-				tagline="See some of the projects I've worked on below to get an idea of my past experience."
-				align="start"
-			/>
-			<ol class="work-index">
-				{
-					projects.map((project, i) => (
-						<li data-animate="work-row">
-							<WorkIndexRow project={project} eager={i === 0} />
-						</li>
-					))
-				}
-			</ol>
+		<main class="wrapper stack gap-10 lg:gap-12" data-catalogue>
+			<div class="stack gap-8 lg:gap-12">
+				<div data-animate="fade" data-animate-delay="0.2">
+					<Readout
+						label="Catalogue"
+						items={[
+							{ dt: 'Catalogue', dd: `${String(projects.length).padStart(2, '0')} objects` },
+							{ dt: 'Span', dd: `${Math.min(...years)}–${Math.max(...years)}` },
+							{ dt: 'Tools', dd: String(allTools(projects).length) },
+							{ dt: 'Open source', dd: String(repos), optional: true },
+							{ dt: 'Live sites', dd: String(projects.length - repos), optional: true },
+							{ dt: 'Commits', dd: String(commits), optional: true },
+							{ dt: 'Synced', dd: synced, optional: true },
+						]}
+					>
+						<div class="item filter-item">
+							<dt>Showing</dt>
+							<dd>
+								<output data-showing aria-live="polite">{projects.length} of {projects.length}</output>
+								<button type="button" class="clear" data-clear hidden>
+									<span data-clear-label></span><span class="sr-only">: clear the filter</span>
+									<span aria-hidden="true">✕</span>
+								</button>
+							</dd>
+						</div>
+					</Readout>
+				</div>
+				<div class="intro">
+					<Hero
+						title="My Work."
+						tagline="See some of the projects I've worked on below to get an idea of my past experience."
+						align="start"
+					/>
+					{/* How to read Fig. 1 (desktop only, like the chart). */}
+					<dl class="legend" aria-label="Fig. 1 legend" data-animate="fade" data-animate-delay="0.6">
+						<div>
+							<dt><span class="glyph project" /></dt>
+							<dd>Project, numbered oldest first</dd>
+						</div>
+						<div>
+							<dt><span class="glyph shared" /></dt>
+							<dd>Tool shared by projects</dd>
+						</div>
+						<div>
+							<dt><span class="glyph single" /></dt>
+							<dd>Tool used once</dd>
+						</div>
+						<div>
+							<dt><span class="glyph trail" /></dt>
+							<dd>The path, oldest to newest</dd>
+						</div>
+					</dl>
+				</div>
+			</div>
+
+			<StackMap projects={projects} />
+
+			<section class="catalogue" aria-labelledby="catalogue-title">
+				<h2 id="catalogue-title" class="caption" data-animate="fade">
+					<span class="fig">Fig. 2</span><span class="sep" aria-hidden="true">·</span>Catalogue<span
+						class="sep"
+						aria-hidden="true">·</span
+					><span class="quiet">newest first</span>
+				</h2>
+				<ol class="work-index">
+					{
+						projects.map((project, i) => (
+							<li data-animate="work-row" data-slug={project.slug}>
+								<WorkIndexRow project={project} eager={i === 0} />
+							</li>
+						))
+					}
+				</ol>
+			</section>
 		</main>
 		<ContactCTA />
 	</div>
@@ -45,11 +119,141 @@ const projects = (await getCollection('work')).sort(
 </BaseLayout>
 
 <style>
+	.caption {
+		margin-bottom: 0.5rem;
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-200);
+	}
+
+	.fig {
+		color: var(--link-color);
+	}
+
+	.sep {
+		margin-inline: 0.5em;
+		color: var(--gray-400);
+	}
+
+	.quiet {
+		color: var(--gray-400);
+	}
+
+	.legend {
+		display: none;
+	}
+
+	@media (min-width: 50em) {
+		.intro {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: end;
+			gap: 3rem;
+		}
+
+		.legend {
+			display: grid;
+			gap: 0.55rem;
+			margin: 0;
+			padding: 1rem 1.25rem;
+			border: 1px solid color-mix(in oklch, var(--gray-0) 12%, transparent);
+			border-radius: 1rem;
+			background: var(--gray-999_65);
+			font-family: var(--font-mono);
+			font-size: 0.6875rem;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+			color: var(--gray-300);
+		}
+
+		.legend div {
+			display: grid;
+			grid-template-columns: 1.75rem auto;
+			align-items: center;
+		}
+
+		.legend dd {
+			margin: 0;
+		}
+
+		.legend dt {
+			display: flex;
+			justify-content: center;
+		}
+
+		.glyph {
+			display: block;
+			border-radius: 50%;
+			background: var(--gray-0);
+		}
+
+		.glyph.project {
+			width: 0.5rem;
+			height: 0.5rem;
+			box-shadow:
+				0 0 0 0.2rem color-mix(in oklch, var(--link-color) 40%, transparent),
+				0 0 0.75rem 0.3rem color-mix(in oklch, var(--link-color) 45%, transparent);
+		}
+
+		.glyph.shared {
+			width: 0.4rem;
+			height: 0.4rem;
+			opacity: 0.9;
+			box-shadow: 0 0 0 0.15rem color-mix(in oklch, var(--link-color) 35%, transparent);
+		}
+
+		.glyph.single {
+			width: 0.25rem;
+			height: 0.25rem;
+			opacity: 0.55;
+		}
+
+		.glyph.trail {
+			width: 1.5rem;
+			height: 0;
+			border-radius: 0;
+			border-top: 2px dotted color-mix(in oklch, var(--link-color) 75%, transparent);
+			background: none;
+		}
+	}
+
 	.work-index {
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		border-bottom: 1px solid var(--gray-800);
+		border-bottom: 1px solid color-mix(in oklch, var(--gray-0) 12%, transparent);
+	}
+
+	.work-index > li[hidden] {
+		display: none;
+	}
+
+	.clear {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5em;
+		margin: -0.25em 0 -0.25em 0.5em;
+		padding: 0.25em 0.5em;
+		border: 1px solid var(--link-color);
+		border-radius: 999rem;
+		background: var(--accent-subtle-overlay);
+		font: inherit;
+		letter-spacing: inherit;
+		text-transform: inherit;
+		color: var(--gray-0);
+		cursor: pointer;
+	}
+
+	.clear[hidden] {
+		display: none;
+	}
+
+	.clear:focus-visible {
+		outline: 2px solid var(--link-color);
+		outline-offset: 2px;
 	}
 
 	.work-float {
@@ -74,6 +278,7 @@ const projects = (await getCollection('work')).sort(
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+		object-position: top;
 	}
 
 	.work-float::after {
@@ -142,4 +347,5 @@ const projects = (await getCollection('work')).sort(
 
 <script>
 	import '../scripts/work-hover';
+	import '../scripts/work-catalogue';
 </script>

@@ -53,6 +53,8 @@ export const collections = {
 		schema: ({ image }) =>
 			z.object({
 				title: z.string(),
+				// Name for tight spots (the work page's stack map); defaults to the title.
+				short: z.string().optional(),
 				description: z.string(),
 				publishDate: z.coerce.date(),
 				link: z.string(),

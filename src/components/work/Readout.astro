@@ -1,0 +1,108 @@
+---
+/**
+ * The work pages' instrument strip, in the home page's readout style
+ * (home/SkyReadout.astro): mono label/value pairs between hairlines.
+ * `optional` items drop out on phones. Extra items (live controls) go in the
+ * default slot, each as a `<div class="item">`.
+ */
+interface Item {
+	dt: string;
+	dd: string;
+	optional?: boolean;
+	href?: string;
+}
+
+interface Props {
+	items: Item[];
+	label: string;
+}
+
+const { items, label } = Astro.props;
+---
+
+<dl class="readout" aria-label={label}>
+	{
+		items.map(({ dt, dd, optional, href }) => (
+			<div class:list={['item', { optional }]}>
+				<dt>{dt}</dt>
+				<dd>
+					{href ? (
+						<a href={href} target="_blank" rel="noopener">
+							{dd}
+							<span class="sr-only">(opens in a new tab)</span>
+							<span aria-hidden="true"> ↗</span>
+						</a>
+					) : (
+						dd
+					)}
+				</dd>
+			</div>
+		))
+	}
+	<slot />
+</dl>
+
+<style>
+	.readout {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem 1.25rem;
+		margin: 0;
+		padding-block: 0.625rem;
+		border-block: 1px solid color-mix(in oklch, var(--gray-0) 14%, transparent);
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		font-variant-numeric: tabular-nums;
+		color: var(--gray-400);
+	}
+
+	.readout > :global(.item) {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+		white-space: nowrap;
+	}
+
+	.readout :global(dd) {
+		margin: 0;
+		color: var(--gray-200);
+	}
+
+	a {
+		color: var(--link-color);
+		text-decoration: none;
+	}
+
+	a:hover,
+	a:focus-visible {
+		text-decoration: underline;
+		text-underline-offset: 0.2em;
+	}
+
+	/* Long values (a repo path) truncate rather than push the strip wide;
+	   not the ones holding a control, whose focus ring would be clipped. */
+	.readout :global(dd:not(:has(button))) {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.readout > :global(.item) {
+		max-width: 100%;
+	}
+
+	@media (max-width: 49.99em) {
+		.readout > .optional {
+			display: none;
+		}
+	}
+
+	@media (min-width: 50em) {
+		.readout {
+			justify-content: space-between;
+			font-size: 0.75rem;
+		}
+	}
+</style>

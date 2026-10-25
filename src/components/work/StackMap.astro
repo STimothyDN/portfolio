@@ -1,0 +1,558 @@
+---
+/**
+ * Fig. 1 — the stack map: every project as a bright star, left to right in
+ * the order they were made, and every tool as a fainter star tied to each
+ * project that used it. Tools used more than once shine brighter (and
+ * settle between their projects), so the catalogue's constellations draw
+ * themselves. The layout is a seeded force simulation run at build time
+ * (stackMap in utils/work.ts); nothing is laid out in the browser.
+ *
+ * One list of tools, two layouts (like the home page's Fig. 1):
+ * - Desktop: stars over the SVG chart. Hover or focus a project and its
+ *   lines and tools light up; hover a tool and its projects do. Picking a
+ *   tool filters the catalogue below; following a project's star morphs its
+ *   name into the project page's title (scripts/work-catalogue.ts).
+ * - Phones: the chart hides and the tools become a wrapping row of filter
+ *   chips.
+ */
+import { MAP_H, MAP_W, type Project, allTools, catalogueNo, stackMap } from '../../utils/work';
+
+interface Props {
+	projects: Project[];
+}
+
+const { projects } = Astro.props;
+const map = stackMap(projects);
+const tools = allTools(projects);
+const bySlug = new Map(projects.map((p) => [p.slug, p]));
+const at = new Map([...map.projects, ...map.tools].map((n) => [n.slug, n]));
+const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(3)}%`;
+
+// The path between the projects, oldest to newest: a gentle curve through each star.
+const path = map.projects
+	.map((p, i, all) => {
+		if (i === 0) return `M${p.x} ${p.y}`;
+		const prev = all[i - 1];
+		const mx = (prev.x + p.x) / 2;
+		return `C${mx} ${prev.y} ${mx} ${p.y} ${p.x} ${p.y}`;
+	})
+	.join('');
+
+// A faint graticule behind it all.
+const rows = [0.25, 0.5, 0.75].map((f) => Math.round(MAP_H * f));
+const cols = Array.from({ length: 9 }, (_, i) => Math.round((MAP_W / 10) * (i + 1)));
+
+// Entrance (desktop): the path draws itself, the stars pop in along it.
+const delayOf = (x: number) => (0.5 + (x / MAP_W) * 1.2).toFixed(2);
+---
+
+<section class="map" aria-labelledby="map-title" data-stack-map>
+	<header class="map-head">
+		<h2 id="map-title" class="caption">
+			<span class="fig">Fig. 1</span><span class="sep" aria-hidden="true">·</span>Stack map
+			<span class="hint" aria-hidden="true"
+				><span class="sep">·</span>brighter stars are used more<span class="sep">·</span>pick one to filter</span
+			>
+		</h2>
+		<p class="sr-only">
+			Each project is listed with the tools it used; choosing a tool filters the catalogue below to the projects
+			that used it.
+		</p>
+	</header>
+
+	<div class="chart" style={`--aspect:${MAP_W} / ${MAP_H}`}>
+		<svg class="chart-svg" viewBox={`0 0 ${MAP_W} ${MAP_H}`} preserveAspectRatio="none" aria-hidden="true">
+			<g class="grid">
+				{rows.map((y) => <line x1="0" y1={y} x2={MAP_W} y2={y} />)}
+				{cols.map((x) => <line x1={x} y1="0" x2={x} y2={MAP_H} class="dashed" />)}
+			</g>
+			<path class="trail" d={path} pathLength="1" />
+			<g class="links">
+				{
+					map.links.map(({ project, tool }) => {
+						const p = at.get(project)!;
+						const t = at.get(tool)!;
+						return (
+							<line
+								x1={p.x}
+								y1={p.y}
+								x2={t.x}
+								y2={t.y}
+								data-p={project}
+								data-t={tool}
+								style={`--d:${delayOf(t.x)}s`}
+							/>
+						);
+					})
+				}
+			</g>
+		</svg>
+
+		<ol class="projects">
+			{
+				map.projects.map(({ slug, x, y }) => {
+					const p = bySlug.get(slug)!;
+					return (
+						<li class="project" style={`--x:${pct(x, MAP_W)};--y:${pct(y, MAP_H)};--d:${delayOf(x)}s`}>
+							<a class="project-link" href={`/work/${slug}/`} data-project={slug}>
+								<span class="star" aria-hidden="true" />
+								<span class="project-label">
+									<span class="no" aria-hidden="true">
+										{catalogueNo(p.no)}
+									</span>
+									<span class="project-name">{p.short}</span>
+									<span class="year">{p.year}</span>
+								</span>
+							</a>
+						</li>
+					);
+				})
+			}
+		</ol>
+
+		<ul class="tools" aria-label="Filter the catalogue by tool">
+			{
+				tools.map((t) => {
+					const pos = at.get(t.slug)!;
+					return (
+						<li
+							class="tool"
+							data-side={(pos as { side?: string }).side}
+							data-mag={Math.min(t.projects.length, 3)}
+							style={`--x:${pct(pos.x, MAP_W)};--y:${pct(pos.y, MAP_H)};--d:${delayOf(pos.x)}s`}
+						>
+							<button
+								type="button"
+								class="tool-btn"
+								aria-pressed="false"
+								data-tool={t.slug}
+								data-projects={t.projects.join(' ')}
+							>
+								<span class="tool-star" aria-hidden="true" />
+								<span class="tool-text">
+									<span class="tool-name">{t.name}</span>
+									{/* Brightness already says "used once"; only repeats get a count. */}
+									{t.projects.length > 1 ? (
+										<span class="count">
+											<span class="sr-only">, used in </span>
+											<span aria-hidden="true">×</span>
+											{t.projects.length}
+											<span class="sr-only"> projects</span>
+										</span>
+									) : (
+										<span class="sr-only">, used in 1 project</span>
+									)}
+								</span>
+							</button>
+						</li>
+					);
+				})
+			}
+		</ul>
+	</div>
+</section>
+
+<style>
+	.map {
+		--ink: var(--link-color);
+		--line: color-mix(in oklch, var(--gray-0) 22%, transparent);
+		--grid: color-mix(in oklch, var(--gray-0) 7%, transparent);
+		--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.caption {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		font-weight: 400;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-200);
+	}
+
+	.fig {
+		color: var(--ink);
+	}
+
+	.sep {
+		margin-inline: 0.5em;
+		color: var(--gray-400);
+	}
+
+	.hint {
+		display: none;
+		color: var(--gray-400);
+	}
+
+	.tools {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.tool-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45em;
+		border: 0;
+		background: none;
+		font-family: var(--font-mono);
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--gray-200);
+		cursor: pointer;
+	}
+
+	.count {
+		margin-left: 0.45em;
+		color: var(--gray-400);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.tool-btn[aria-pressed='true'] {
+		color: var(--gray-0);
+	}
+
+	/* Filtering needs the script; without it the tools are just labels. */
+	@media (scripting: none) {
+		.tool-btn {
+			pointer-events: none;
+		}
+	}
+
+	.tool-btn[aria-pressed='true'] .count {
+		color: var(--ink);
+	}
+
+	.tool-btn:focus-visible,
+	.project-link:focus-visible {
+		outline: 2px solid var(--ink);
+		outline-offset: 2px;
+	}
+
+	/* A tool's star: brighter (and bigger) the more projects used it. */
+	.tool-star {
+		position: relative;
+		flex: none;
+		width: 0.75em;
+		height: 0.75em;
+	}
+
+	.tool-star::before {
+		position: absolute;
+		inset: 25%;
+		border-radius: 50%;
+		content: '';
+		background: var(--gray-0);
+		opacity: 0.55;
+		transition:
+			scale 0.3s var(--ease-out),
+			opacity 0.3s;
+	}
+
+	.tool[data-mag='2'] .tool-star::before,
+	.tool[data-mag='3'] .tool-star::before {
+		inset: 12%;
+		opacity: 0.9;
+		box-shadow: 0 0 0 0.18em color-mix(in oklch, var(--ink) 35%, transparent);
+	}
+
+	.tool-btn[aria-pressed='true'] .tool-star::before {
+		opacity: 1;
+		background: var(--ink);
+		box-shadow: 0 0 0.6em var(--ink);
+	}
+
+	/* ── Phones: one swipeable row of filter chips ──────────────────── */
+	@media (max-width: 49.99em) {
+		.chart-svg,
+		.projects {
+			display: none;
+		}
+
+		/* Full-bleed past the wrapper's 1.5rem gutter, fading at the edges. */
+		.tools {
+			display: flex;
+			gap: 0.4rem;
+			margin-inline: -1.5rem;
+			padding: 0.25rem 1.5rem;
+			overflow-x: auto;
+			overscroll-behavior-x: contain;
+			scroll-snap-type: x proximity;
+			scroll-padding-inline: 1.5rem;
+			scrollbar-width: none;
+			-webkit-mask-image: linear-gradient(90deg, transparent, #000 1.5rem, #000 calc(100% - 1.5rem), transparent);
+			mask-image: linear-gradient(90deg, transparent, #000 1.5rem, #000 calc(100% - 1.5rem), transparent);
+		}
+
+		.tools::-webkit-scrollbar {
+			display: none;
+		}
+
+		.tool {
+			flex: none;
+			scroll-snap-align: start;
+		}
+
+		.tool-btn {
+			min-height: 2.25rem;
+			padding: 0.35rem 0.7rem 0.35rem 0.55rem;
+			white-space: nowrap;
+			border: 1px solid color-mix(in oklch, var(--gray-0) 12%, transparent);
+			border-radius: 999rem;
+			background: var(--gray-999_65);
+			font-size: 0.6875rem;
+		}
+
+		.tool-btn[aria-pressed='true'] {
+			border-color: var(--ink);
+			background: var(--accent-subtle-overlay);
+		}
+	}
+
+	/* ── Desktop: the chart ────────────────────────────────────────── */
+	@media (min-width: 50em) {
+		@media (hover: hover) {
+			.hint {
+				display: inline;
+			}
+		}
+
+		.chart {
+			position: relative;
+			width: 100%;
+			aspect-ratio: var(--aspect);
+			/* Labels scale with the chart, so the build-time layout's label
+			   boxes stay true at every width. */
+			container-type: inline-size;
+		}
+
+		.chart-svg {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			overflow: visible;
+		}
+
+		.grid line {
+			stroke: var(--grid);
+			stroke-width: 1;
+			vector-effect: non-scaling-stroke;
+		}
+
+		.grid .dashed {
+			stroke-dasharray: 2 6;
+		}
+
+		.trail {
+			fill: none;
+			stroke: color-mix(in oklch, var(--ink) 55%, transparent);
+			stroke-width: 1.5;
+			stroke-dasharray: 0.003 0.006;
+			stroke-linecap: round;
+			vector-effect: non-scaling-stroke;
+		}
+
+		.links line {
+			stroke: var(--line);
+			stroke-width: 1;
+			vector-effect: non-scaling-stroke;
+			transition:
+				stroke 0.3s,
+				opacity 0.3s,
+				stroke-width 0.3s;
+		}
+
+		.projects,
+		.tools {
+			position: absolute;
+			inset: 0;
+			margin: 0;
+			padding: 0;
+			list-style: none;
+			pointer-events: none;
+		}
+
+		.project-link,
+		.tool-btn {
+			position: absolute;
+			left: var(--x);
+			top: var(--y);
+			pointer-events: auto;
+			white-space: nowrap;
+			transition: opacity 0.3s;
+		}
+
+		/* Project: the star's centre on (--x, --y), its label underneath. */
+		.project-link {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 0.35em;
+			padding: 0.2em 0.4em;
+			border-radius: 0.5rem;
+			translate: -50% -0.95em;
+			font-size: clamp(0.7rem, 1.45cqi, 1.05rem);
+			text-decoration: none;
+			color: var(--gray-0);
+		}
+
+		.star {
+			position: relative;
+			display: block;
+			width: 1.5em;
+			height: 1.5em;
+			transition: scale 0.35s var(--ease-out);
+		}
+
+		.star::before,
+		.star::after {
+			position: absolute;
+			border-radius: 50%;
+			content: '';
+		}
+
+		.star::before {
+			inset: -0.4em;
+			background: radial-gradient(circle, color-mix(in oklch, var(--ink) 55%, transparent), transparent 68%);
+			opacity: 0.75;
+			transition: opacity 0.35s;
+		}
+
+		.star::after {
+			inset: 0.5em;
+			background: var(--gray-0);
+			box-shadow: 0 0 0 0.2em color-mix(in oklch, var(--ink) 40%, transparent);
+		}
+
+		.project-label {
+			display: flex;
+			align-items: baseline;
+			gap: 0.4em;
+			padding: 0.1em 0.45em;
+			border-radius: 999rem;
+			font-family: var(--font-brand);
+			font-weight: 600;
+			line-height: 1.2;
+			background: color-mix(in oklch, var(--gray-999) 55%, transparent);
+			transition: background-color 0.25s;
+		}
+
+		.no,
+		.year {
+			font-family: var(--font-mono);
+			font-size: 0.68em;
+			font-weight: 400;
+			letter-spacing: 0.06em;
+			color: var(--gray-400);
+		}
+
+		.no {
+			color: var(--ink);
+		}
+
+		/* Tool: the star on (--x, --y), the label trailing away from its projects. */
+		.tool-btn {
+			padding: 0.2em 0.35em;
+			border-radius: 999rem;
+			translate: calc(-0.35em - 0.375em) -50%;
+			font-size: clamp(0.53rem, 1.05cqi, 0.75rem);
+		}
+
+		.tool[data-side='left'] .tool-btn {
+			flex-direction: row-reverse;
+			translate: calc(-100% + 0.35em + 0.375em) -50%;
+		}
+
+		.tool-btn:hover,
+		.tool-btn[aria-pressed='true'] {
+			background: var(--gray-999_65);
+		}
+
+		/* Focus: one project or tool lit, its neighbours with it, the rest
+		   dimmed (classes from scripts/work-catalogue.ts). */
+		.chart[data-focus] :is(.project-link, .tool-btn):not(.is-lit) {
+			opacity: 0.32;
+		}
+
+		.chart[data-focus] .links line:not(.is-lit) {
+			opacity: 0.25;
+		}
+
+		.links line.is-lit {
+			stroke: var(--ink);
+			stroke-width: 1.75;
+		}
+
+		.project-link.is-lit .star,
+		.project-link:is(:hover, :focus-visible) .star {
+			scale: 1.3;
+		}
+
+		.project-link.is-lit .star::before {
+			opacity: 1;
+		}
+
+		.project-link:is(:hover, :focus-visible) .project-label {
+			background: var(--gray-999_65);
+		}
+
+		.tool-btn.is-lit .tool-star::before {
+			opacity: 1;
+			scale: 1.4;
+		}
+
+		/* Entrance: the trail draws left to right, stars and lines arrive
+		   as it passes. JS + motion only (anim-ready); backwards fill so
+		   finished entrances never pin the hover states. */
+		@media (prefers-reduced-motion: no-preference) {
+			:global(html.anim-ready) .trail {
+				animation: trail-draw 1.6s 0.4s var(--ease-out) backwards;
+			}
+
+			:global(html.anim-ready) :is(.star, .tool-star) {
+				animation: map-pop 0.7s var(--d) var(--ease-out) backwards;
+			}
+
+			:global(html.anim-ready) :is(.project-label, .tool-text, .links line) {
+				animation: map-fade 0.6s calc(var(--d) + 0.1s) ease-out backwards;
+			}
+
+			:global(html.anim-ready) :is(.grid, .map-head) {
+				animation: map-fade 1.2s 0.2s ease-out backwards;
+			}
+		}
+	}
+
+	@keyframes trail-draw {
+		from {
+			clip-path: inset(0 100% 0 0);
+		}
+		to {
+			clip-path: inset(0 0 0 0);
+		}
+	}
+
+	@keyframes map-pop {
+		from {
+			scale: 0;
+			opacity: 0;
+		}
+		60% {
+			opacity: 1;
+		}
+		to {
+			scale: 1;
+		}
+	}
+
+	@keyframes map-fade {
+		from {
+			opacity: 0;
+		}
+	}
+</style>

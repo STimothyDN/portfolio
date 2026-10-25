@@ -158,7 +158,7 @@ h2 {
 	html.anim-ready [data-animate='work-row']:not([data-revealed]) .hairline {
 		scale: 0 1;
 	}
-	html.anim-ready [data-animate='work-row']:not([data-revealed]) :is(.title, .thumb) {
+	html.anim-ready [data-animate='work-row']:not([data-revealed]) :is(.no, .body, .signals, .thumb) {
 		opacity: 0;
 	}
 

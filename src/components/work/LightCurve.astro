@@ -1,0 +1,312 @@
+---
+/**
+ * A repo's activity as a light curve: commits across its active span, first
+ * commit to last (lightCurve in utils/work.ts), from the GitHub snapshot that
+ * `npm run sync-work` takes. The curve is the commits' density (a Gaussian
+ * kernel over fine bins); the figure variant also ticks every commit day
+ * under it.
+ *
+ * `spark`: the curve with its total (catalogue rows). `figure`: the curve with
+ * its dates, the repo's numbers and its language breakdown.
+ */
+import { type GitHubSignals, lightCurve } from '../../utils/work';
+
+interface Props {
+	github: GitHubSignals;
+	variant?: 'spark' | 'figure';
+}
+
+const { github, variant = 'spark' } = Astro.props;
+const BINS = 120;
+const curve = lightCurve(github.commits, BINS);
+const W = BINS;
+const H = 32;
+
+// Kernel density: each bin's commits spread over its neighbours.
+const sigma = variant === 'figure' ? 1.6 : 2.4;
+const reach = Math.ceil(sigma * 3);
+const density = curve.counts.map((_, i) => {
+	let sum = 0;
+	for (let k = -reach; k <= reach; k++) {
+		const c = curve.counts[i + k];
+		if (c) sum += c * Math.exp(-(k * k) / (2 * sigma * sigma));
+	}
+	return sum;
+});
+const peak = Math.max(...density) || 1;
+const pts = density.map((d, i) => [i + 0.5, H - 1 - (d / peak) * (H - 3)] as const);
+const f = (v: number) => v.toFixed(2);
+const linePath = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${f(x)} ${f(y)}`).join('');
+const areaPath = `${linePath}L${f(W - 0.5)} ${H}L0.5 ${H}Z`;
+const ticks = curve.counts.map((c, i) => (c ? i + 0.5 : null)).filter((x): x is number => x !== null);
+const gradientId = `curve-${github.repo.replace(/\W/g, '-')}-${variant}`;
+
+const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString('en-US', { timeZone: 'UTC', ...opts });
+const monthYear = (d: Date) => fmt(d, { month: 'short', year: 'numeric' });
+const day = (d: Date) => fmt(d, { month: 'short', day: 'numeric', year: 'numeric' });
+const sameMonth = monthYear(curve.first) === monthYear(curve.last);
+const span = sameMonth ? monthYear(curve.first) : `${monthYear(curve.first)} – ${monthYear(curve.last)}`;
+const spanLength = curve.spanDays < 60 ? `${curve.spanDays} days` : `${Math.round(curve.spanDays / 30.4)} months`;
+const busiest = Math.max(...Object.values(
+	github.commits.reduce<Record<string, number>>((days, c) => ((days[c.slice(0, 10)] = (days[c.slice(0, 10)] ?? 0) + 1), days), {})
+));
+
+/* GitHub linguist's colours, so the breakdown reads like the repo's own bar. */
+const LANGUAGE_COLOURS: Record<string, string> = {
+	JavaScript: '#f1e05a',
+	TypeScript: '#3178c6',
+	Vue: '#41b883',
+	CSS: '#663399',
+	HTML: '#e34c26',
+	Java: '#b07219',
+	Python: '#3572a5',
+};
+const totalBytes = Object.values(github.languages).reduce((a, b) => a + b, 0);
+const languages = Object.entries(github.languages)
+	.map(([name, bytes]) => ({ name, share: bytes / totalBytes, colour: LANGUAGE_COLOURS[name] ?? '#8b8b9e' }))
+	.sort((a, b) => b.share - a.share);
+const pct = (v: number) => (v < 0.01 ? '<1%' : `${Math.round(v * 100)}%`);
+---
+
+<figure class:list={['curve', variant]}>
+	{variant === 'spark' && <p class="label" aria-hidden="true">Activity</p>}
+	<svg viewBox={`0 0 ${W} ${H + (variant === 'figure' ? 6 : 0)}`} preserveAspectRatio="none" aria-hidden="true">
+		<defs>
+			<linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+				<stop offset="0" class="stop-top" />
+				<stop offset="1" class="stop-bottom" />
+			</linearGradient>
+		</defs>
+		<line class="floor" x1="0" y1={H - 0.5} x2={W} y2={H - 0.5} />
+		<path class="area" d={areaPath} fill={`url(#${gradientId})`} />
+		<path class="line" d={linePath} />
+		{variant === 'figure' && ticks.map((x) => <line class="tick" x1={x} x2={x} y1={H + 1.5} y2={H + 5} />)}
+	</svg>
+	{
+		variant === 'spark' ? (
+			<figcaption>
+				<span class="total">{github.commits.length}</span> commits <span class="sep">·</span> {span}
+			</figcaption>
+		) : (
+			<>
+				<div class="axis" aria-hidden="true">
+					<span>{day(curve.first)}</span>
+					<span>{day(curve.last)}</span>
+				</div>
+				<figcaption>
+					<dl class="readout">
+						<div>
+							<dt>Commits</dt>
+							<dd>{github.commits.length}</dd>
+						</div>
+						<div>
+							<dt>Active days</dt>
+							<dd>{curve.activeDays}</dd>
+						</div>
+						<div>
+							<dt>Span</dt>
+							<dd>{spanLength}</dd>
+						</div>
+						<div>
+							<dt>Busiest day</dt>
+							<dd>{busiest} commits</dd>
+						</div>
+						{github.forks > 0 && (
+							<div>
+								<dt>Forks</dt>
+								<dd>{github.forks}</dd>
+							</div>
+						)}
+					</dl>
+				</figcaption>
+				<div class="languages">
+					<div class="lang-bar" aria-hidden="true">
+						{languages.map((l) => (
+							<span style={`--c:${l.colour};flex-grow:${l.share}`} />
+						))}
+					</div>
+					<ul aria-label="Languages, by share of the code">
+						{languages.map((l) => (
+							<li style={`--c:${l.colour}`}>
+								{l.name} <span class="share">{pct(l.share)}</span>
+							</li>
+						))}
+					</ul>
+				</div>
+			</>
+		)
+	}
+</figure>
+
+<style>
+	.curve {
+		--ink: var(--link-color);
+
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-400);
+	}
+
+	svg {
+		display: block;
+		width: 100%;
+		overflow: visible;
+	}
+
+	.stop-top {
+		stop-color: var(--ink);
+		stop-opacity: 0.45;
+	}
+
+	.stop-bottom {
+		stop-color: var(--ink);
+		stop-opacity: 0;
+	}
+
+	.line {
+		fill: none;
+		stroke: var(--ink);
+		stroke-width: 1.5;
+		stroke-linejoin: round;
+		vector-effect: non-scaling-stroke;
+	}
+
+	.floor,
+	.tick {
+		stroke: color-mix(in oklch, var(--gray-0) 16%, transparent);
+		stroke-width: 1;
+		vector-effect: non-scaling-stroke;
+	}
+
+	.tick {
+		stroke: var(--ink);
+		opacity: 0.7;
+	}
+
+	.total {
+		color: var(--gray-100);
+	}
+
+	.sep {
+		margin-inline: 0.35em;
+	}
+
+	.spark {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.spark svg {
+		height: 1.75rem;
+	}
+
+	.figure {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.figure svg {
+		height: 5rem;
+	}
+
+	.figure .line {
+		stroke-width: 2;
+		filter: drop-shadow(0 0 4px color-mix(in oklch, var(--ink) 70%, transparent));
+	}
+
+	.axis {
+		display: flex;
+		justify-content: space-between;
+		font-size: 0.625rem;
+	}
+
+	.readout {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1.25rem;
+		margin: 0.25rem 0 0;
+	}
+
+	.readout div {
+		display: flex;
+		gap: 0.5em;
+	}
+
+	.readout dd {
+		margin: 0;
+		color: var(--gray-200);
+	}
+
+	.languages {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+	}
+
+	.lang-bar {
+		display: flex;
+		gap: 2px;
+		height: 0.5rem;
+		overflow: hidden;
+		border-radius: 999rem;
+	}
+
+	.lang-bar span {
+		flex-basis: 0;
+		min-width: 3px;
+		background: var(--c);
+	}
+
+	.languages ul {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 1rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		text-transform: none;
+		letter-spacing: 0.02em;
+		color: var(--gray-200);
+	}
+
+	.languages li {
+		display: flex;
+		align-items: center;
+		gap: 0.45em;
+	}
+
+	.languages li::before {
+		width: 0.6em;
+		height: 0.6em;
+		border-radius: 50%;
+		content: '';
+		background: var(--c);
+	}
+
+	.share {
+		color: var(--gray-400);
+	}
+
+	/* The curve sweeps in left to right as the figure's entrance starts (an
+	   ancestor with data-animate gets [data-revealed]; anim-ready only). */
+	@media (prefers-reduced-motion: no-preference) {
+		:global(html.anim-ready [data-revealed]) .figure :is(.area, .line) {
+			animation: curve-sweep 1.4s 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+		}
+	}
+
+	@keyframes curve-sweep {
+		from {
+			clip-path: inset(0 100% 0 0);
+		}
+		to {
+			clip-path: inset(0 0 0 0);
+		}
+	}
+</style>

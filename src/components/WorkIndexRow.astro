@@ -1,23 +1,64 @@
 ---
-import type { CollectionEntry } from 'astro:content';
-
+/**
+ * One catalogue entry on the work index: number, title, first sentence and
+ * stack on the left; the project's signals on the right (its repo's light
+ * curve, its screenshot's spectrum, where it lives). The screenshot itself
+ * is the cursor follower's source on desktop (work-hover.ts) and an inline
+ * thumb on phones.
+ *
+ * `data-tools` lists the row's tool slugs for the catalogue filter
+ * (work-catalogue.ts); `data-slug` ties it to its star on the stack map.
+ */
+import type { Project } from '../utils/work';
+import { catalogueNo } from '../utils/work';
 import { WORK_IMAGE_SIZES, workImage } from '../utils/images';
+import LightCurve from './work/LightCurve.astro';
+import Spectrum from './work/Spectrum.astro';
 
 interface Props {
-	project: CollectionEntry<'work'>;
+	project: Project;
 	eager?: boolean;
 }
 
 const { project, eager = false } = Astro.props;
-// Collection ids are the old slugs (lower-cased file names), so URLs are unchanged.
-const { data, id: slug } = project;
-const year = data.publishDate.getFullYear();
+const { entry, slug, title, year, summary, tools, host, isRepo, github, spectrum } = project;
+const { data } = entry;
 const img = await workImage(data.img);
 ---
 
-<article class="row" data-slug={slug}>
+<article class="row" data-slug={slug} data-tools={tools.map((t) => t.slug).join(' ')}>
 	<span class="hairline" aria-hidden="true"></span>
-	<h2 class="title"><a href={`/work/${slug}`} transition:name={`work-title-${slug}`}>{data.title}</a></h2>
+	<p class="no" aria-hidden="true">{catalogueNo(project.no)}</p>
+	<div class="body">
+		<p class="kicker">
+			<span class="sr-only">No. {project.no}, </span>{year}<span class="sep" aria-hidden="true">·</span>{
+				isRepo ? 'Open source' : 'Live site'
+			}
+		</p>
+		<h2 class="title"><a href={`/work/${slug}/`} transition:name={`work-title-${slug}`}>{title}</a></h2>
+		<p class="summary">{summary}</p>
+		<ul class="tags" aria-label="Stack">
+			{tools.map((t) => <li data-tool={t.slug}>{t.name}</li>)}
+		</ul>
+	</div>
+	<div class="signals">
+		{github && <LightCurve github={github} />}
+		{
+			spectrum && (
+				<div class="signal">
+					<p class="signal-label" aria-hidden="true">
+						Spectrum
+					</p>
+					<Spectrum spectrum={spectrum} />
+				</div>
+			)
+		}
+		<a class="host" href={data.link} target="_blank" rel="noopener">
+			{host}
+			<span class="sr-only">(opens in a new tab)</span>
+			<span aria-hidden="true">↗</span>
+		</a>
+	</div>
 	<div class="thumb">
 		<img
 			src={img.src}
@@ -31,7 +72,8 @@ const img = await workImage(data.img);
 			decoding="async"
 			transition:name={`work-image-${slug}`}
 		/>
-		<div class="thumb-overlay">
+		{/* The follower's caption source (work-hover.ts clones it); hidden in place. */}
+		<div class="thumb-overlay" hidden>
 			<p class="preview-year" data-preview-vt={`work-year-${slug}`}>{year}</p>
 			<div class="preview-tags" role="list">
 				{data.tags.map((t, i) => <span role="listitem" data-preview-vt={`work-tag-${slug}-${i}`}>{t}</span>)}
@@ -43,11 +85,19 @@ const img = await workImage(data.img);
 
 <style>
 	.row {
+		--ink: var(--link-color);
+
 		position: relative;
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-		padding-block: 2rem;
+		display: grid;
+		grid-template-columns: 2.25rem minmax(0, 1fr);
+		grid-template-areas:
+			'no body'
+			'. thumb'
+			'. signals';
+		gap: 1.25rem 0.75rem;
+		padding-block: 1.75rem;
+		border-radius: 0.75rem;
+		transition: background-color 0.3s;
 	}
 
 	/* Top rule as a real element (not border) so motion.ts can scaleX-reveal it. */
@@ -57,13 +107,45 @@ const img = await workImage(data.img);
 		left: 0;
 		width: 100%;
 		height: 1px;
-		background: var(--gray-800);
+		background: color-mix(in oklch, var(--gray-0) 12%, transparent);
 		transform-origin: left center;
 	}
 
+	.no {
+		grid-area: no;
+		padding-top: 0.2rem;
+		font-family: var(--font-mono);
+		font-size: 0.75rem;
+		letter-spacing: 0.06em;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink);
+	}
+
+	.body {
+		grid-area: body;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		min-width: 0;
+	}
+
+	.kicker,
+	.signal-label,
+	.host {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--gray-400);
+	}
+
+	.sep {
+		margin-inline: 0.5em;
+	}
+
 	.title {
-		font-size: clamp(var(--text-2xl), 4.5vw, var(--text-4xl));
-		line-height: 1.1;
+		font-size: clamp(var(--text-2xl), 1rem + 2.4vw, 3rem);
+		line-height: 1.05;
 	}
 
 	.title a {
@@ -81,11 +163,86 @@ const img = await workImage(data.img);
 		inset: 0;
 	}
 
+	.summary {
+		max-width: 58ch;
+		color: var(--gray-300);
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+	}
+
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		margin: 0.2rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.tags li {
+		padding: 0.15rem 0.55rem;
+		border: 1px solid color-mix(in oklch, var(--gray-0) 12%, transparent);
+		border-radius: 999rem;
+		background: color-mix(in oklch, var(--gray-0) 4%, transparent);
+		font-size: var(--text-sm);
+		line-height: 1.4;
+		color: var(--gray-100);
+		transition:
+			color 0.25s,
+			border-color 0.25s,
+			background-color 0.25s;
+	}
+
+	/* The tool the catalogue is filtered by (work-catalogue.ts). */
+	.tags li.is-match {
+		border-color: var(--ink);
+		background: var(--accent-subtle-overlay);
+		color: var(--gray-0);
+	}
+
+	.signals {
+		grid-area: signals;
+		display: flex;
+		flex-direction: column;
+		gap: 0.875rem;
+		min-width: 0;
+	}
+
+	.signal {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	/* Above the row's stretched link, so it opens the project itself. */
+	.host {
+		position: relative;
+		z-index: 1;
+		align-self: flex-start;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-transform: none;
+		letter-spacing: 0.02em;
+		color: var(--ink);
+		text-decoration: none;
+	}
+
+	.host:hover,
+	.host:focus-visible {
+		text-decoration: underline;
+		text-underline-offset: 0.2em;
+	}
+
 	.thumb {
+		grid-area: thumb;
 		position: relative;
 		aspect-ratio: 16 / 10;
 		overflow: hidden;
-		border: 1px solid var(--gray-800);
+		border: 1px solid color-mix(in oklch, var(--gray-0) 12%, transparent);
 		border-radius: 0.5rem;
 		box-shadow: var(--shadow-sm);
 		background: var(--gray-999);
@@ -96,81 +253,17 @@ const img = await workImage(data.img);
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		filter: saturate(0.55) contrast(0.95);
-		opacity: 0.85;
-	}
-
-	.thumb::after {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(180deg, rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.78));
-		pointer-events: none;
-	}
-
-	.thumb-overlay {
-		position: absolute;
-		inset: auto 0 0;
-		z-index: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: clamp(1rem, 4vw, 1.5rem);
-		color: white;
-		text-shadow: 0 1px 1.5rem rgb(0 0 0 / 0.45);
-	}
-
-	.preview-year {
-		font-family: var(--font-brand);
-		font-size: var(--text-sm);
-		font-variant-numeric: tabular-nums;
-		color: rgb(255 255 255 / 0.72);
-	}
-
-	.preview-tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.4rem;
-	}
-
-	.preview-tags span {
-		display: inline-flex;
-		align-items: center;
-		min-height: 1.85rem;
-		padding: 0.3rem 0.65rem;
-		border: 1px solid rgb(255 255 255 / 0.32);
-		border-radius: 999rem;
-		background: rgb(0 0 0 / 0.28);
-		font-size: var(--text-sm);
-		line-height: 1.2;
-		backdrop-filter: blur(10px);
-	}
-
-	.preview-description {
-		display: -webkit-box;
-		overflow: hidden;
-		-webkit-box-orient: vertical;
-		-webkit-line-clamp: 3;
-		max-width: 52ch;
-		font-size: var(--text-md);
-		line-height: 1.45;
-		color: rgb(255 255 255 / 0.9);
-	}
-
-	.row:hover .thumb img,
-	.row:has(a:focus-visible) .thumb img {
-		filter: none;
-		opacity: 1;
-		transform: scale(1.04);
+		object-position: top;
 	}
 
 	.row:hover .title a,
-	.row:has(a:focus-visible) .title a {
-		color: var(--accent-dark);
+	.row:has(.title a:focus-visible) .title a,
+	.row.is-lit .title a {
+		color: var(--ink);
 	}
 
-	.row:has(a:focus-visible) {
-		outline: 2px solid var(--accent-dark);
+	.row:has(.title a:focus-visible) {
+		outline: 2px solid var(--ink);
 		outline-offset: 4px;
 	}
 
@@ -181,58 +274,52 @@ const img = await workImage(data.img);
 
 	@media (prefers-reduced-motion: no-preference) {
 		.thumb img {
-			transition:
-				transform 400ms cubic-bezier(0.33, 1, 0.68, 1),
-				filter var(--theme-transition),
-				opacity var(--theme-transition);
+			transition: transform 400ms cubic-bezier(0.33, 1, 0.68, 1);
 		}
-	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.thumb img,
 		.row:hover .thumb img,
-		.row:has(a:focus-visible) .thumb img {
-			transform: none;
+		.row:has(.title a:focus-visible) .thumb img {
+			transform: scale(1.03);
 		}
 	}
 
 	@media (min-width: 50em) {
 		.row {
-			display: grid;
-			grid-template-columns: minmax(0, 1fr) 18rem;
-			gap: 2rem;
-			align-items: center;
-			padding-block: 3rem;
+			grid-template-columns: 3.5rem minmax(0, 1fr) minmax(14rem, 17rem);
+			grid-template-areas: 'no body signals';
+			gap: 2.5rem;
+			align-items: start;
+			padding-block: 2.5rem;
+		}
+
+		.no {
+			padding-top: 0.5rem;
+			font-size: 0.875rem;
+		}
+
+		.signals {
+			padding-top: 0.35rem;
 		}
 
 		.thumb {
-			aspect-ratio: 3 / 2;
+			grid-area: auto;
+			grid-column: 1 / -1;
+			aspect-ratio: 21 / 9;
 		}
 	}
 
-	/* Cursor-follow mode (work-hover.ts): the static thumb column collapses and
-	 * a floating preview tracks the pointer. The media query must match the JS
-	 * gate exactly — coarse pointers and reduced-motion users keep this column,
-	 * and (scripting: enabled) keeps thumbs for no-JS visitors since the
-	 * follower can't run there. Keyboard focus always brings the static thumb
-	 * back (the follower never responds to focus). */
+	/* Cursor-follow mode (work-hover.ts): the floating preview carries the
+	 * screenshot, so the inline thumb hides. The media query must match the
+	 * JS gate exactly — coarse pointers and reduced-motion users keep the
+	 * thumb, and (scripting: enabled) keeps it for no-JS visitors since the
+	 * follower can't run there. Keyboard focus brings the thumb back (the
+	 * follower never responds to focus). */
 	@media (min-width: 50em) and (pointer: fine) and (prefers-reduced-motion: no-preference) and (scripting: enabled) {
-		/* Collapse the reserved thumb column so the text spans the row; the
-		 * floating follower carries the preview instead. */
-		.row {
-			grid-template-columns: minmax(0, 1fr);
-		}
-
 		.thumb {
 			display: none;
 		}
 
-		/* Keyboard focus restores the static thumb in its own column. */
-		.row:has(a:focus-visible) {
-			grid-template-columns: minmax(0, 1fr) 18rem;
-		}
-
-		.row:has(a:focus-visible) .thumb {
+		.row:has(.title a:focus-visible) .thumb {
 			display: block;
 		}
 	}

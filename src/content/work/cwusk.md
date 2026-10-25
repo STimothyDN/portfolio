@@ -1,5 +1,6 @@
 ---
 title: Clean Water for US/Carolina Kids
+short: Clean Water
 publishDate: 2020-03-04 00:00:00
 img: ../../assets/work/cwusk.png
 img_alt: CWUSK Website Landing page

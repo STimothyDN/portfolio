@@ -1,5 +1,6 @@
 ---
 title: BTFF Data Dashboard
+short: BTFF Dashboard
 publishDate: 2025-01-30 00:00:00
 img: ../../assets/work/flats.png
 img_alt: BTFF Data Dashboard Website
