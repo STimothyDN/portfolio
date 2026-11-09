@@ -6,6 +6,7 @@
 				<p class="lab-meta">
 					{{ list.length ? `${list.length} of ${exposures} logged` : 'None logged yet.' }}
 					<template v-if="inCamera"> <a class="lab-link" :href="`/photography/lab/shoot/?roll=${code}`">Log frames in shooting mode</a></template>
+					<template v-if="list.length"> · <a class="lab-link" :href="`/photography/lab/frames/?q=${code}`">On the contact sheet</a></template>
 				</p>
 			</div>
 			<button v-if="!adding" type="button" class="lab-btn lab-btn--quiet" @click="startAdd">Add a frame</button>

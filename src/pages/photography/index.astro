@@ -6,12 +6,14 @@ import FilmDesk from '../../components/film/FilmDesk.vue';
 import { packFilmPhotos } from '../../components/film/data';
 import { bunnyUrl } from '../../utils/bunny';
 import { getFilmRolls, rollFolder, toFilmDeskData } from '../../utils/film';
-import { publishedExposures } from '../../lib/lab/server/published';
+import { publishedExposures, publishedLoaded } from '../../lib/lab/server/published';
 
 const rolls = await getFilmRolls();
 // Exposure, lens and place from the Film Lab, for rolls its owner chose to share (build time only).
 const published = await publishedExposures(rolls.map((r) => ({ id: r.id, files: r.data.photos.map((p) => p.filename) })));
 const desk = toFilmDeskData(rolls, published);
+// What's in the cameras right now, if the Film Lab's owner shows it (also build time only).
+const loadedNow = await publishedLoaded();
 
 const formatDate = (date: Date) =>
 	date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
@@ -91,7 +93,7 @@ const formatDate = (date: Date) =>
 		{
 			rolls.length > 0 ? (
 				<>
-					<FilmDesk client:load rolls={desk.rolls} packedPhotos={packFilmPhotos(desk.photos)}>
+					<FilmDesk client:load rolls={desk.rolls} packedPhotos={packFilmPhotos(desk.photos)} {...(loadedNow.length ? { loadedNow } : {})}>
 						<MediumToggle current="film" variant="dock" />
 					</FilmDesk>
 					<noscript>

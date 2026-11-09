@@ -5,7 +5,8 @@ import labels from '../../../data/film-labels.json';
 import { todayInDurham } from '../../../lib/lab/inventory';
 import { labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
-import { labelGaps, listCameras, listLabs, listStocks, rollViews, stepChoices } from '../../../lib/lab/server/inventory';
+import { labelGaps, listCameras, listLabs, listStocks, rollMilestones, rollViews, stepChoices } from '../../../lib/lab/server/inventory';
+import { restockForecast } from '../../../lib/lab/pace';
 
 export const prerender = false;
 
@@ -15,18 +16,26 @@ const data =
 	user && config.ok
 		? await (async () => {
 				const d = await getDb(config.config);
-				const [rolls, stocks, choices, cameras, labs] = await Promise.all([
+				const [rolls, stocks, choices, cameras, labs, milestones] = await Promise.all([
 					rollViews(d, user.id),
 					listStocks(d, user.id),
 					stepChoices(d, user.id),
 					listCameras(d, user.id),
 					listLabs(d, user.id),
+					rollMilestones(d, user.id),
 				]);
 				const totals: Record<string, number> = {};
 				for (const r of rolls) totals[r.stock.id] = (totals[r.stock.id] ?? 0) + 1;
 				const storage = rolls.filter((r) => r.status === 'storage');
 				const gaps = labelGaps(labels, { stocks, cameras, labs });
+				// How fast each stock leaves the fridge, from when rolls went into cameras.
+				const forecast = restockForecast(
+					rolls,
+					Object.fromEntries(rolls.map((r) => [r.id, milestones[r.id]?.camera])),
+					todayInDurham()
+				);
 				return {
+					forecast,
 					storage,
 					stocks,
 					totals,
@@ -61,6 +70,7 @@ const data =
 					choices={data.choices}
 					shops={data.shops}
 					deskNames={data.deskNames}
+					forecast={data.forecast}
 					today={todayInDurham()}
 				/>
 			</>

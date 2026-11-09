@@ -1,0 +1,36 @@
+---
+import FramesDesk from '../../../components/lab/FramesDesk.vue';
+import LabLayout from '../../../components/lab/LabLayout.astro';
+import RollsTabs from '../../../components/lab/RollsTabs.astro';
+import ToneReview from '../../../components/lab/ToneReview.vue';
+import { labConfig } from '../../../lib/lab/server/config';
+import { getDb } from '../../../lib/lab/server/db/client';
+import { framesPage } from '../../../lib/lab/server/frames';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const data = user && config.ok ? await framesPage(await getDb(config.config), user.id) : null;
+const q = Astro.url.searchParams.get('q') ?? '';
+---
+
+<LabLayout title="Frames" current="rolls">
+	{
+		data && (
+			<>
+				<section class="lab-head">
+					<div>
+						<span class="lab-edge">Rolls</span>
+						<h1 class="lab-title">Frames</h1>
+						<p class="lab-edge-print">Search every frame you’ve logged · see how the negatives came back</p>
+					</div>
+					<RollsTabs current="frames" />
+				</section>
+				<ToneReview review={data.review} desk={data.desk} part="findings" />
+				<FramesDesk client:load rows={data.rows} initialQuery={q} />
+				<ToneReview review={data.review} desk={data.desk} part="charts" />
+			</>
+		)
+	}
+</LabLayout>

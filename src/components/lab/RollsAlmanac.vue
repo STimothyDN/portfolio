@@ -89,12 +89,12 @@
 			<article class="plate">
 				<header>
 					<h3>Cameras</h3>
-					<p class="lab-edge-print">{{ cameraRows.length }} cameras have shot a roll{{ loaded.length ? ' · ● loaded now' : '' }}</p>
+					<p class="lab-edge-print">{{ cameraRows.length }} cameras have shot a roll · d = median days a roll spends in it{{ loaded.length ? ' · ● loaded now' : '' }}</p>
 				</header>
 				<ul class="bars">
 					<li v-for="(c, i) in cameraRows" :key="c.id">
 						<button type="button" :aria-pressed="isActive('camera', c.id)" :style="{ '--i': i }" @click="toggle({ kind: 'camera', value: c.id, label: c.name })">
-							<span class="b-name">{{ c.name }}<span v-if="c.loaded" class="live" aria-label="loaded now">●</span></span>
+							<span class="b-name">{{ c.name }}<span v-if="c.loaded" class="live" aria-label="loaded now">●</span><span v-if="c.days != null" class="b-days" :title="`A roll usually spends ${c.days} days in it`">{{ c.days }}d</span></span>
 							<span class="b-track"><span class="b-fill" :style="{ width: `${(c.count / cameraMax) * 100}%` }"></span></span>
 							<span class="b-n">{{ c.count }}</span>
 						</button>
@@ -124,6 +124,34 @@
 					</li>
 				</ul>
 				<p v-if="labRows.length" class="axis-note lab-edge-print">0 → {{ labMax }} days</p>
+			</article>
+
+			<!-- What a frame costs -->
+			<article class="plate wide cost">
+				<header>
+					<h3>What a frame costs</h3>
+					<p class="lab-edge-print">Film plus developing and scans, over the frames each roll gave</p>
+				</header>
+				<div v-if="cost" class="cost-grid">
+					<div class="cost-side">
+						<p class="cost-big">
+							<b>{{ formatMoney(Math.round(cost.perFrame)) }}</b>
+							<span>a frame, across {{ cost.rolls }} {{ cost.rolls === 1 ? 'roll' : 'rolls' }} · film {{ cost.filmShare }}%, lab {{ 100 - cost.filmShare }}%</span>
+						</p>
+						<span class="split" aria-hidden="true"><i :style="{ width: `${cost.filmShare}%` }"></i></span>
+						<p v-if="fridgeValue" class="lab-meta">The fridge holds {{ formatMoney(fridgeValue.cents) }} of film across {{ fridgeValue.rolls }} priced {{ fridgeValue.rolls === 1 ? 'roll' : 'rolls' }}.</p>
+					</div>
+					<ul class="bars">
+						<li v-for="(c, i) in cost.byStock" :key="c.id">
+							<button type="button" :aria-pressed="isActive('stock', c.id)" :style="{ '--i': i }" @click="toggle({ kind: 'stock', value: c.id, label: c.name })">
+								<span class="b-name">{{ c.name }}</span>
+								<span class="b-track"><span class="b-fill" :style="{ width: `${(c.perFrame / cost.max) * 100}%`, background: c.color }"></span></span>
+								<span class="b-n">{{ formatMoney(Math.round(c.perFrame)) }}</span>
+							</button>
+						</li>
+					</ul>
+				</div>
+				<p v-else class="lab-meta">Add a price or lab cost to a few finished rolls and this works out what each frame costs you.</p>
 			</article>
 
 			<!-- Exposure map + clock -->
@@ -214,15 +242,19 @@ const brands = computed(() => new Set(stockRows.value.map((s) => s.brand)).size)
 /* ---------- cameras and labs ---------- */
 
 const cameraRows = computed(() => {
-	const map = new Map<string, { id: string; name: string; count: number; loaded: boolean }>();
+	const map = new Map<string, { id: string; name: string; count: number; loaded: boolean; spans: number[] }>();
 	for (const r of props.rolls) {
 		if (!r.camera || r.status === 'storage') continue;
-		const row = map.get(r.camera.id) ?? { id: r.camera.id, name: r.camera.name, count: 0, loaded: false };
+		const row = map.get(r.camera.id) ?? { id: r.camera.id, name: r.camera.name, count: 0, loaded: false, spans: [] };
 		row.count++;
 		if (r.status === 'camera') row.loaded = true;
+		const m = props.milestones[r.id];
+		if (m?.camera && m.shot && daysFrom(m.camera, m.shot) >= 0) row.spans.push(daysFrom(m.camera, m.shot));
 		map.set(r.camera.id, row);
 	}
-	return [...map.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+	return [...map.values()]
+		.map((c) => ({ ...c, days: median(c.spans) }))
+		.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 });
 const cameraMax = computed(() => Math.max(1, ...cameraRows.value.map((c) => c.count)));
 
@@ -242,6 +274,39 @@ const labRows = computed(() => {
 	return [...map.values()].map((l) => ({ ...l, median: median(l.days) })).sort((a, b) => b.count - a.count);
 });
 const labMax = computed(() => Math.max(14, ...labRows.value.flatMap((l) => l.days)));
+
+/* ---------- cost per frame ---------- */
+
+/** Frames a finished roll gave: its scans on the desk, else its exposures. */
+const framesOf = (r: RollView) => (r.publicRollId ? props.deskCounts[r.publicRollId] : undefined) || r.exposures;
+const cost = computed(() => {
+	const done = props.rolls.filter((r) => ['shot', 'lab', 'scanned', 'negatives'].includes(r.status) && (r.priceCents != null || r.devCostCents != null));
+	if (!done.length) return null;
+	const film = done.reduce((n, r) => n + (r.priceCents ?? 0), 0);
+	const lab = done.reduce((n, r) => n + (r.devCostCents ?? 0), 0);
+	const frames = done.reduce((n, r) => n + framesOf(r), 0);
+	const byStock = new Map<string, { id: string; name: string; cents: number; frames: number; color: string }>();
+	for (const r of done) {
+		const row =
+			byStock.get(r.stock.id) ??
+			{ id: r.stock.id, name: r.stock.name, cents: 0, frames: 0, color: canisterColors({ stock: r.stock.token ?? r.stock.id, stockLabel: r.stock.name, stockBrand: r.stock.brand }).can };
+		row.cents += (r.priceCents ?? 0) + (r.devCostCents ?? 0);
+		row.frames += framesOf(r);
+		byStock.set(r.stock.id, row);
+	}
+	const rows = [...byStock.values()].map((s) => ({ ...s, perFrame: s.cents / Math.max(1, s.frames) })).sort((a, b) => a.perFrame - b.perFrame).slice(0, 8);
+	return {
+		perFrame: (film + lab) / Math.max(1, frames),
+		rolls: done.length,
+		filmShare: Math.round((film / Math.max(1, film + lab)) * 100),
+		byStock: rows,
+		max: Math.max(1, ...rows.map((r) => r.perFrame)),
+	};
+});
+const fridgeValue = computed(() => {
+	const priced = props.rolls.filter((r) => r.status === 'storage' && r.priceCents != null);
+	return priced.length ? { cents: priced.reduce((n, r) => n + r.priceCents!, 0), rolls: priced.length } : null;
+});
 </script>
 
 <style scoped>
@@ -535,6 +600,64 @@ const labMax = computed(() => Math.max(14, ...labRows.value.flatMap((l) => l.day
 }
 
 /* ---------- bars ---------- */
+.b-days {
+	margin-left: 0.4rem;
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	color: var(--gray-300);
+}
+
+.cost-grid {
+	display: grid;
+	gap: 1rem 2rem;
+}
+
+@media (min-width: 48em) {
+	.cost-grid {
+		grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr);
+		align-items: start;
+	}
+}
+
+.cost-side {
+	display: grid;
+	gap: 0.75rem;
+}
+
+/* Film against lab, as one bar. */
+.split {
+	display: block;
+	height: 0.45rem;
+	border-radius: 999px;
+	background: var(--lab-edge-text);
+	overflow: hidden;
+}
+
+.split i {
+	display: block;
+	height: 100%;
+	background: var(--gray-0);
+}
+
+.cost-big {
+	display: grid;
+	gap: 0.15rem;
+}
+
+.cost-big b {
+	font-family: var(--font-mono);
+	font-size: 2rem;
+	font-weight: 500;
+	line-height: 1;
+	color: var(--gray-0);
+	font-variant-numeric: tabular-nums;
+}
+
+.cost-big span {
+	font-size: var(--text-sm);
+	color: var(--gray-300);
+}
+
 .bars,
 .labs {
 	display: grid;

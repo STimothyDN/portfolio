@@ -2,7 +2,8 @@
 	<div class="fridge">
 		<div class="topline">
 			<p class="lab-meta">
-				{{ storage.length }} {{ storage.length === 1 ? 'roll' : 'rolls' }} across {{ stockCount }} {{ stockCount === 1 ? 'stock' : 'stocks' }}
+				{{ storage.length }} {{ storage.length === 1 ? 'roll' : 'rolls' }} across {{ stockCount }} {{ stockCount === 1 ? 'stock' : 'stocks' }}<template v-if="forecast?.perMonth && forecast.monthsOfFilm != null">
+					· you load about {{ forecast.perMonth }} a month, so that’s {{ formatMonths(forecast.monthsOfFilm) }} of film</template>
 			</p>
 			<span class="lab-actions">
 				<a class="lab-btn lab-btn--quiet" href="/photography/lab/labels/">Print canister labels</a>
@@ -33,6 +34,7 @@
 					<span class="n">×{{ g.rolls.length }}</span>
 					<span v-if="g.rolls.some((r) => r.rewoundAtFrame)" class="x warn">partly shot</span>
 					<span class="x" :class="{ warn: g.note?.expired, soon: g.note?.soon }">{{ g.note?.text ?? 'no date' }}</span>
+					<span v-if="lateIn(g.rolls).length && !g.note?.expired" class="x warn">{{ lateIn(g.rolls).length }} won’t keep</span>
 				</button>
 			</div>
 			<div class="board" aria-hidden="true"></div>
@@ -45,6 +47,7 @@
 							<p class="lab-meta">
 								{{ [g.stock.iso ? `ISO ${g.stock.iso}` : null, g.stock.process, g.stock.format].filter(Boolean).join(' · ') }}
 							</p>
+							<p v-if="forecastText(g.stock.id)" class="lab-meta forecast">{{ forecastText(g.stock.id) }}</p>
 						</div>
 						<form class="move" @submit.prevent="moveGroup(g.rolls.map((r) => r.id))">
 							<input :id="`move-${g.key}`" v-model="moveTo" class="lab-input" type="text" maxlength="60" list="fridge-spots" placeholder="Move all to…" aria-label="Move all of these to" />
@@ -58,6 +61,7 @@
 								<span class="lab-mono">
 									{{ expiryNote(r.expires, today)?.text ?? 'no expiry date' }}
 									<span v-if="r.rewoundAtFrame" class="lab-chip lab-chip--warn">partly shot · to frame {{ r.rewoundAtFrame }}</span>
+									<span v-if="isLate(r) && !expiryNote(r.expires, today)?.expired" class="lab-chip lab-chip--warn" title="At the rate you load this film, you'd reach this roll after its date">expires before you’ll get to it</span>
 								</span>
 								<span class="lab-meta">{{ [r.priceCents != null ? formatMoney(r.priceCents) : null, r.purchasedFrom, r.purchasedOn ? formatDay(r.purchasedOn) : null].filter(Boolean).join(' · ') }}</span>
 							</div>
@@ -149,6 +153,7 @@ import { computed, ref } from 'vue';
 
 import { run, upsert } from '../../lib/lab/client';
 import { expiryNote, formatDay, formatMoney, type RollView, type StepChoices, type StockView } from '../../lib/lab/inventory';
+import { formatMonths, type StockForecast } from '../../lib/lab/pace';
 import { canisterColors } from '../film/canister';
 import FilmCanister from '../film/FilmCanister.vue';
 import AddRollsForm from './AddRollsForm.vue';
@@ -164,7 +169,19 @@ const props = defineProps<{
 	shops: string[];
 	deskNames: string[];
 	today: string;
+	forecast?: { byStock: Record<string, StockForecast>; perMonth: number; monthsOfFilm: number | null };
 }>();
+
+const late = computed(() => new Set(Object.values(props.forecast?.byStock ?? {}).flatMap((f) => f.late)));
+const isLate = (r: RollView) => late.value.has(r.id);
+const lateIn = (rolls: RollView[]) => rolls.filter(isLate);
+function forecastText(stockId: string): string {
+	const f = props.forecast?.byStock[stockId];
+	if (!f) return '';
+	if (!f.perMonth) return 'Not loaded in the last six months.';
+	const rate = f.perMonth >= 0.95 ? `about ${Math.round(f.perMonth)} a month` : `about one every ${Math.round(1 / f.perMonth)} months`;
+	return `You load ${rate}: ${f.monthsLeft != null ? `these last about ${formatMonths(f.monthsLeft)}` : ''}${f.late.length ? `, but ${f.late.length} will pass ${f.late.length === 1 ? 'its' : 'their'} date first` : ''}.`;
+}
 
 const storage = ref<RollView[]>([...props.storage]);
 const deskNames = ref<string[]>([...props.deskNames]);

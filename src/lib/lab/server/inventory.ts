@@ -19,7 +19,7 @@ import type {
 	StockView,
 } from '../inventory';
 import type { LabDb } from './db/client';
-import { camera, filmStock, frame, lab, lens, roll, rollEvent, serviceLog } from './db/schema';
+import { camera, filmStock, frame, lab, labSetting, lens, roll, rollEvent, serviceLog } from './db/schema';
 
 /* ---------- rolls ---------- */
 
@@ -176,6 +176,12 @@ export async function frameDigest(d: LabDb, userId: string): Promise<[number | n
 }
 
 /* ---------- catalogue ---------- */
+
+/** Someone's lab settings (defaults until they change one). */
+export async function labSettings(d: LabDb, userId: string): Promise<{ shareLoaded: boolean }> {
+	const [row] = await d.select({ shareLoaded: labSetting.shareLoaded }).from(labSetting).where(eq(labSetting.userId, userId));
+	return { shareLoaded: row?.shareLoaded ?? false };
+}
 
 export async function listStocks(d: LabDb, userId: string): Promise<StockView[]> {
 	const rows = await d.select().from(filmStock).where(eq(filmStock.userId, userId)).orderBy(asc(filmStock.brand), asc(filmStock.name));

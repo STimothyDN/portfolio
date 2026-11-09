@@ -1,6 +1,7 @@
 ---
 import LabLayout from '../../../../components/lab/LabLayout.astro';
 import RollsList from '../../../../components/lab/RollsList.vue';
+import RollsTabs from '../../../../components/lab/RollsTabs.astro';
 import { todayInDurham } from '../../../../lib/lab/inventory';
 import { labConfig } from '../../../../lib/lab/server/config';
 import { getDb } from '../../../../lib/lab/server/db/client';
@@ -46,8 +47,9 @@ const status = Astro.url.searchParams.get('status');
 					<div>
 						<span class="lab-edge">Rolls</span>
 						<h1 class="lab-title">The almanac</h1>
+						<p class="lab-edge-print">Every roll you’ve logged, charted · tap any chart to filter the list</p>
 					</div>
-					<p class="lab-edge-print">Every roll you’ve logged, charted · tap any chart to filter the list</p>
+					<RollsTabs current="rolls" />
 				</section>
 				<RollsList
 					client:load

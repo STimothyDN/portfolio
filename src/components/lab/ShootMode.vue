@@ -45,6 +45,21 @@
 
 			<p v-if="rewindHint" class="hint">{{ rewindHint }}</p>
 
+			<!-- Light: a Sunny 16 meter from the sky, long exposures, zone focus, today's sun -->
+			<ShootLight
+				:iso="roll.shotAtIso ?? roll.stock.iso"
+				:stock="roll.stock"
+				:manual="camera?.kind !== 'point-and-shoot'"
+				:camera-kind="camera?.kind ?? null"
+				:apertures="aperturesFor(widest)"
+				:widest="widest"
+				:focal="focalForLight"
+				:aperture="aperture"
+				:shutter="shutter"
+				:coords="locOn && fix ? { lat: fix.lat, lng: fix.lng } : null"
+				@set="setFromLight"
+			/>
+
 			<!-- Exposure -->
 			<section class="exposure" aria-label="Exposure">
 				<template v-if="manual">
@@ -172,6 +187,7 @@ import {
 } from '../../lib/lab/inventory';
 import { flush, pending, queueCall, queueFrame } from '../../lib/lab/offline';
 import ShootDial from './ShootDial.vue';
+import ShootLight from './ShootLight.vue';
 
 interface CameraInfo {
 	name: string;
@@ -251,6 +267,18 @@ const lens = computed(() => props.lenses.find((l) => l.id === lensId.value) ?? n
 const isZoom = computed(() => !!lens.value?.focalMax && lens.value.focalMax !== lens.value.focalMin);
 const widest = computed(() => lens.value?.maxAperture ?? widestFromText(camera.value?.fixedLens));
 const lensMaxText = computed(() => (widest.value ? `widest ${formatAperture(widest.value)}` : ''));
+/** The focal length on the camera now, for zone focusing. */
+const focalForLight = computed(() => {
+	if (isZoom.value && typeof focal.value === 'number') return focal.value;
+	if (lens.value?.focalMin) return lens.value.focalMin;
+	const m = camera.value?.fixedLens?.match(/(\d+(?:\.\d+)?)\s*mm/i);
+	return m ? Number(m[1]) : null;
+});
+function setFromLight(a: number, s: string) {
+	manual.value = true;
+	aperture.value = a;
+	shutter.value = s;
+}
 const apertureOptions = computed(() => [
 	{ value: null, label: 'A' },
 	...aperturesFor(widest.value).map((a) => ({ value: a, label: formatAperture(a)!.slice(2) })),

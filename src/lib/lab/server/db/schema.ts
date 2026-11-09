@@ -402,5 +402,15 @@ export const publish = sqliteTable(
 	(t) => [index('publish_user_idx').on(t.userId)]
 );
 
+/** Per-person lab settings: one row each, made the first time one is changed. */
+export const labSetting = sqliteTable('lab_setting', {
+	userId: text('user_id')
+		.primaryKey()
+		.references(() => user.id, { onDelete: 'cascade' }),
+	/** Show what's loaded in each camera on the public film desk (owner only; at the next publish). */
+	shareLoaded: integer('share_loaded', { mode: 'boolean' }).notNull().default(false),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+});
+
 /** The tables Better Auth's adapter needs, keyed by its model names. */
 export const authSchema = { user, session, account, verification, passkey, rateLimit };

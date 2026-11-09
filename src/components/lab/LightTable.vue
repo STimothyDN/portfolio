@@ -12,6 +12,12 @@
 				<span class="lab-edge">{{ loaded.length ? `${loaded.length} loaded` : 'Nothing loaded' }}</span>
 				<button v-if="storage.length" type="button" class="lab-btn lab-btn--quiet push" @click="openLoad()">Load a roll</button>
 			</header>
+			<!-- The owner can show what's loaded on the public film desk (from the next publish). -->
+			<div v-if="share !== null" class="desk-share">
+				<button id="share-loaded" type="button" class="switch" role="switch" :aria-checked="share" :disabled="sharing" aria-labelledby="share-loaded-l" @click="toggleShare"></button>
+				<span id="share-loaded-l" class="lab-meta">Show what’s loaded on the film desk<template v-if="share && newestLoaded?.camera">: “In the {{ newestLoaded.camera.name }}: {{ newestLoaded.stock.name }}, {{ newestLoaded.frameCount }} of {{ newestLoaded.exposures }}”</template></span>
+				<PublishButton v-if="shareChanged" quiet />
+			</div>
 			<div v-if="loaded.length" class="loaded">
 				<article v-for="(r, ci) in loaded" :key="r.id" class="lcard" :style="{ '--ci': ci }">
 					<header class="lcard-head">
@@ -35,6 +41,8 @@
 					<div class="lcard-foot">
 						<span class="lab-meta">
 							<b class="count">{{ r.frameCount }}</b> / {{ r.exposures }} logged · loaded {{ formatDays(daysBetween(r.statusOn, today)) }}{{ daysBetween(r.statusOn, today) > 0 ? ' ago' : '' }}
+							<template v-if="paceOf(r)"><br /><span class="pace">{{ paceOf(r)!.rate }} · {{ paceOf(r)!.finish }}</span></template>
+							<template v-if="paceOf(r)?.nudge"><br /><span class="nudge">{{ paceOf(r)!.nudge }}</span></template>
 						</span>
 						<span class="lab-actions">
 							<a class="lab-btn lab-btn--quiet" :href="`/photography/lab/shoot/?roll=${r.code}`">Log frames</a>
@@ -175,6 +183,8 @@ import {
 	type StepChoices,
 } from '../../lib/lab/inventory';
 import type { LabStats } from '../../lib/lab/server/inventory';
+import { rollPace } from '../../lib/lab/pace';
+import PublishButton from './PublishButton.vue';
 import FilmCanister from '../film/FilmCanister.vue';
 import LabDialog from './LabDialog.vue';
 import RollTicket from './RollTicket.vue';
@@ -188,7 +198,28 @@ const props = defineProps<{
 	labStats: Record<string, LabStats>;
 	binderHints: string[];
 	today: string;
+	/** Whether the film desk shows what's loaded; null for anyone but the owner. */
+	shareLoaded?: boolean | null;
 }>();
+
+const paceOf = (r: RollView) => rollPace(r, props.today);
+
+const share = ref<boolean | null>(props.shareLoaded ?? null);
+const shareChanged = ref(false);
+const sharing = ref(false);
+async function toggleShare() {
+	if (share.value === null) return;
+	sharing.value = true;
+	try {
+		const r = await run(actions.lab.updateSettings({ shareLoaded: !share.value }));
+		share.value = r.shareLoaded;
+		shareChanged.value = true;
+	} catch (e) {
+		error.value = (e as Error).message;
+	} finally {
+		sharing.value = false;
+	}
+}
 
 const rolls = ref<RollView[]>([...props.rolls]);
 const lineEl = ref<HTMLElement | null>(null);
@@ -211,6 +242,8 @@ const byStage = computed(() => {
 	return map;
 });
 const loaded = computed(() => byStage.value.camera);
+/** The film desk lists the most recently loaded camera first. */
+const newestLoaded = computed(() => [...loaded.value].sort((a, b) => b.statusOn.localeCompare(a.statusOn))[0] ?? null);
 const storage = computed(() => byStage.value.storage);
 const counts = computed(() => ({ ...Object.fromEntries(STAGES.map((s) => [s, byStage.value[s].length])), negatives: negativesCount.value }) as Record<Stage, number>);
 const ticker = computed(() => [
@@ -366,6 +399,62 @@ function onDrop(e: DragEvent, stage: Stage) {
 
 .push {
 	margin-left: auto;
+}
+
+.desk-share {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.75rem;
+	margin-top: -0.25rem;
+}
+
+.desk-share .switch {
+	position: relative;
+	flex: none;
+	width: 2.4rem;
+	height: 1.4rem;
+	border: 0;
+	border-radius: 999px;
+	background: var(--gray-700);
+	cursor: pointer;
+}
+
+.desk-share .switch::after {
+	content: '';
+	position: absolute;
+	top: 0.2rem;
+	left: 0.2rem;
+	width: 1rem;
+	height: 1rem;
+	border-radius: 50%;
+	background: var(--gray-999);
+	transition: translate 0.15s ease;
+}
+
+.desk-share .switch[aria-checked='true'] {
+	background: var(--accent-regular);
+}
+
+.desk-share .switch[aria-checked='true']::after {
+	translate: 1rem 0;
+	background: var(--accent-text-over);
+}
+
+.desk-share .switch:focus-visible {
+	outline: 2px solid var(--accent-regular);
+	outline-offset: 2px;
+}
+
+.pace {
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	color: var(--lab-edge-text);
+}
+
+.nudge {
+	font-size: var(--text-sm);
+	color: var(--lab-warn);
 }
 
 .loaded {

@@ -14,25 +14,51 @@ import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { alignScans, publicExposure, type PublicExposure } from '../alignment';
 import { labConfig, type LabConfig } from './config';
 import { getDb } from './db/client';
-import { filmStock, frame, lens, roll, user } from './db/schema';
+import { filmStock, frame, labSetting, lens, roll, user } from './db/schema';
+import { rollViews } from './inventory';
 
 export type PublishedExposures = Map<string, Map<string, PublicExposure>>;
 
-export async function publishedExposures(desk: { id: string; files: string[] }[]): Promise<PublishedExposures> {
-	const empty: PublishedExposures = new Map();
+/** Reads the logbook at build time with a timeout; any failure gives `empty`. */
+async function guarded<T>(what: string, empty: T, fn: (config: LabConfig) => Promise<T>): Promise<T> {
 	if (import.meta.env.PROD && !process.env.VERCEL && process.env.FILM_LAB_BUILD_DATA !== '1') return empty;
 	const config = labConfig();
 	if (!config.ok) return empty;
 	try {
 		return await Promise.race([
-			read(config.config, desk),
+			fn(config.config),
 			new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timed out after 8 s')), 8000)),
 		]);
 	} catch (e) {
-		console.warn(`[film lab] Couldn't read what the logbook shares (${(e as Error).message}); building the film desk without it.`);
+		console.warn(`[film lab] Couldn't read ${what} (${(e as Error).message}); building the film desk without it.`);
 		return empty;
 	}
 }
+
+export const publishedExposures = (desk: { id: string; files: string[] }[]): Promise<PublishedExposures> =>
+	guarded('what the logbook shares', new Map(), (config) => read(config, desk));
+
+/** "In the Minolta X-700: Kodak Portra 400, 22 of 36", for each loaded camera. */
+export interface LoadedNow {
+	camera: string;
+	stock: string;
+	frames: number;
+	exposures: number;
+}
+
+/** What's in the owner's cameras, if they chose to show it on the desk. */
+export const publishedLoaded = (): Promise<LoadedNow[]> =>
+	guarded('what’s loaded', [], async (config) => {
+		const d = await getDb(config);
+		const [owner] = await d.select({ id: user.id }).from(user).where(eq(user.role, 'owner')).limit(1);
+		if (!owner) return [];
+		const [setting] = await d.select({ shareLoaded: labSetting.shareLoaded }).from(labSetting).where(eq(labSetting.userId, owner.id));
+		if (!setting?.shareLoaded) return [];
+		return (await rollViews(d, owner.id))
+			.filter((r) => r.status === 'camera' && r.camera)
+			.sort((a, b) => b.statusOn.localeCompare(a.statusOn))
+			.map((r) => ({ camera: r.camera!.name, stock: r.stock.name, frames: r.frameCount, exposures: r.exposures }));
+	});
 
 async function read(config: LabConfig, desk: { id: string; files: string[] }[]): Promise<PublishedExposures> {
 	const d = await getDb(config);

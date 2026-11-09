@@ -2,10 +2,11 @@
 import ImportDesk from '../../../components/lab/ImportDesk.vue';
 import LabLayout from '../../../components/lab/LabLayout.astro';
 import LightTable from '../../../components/lab/LightTable.vue';
-import { todayInDurham } from '../../../lib/lab/inventory';
+import { formatDay, todayInDurham } from '../../../lib/lab/inventory';
 import { labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
-import { labStats, rollViews, stepChoices } from '../../../lib/lab/server/inventory';
+import { labSettings, labStats, rollViews, stepChoices } from '../../../lib/lab/server/inventory';
+import { rewind } from '../../../lib/lab/server/rewind';
 import { listPasskeys } from '../../../lib/lab/server/plugin';
 
 export const prerender = false;
@@ -18,11 +19,12 @@ const data =
 	user && config.ok
 		? await (async () => {
 				const d = await getDb(config.config);
-				const [all, choices, stats, passkeys] = await Promise.all([
+				const [all, choices, stats, passkeys, settings] = await Promise.all([
 					rollViews(d, user.id),
 					stepChoices(d, user.id),
 					labStats(d, user.id),
 					listPasskeys(config.config, user.id),
+					labSettings(d, user.id),
 				]);
 				const negatives = all
 					.filter((r) => r.status === 'negatives')
@@ -35,6 +37,8 @@ const data =
 					stats,
 					passkeys: passkeys.length,
 					binderHints: [...new Set(all.map((r) => r.negativesAt).filter((v): v is string => !!v))].slice(0, 12),
+					shareLoaded: (user as { role?: string }).role === 'owner' ? settings.shareLoaded : null,
+					rewind: all.length ? await rewind(all, today) : null,
 				};
 			})()
 		: null;
@@ -81,7 +85,33 @@ const firstName = user?.name.split(/\s+/)[0] ?? '';
 					labStats={data.stats}
 					binderHints={data.binderHints}
 					today={today}
+					shareLoaded={data.shareLoaded}
 				/>
+
+				{data.rewind && (
+					<section class="lab-section rewind" aria-labelledby="rewind-h">
+						<header class="rewind-head">
+							<span class="lab-edge">Rewind · {data.rewind.when}</span>
+							<h2 id="rewind-h" class="lab-h2">{data.rewind.title}</h2>
+							<p class="lab-meta">
+								Developed {formatDay(data.rewind.developed)} · {data.rewind.count} scans
+								{data.rewind.code && (
+									<>
+										{' · '}
+										<a class="lab-code" href={`/photography/lab/rolls/${data.rewind.code}/`}>{data.rewind.code}</a>
+									</>
+								)}
+							</p>
+						</header>
+						<ul class="rewind-prints">
+							{data.rewind.scans.map((s, i) => (
+								<li style={`--i:${i}`}>
+									<img src={s.src} width={s.w} height={s.h} alt="" loading="lazy" decoding="async" />
+								</li>
+							))}
+						</ul>
+					</section>
+				)}
 			</>
 		)
 	}
@@ -104,5 +134,39 @@ const firstName = user?.name.split(/\s+/)[0] ?? '';
 
 	.lab-nudge p {
 		flex: 1 1 20rem;
+	}
+
+	/* A few prints from the archive, dropped on the table. */
+	.rewind {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.rewind-head {
+		display: grid;
+		gap: 0.35rem;
+	}
+
+	.rewind-prints {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+		gap: 1rem;
+		list-style: none;
+		padding: 0.5rem 0.25rem;
+	}
+
+	.rewind-prints li {
+		padding: 0.45rem 0.45rem 1.4rem;
+		background: oklch(98% 0.006 85);
+		box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 10px 24px -14px rgb(0 0 0 / 0.4);
+		rotate: calc((var(--i) - 1.5) * 1.6deg);
+	}
+
+	.rewind-prints img {
+		display: block;
+		width: 100%;
+		height: auto;
+		aspect-ratio: 3 / 2;
+		object-fit: cover;
 	}
 </style>

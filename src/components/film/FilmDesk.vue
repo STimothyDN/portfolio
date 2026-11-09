@@ -52,6 +52,11 @@
 				@toggle-open="rollsState = NEXT_ROLLS_STATE[rollsCurrent]"
 				@toggle="pickRoll"
 			/>
+			<p v-if="loadedLine.length" class="loaded-now">
+				<span class="rec" aria-hidden="true"></span>
+				<span class="sr-only">Loaded now: </span>
+				<span v-for="line in loadedLine" :key="line">{{ line }}</span>
+			</p>
 			<FilmFilterDock
 				class="film-dock"
 				:facets="FILTER_FACETS"
@@ -254,6 +259,7 @@ import '@fontsource/permanent-marker/400.css';
 
 import FilmCanister from './FilmCanister.vue';
 import FilmRollStrip from './FilmRollStrip.vue';
+import type { LoadedNow } from '../../lib/lab/server/published';
 import { bestSplit } from './canister';
 import { unpackFilmPhotos } from './data';
 import { negativeBaseVars, negativeFilter, negativeFilterId, type NegativeProfileKey } from './negative';
@@ -276,7 +282,11 @@ import type { FacetKey, FacetOption, FilmPhotoData, FilmRollData, RollsState } f
 
 // Every frame on every roll, packed into one string by the page (data.ts) —
 // static for the island's lifetime, so a plain array, not reactive state.
-const props = defineProps<{ rolls: FilmRollData[]; packedPhotos: string }>();
+const props = defineProps<{ rolls: FilmRollData[]; packedPhotos: string; loadedNow?: LoadedNow[] }>();
+/** "In the Minolta X-700: Kodak Portra 400, 22 of 36" (the Film Lab's, when its owner shows it). */
+const loadedLine = computed(() =>
+	(props.loadedNow ?? []).slice(0, 2).map((l) => `In the ${l.camera}: ${l.stock}${l.frames ? `, ${l.frames} of ${l.exposures}` : ''}`)
+);
 const photos: FilmPhotoData[] = unpackFilmPhotos(props.packedPhotos);
 
 /* ── Facets ─────────────────────────────────────────────────────────── */
@@ -1957,6 +1967,47 @@ onBeforeUnmount(() => {
 
 .film-bottom > * {
 	pointer-events: auto;
+}
+
+/* What's in the cameras now: a line of edge print over the dock. */
+.loaded-now {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 0.15rem 0.9rem;
+	max-width: calc(100% - 2rem);
+	margin: 0 auto 0.15rem;
+	padding: 0.25rem 0.8rem;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--gray-999) 72%, transparent);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	font-family: var(--font-mono, ui-monospace, monospace);
+	font-size: 0.66rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--gray-200);
+	pointer-events: none;
+}
+
+.loaded-now .rec {
+	width: 0.45rem;
+	height: 0.45rem;
+	border-radius: 50%;
+	background: oklch(58% 0.19 28);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.loaded-now .rec {
+		animation: rec 2.4s ease-in-out infinite;
+	}
+
+	@keyframes rec {
+		50% {
+			opacity: 0.35;
+		}
+	}
 }
 
 .film-bottom::before {

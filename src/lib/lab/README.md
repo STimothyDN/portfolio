@@ -5,15 +5,19 @@ inventory (phase 2: cameras, lenses, film stocks, labs, and every roll from the 
 the negative binder), shooting mode on the phone (phase 3: per-frame logging that works
 with no signal, QR roll labels, rewinding part-way), and the way back to the portfolio
 (phase 4: logged settings in the public film desk's lightbox, a Publish button, and
-`upload-film --roll`).
+`upload-film --roll`), and insight (phase 5: a light meter, reciprocity timer and zone
+focus on the phone; search across every frame; what your scans say about your cameras,
+film and labs; cost per frame; pace and restock forecasts; and a "loaded now" line on the
+film desk).
 
 ## The pages
 
 | Page | What it's for |
 | --- | --- |
-| **Light table** (`/photography/lab/`) | What's loaded in each camera, and "the line": six columns, one per stage. Drag a roll to its next stage on a laptop, or tap its → button. Every move records a date and has an Undo. |
-| **Rolls** | Every roll, filterable by stage and searchable. Each roll's page has its timeline (dates are editable), its details, and its scans on the public desk. |
-| **Fridge** | Unshot film, as canisters on shelves grouped by where they're kept ("Fridge door"). Oldest expiry first, with the usual rule of thumb for expired film. Below it, the film stock catalogue (ISO, process, format). |
+| **Light table** (`/photography/lab/`) | What's loaded in each camera, with its pace ("about 2 frames a day · done around Nov 17"), and "the line": six columns, one per stage. Drag a roll to its next stage on a laptop, or tap its → button. Every move records a date and has an Undo. At the bottom, **Rewind**: a roll developed about a year (or six, three, one months) ago today. |
+| **Rolls** | The almanac (charts that filter the list below them, cost per frame, days a roll spends in each camera) and every roll, filterable by stage and searchable. Each roll's page has its timeline (dates are editable), its details, and its scans on the public desk. |
+| **Frames** (`/photography/lab/frames/`, the Rolls page's second tab) | Every frame you've logged, as contact sheets with their scans, a search box and a map. Above it, what the scans say about how your negatives come back. See *Insight* below. |
+| **Fridge** | Unshot film, as canisters on shelves grouped by where they're kept ("Fridge door"). Oldest expiry first, with the usual rule of thumb for expired film, and how long each stock lasts at the rate you load it (flagging rolls that will pass their date first). Below it, the film stock catalogue (ISO, process, format). |
 | **Gear** | Cameras (mount or fixed lens, battery, service log) and lenses grouped by mount, with which cameras each fits. |
 | **Shoot** (`/photography/lab/shoot/`) | The phone screen for logging frames while you shoot. See below. |
 | **Labels** (`/photography/lab/labels/`) | Printable QR stickers for canisters and camera backs. The phone's own camera opens them: shooting mode if the roll is loaded, otherwise its page (`/photography/lab/r/R-031`). |
@@ -46,6 +50,26 @@ most recently; with more than one loaded, chips at the top switch between them.
 - **Safelight** (bulb icon): red on black, so your eyes stay used to the dark.
 - The screen stays on while shooting mode is open (where the browser allows it).
 
+**Light** (the bar under the counter; tap it open):
+
+- **Meter:** a Sunny 16 reading from the sun's height where you are (the observatory's
+  sun math, `src/scripts/sky/astro.ts`) and the weather (Open-Meteo, keyless; only a
+  position rounded to about a kilometre is sent, and a reading is reused for 15 minutes).
+  Or pick the light you see: bright sun to open shade, and a night table (neon, lit
+  streets, indoors, candlelight). It offers three settings that fit the lens and the
+  shutter dial (everyday, freeze motion, shallow or deep focus); tap one to set the dials.
+  It also says how the dials as set compare ("1 stop over, fine on negative film").
+  Point-and-shoots get "plenty of light" or "the flash may fire" instead.
+- **Long exposure:** metered time → time to expose, with each stock's reciprocity
+  (Ilford's published formulas; common estimates for the rest, labelled as such), and a
+  bulb timer that counts down with beeps and vibration, or counts up.
+- **Focus:** hyperfocal distance and sharp zones for the lens on the camera at the
+  aperture on the dial (35mm and 120 circles of confusion), in metres and feet.
+- **Sun:** today's blue hour, golden hours, sunrise and sunset, in your time zone.
+
+With no signal, the meter falls back to the last weather reading (up to 3 hours old), then
+to picking the light yourself.
+
 **No signal.** Everything you log goes into an outbox on the phone (IndexedDB) and syncs
 as soon as the server answers. The top corner says "Offline · 5 waiting" until then. The
 lab's pages are kept on the phone by a service worker (`public/photography/lab/sw.js`,
@@ -73,6 +97,34 @@ The rest of the site is unchanged and still fully prerendered. Only the lab's pa
 `/api/auth/*` run as a Vercel function (through `@astrojs/vercel`), so visitors never touch
 the database.
 
+## Insight
+
+The **Frames** page (`src/lib/lab/server/frames.ts`, `src/lib/lab/insight.ts`) starts
+with what the scans say. Every desk scan carries its measured tone (black point,
+log-average, white point, stored by the uploader). A thin negative scans with grey,
+raised blacks, so a high black point is the signal. Film and lab scanning raise blacks
+too, so the comparisons are made fairly:
+
+- A **camera** is compared with the same film shot in your other cameras. One that sits
+  0.025 or more higher (over at least 20 comparable scans) "comes back thin". If every
+  roll from it went to one lab, the finding says the lab may be part of it.
+- A **film** that scans flat everywhere is called out as the film's own character, with
+  the usual advice to rate it a stop slower.
+- A **lab** is compared with your other labs on the same film.
+- **Frames you logged** are compared with the rest of their own roll. When thin frames
+  cluster in one kind of light (bright, shade and overcast, dim, night), with one lens or
+  in one camera, it says so.
+
+Below the findings: the contact sheets (one per roll, unscanned frames tinted by the light
+they were exposed for), the search box, and a map of where frames were taken (OpenStreetMap
+tiles, greyed; the tile server sees which area you're looking at). Searches read settings,
+flags and dates as such: `f/1.7`, `1/500`, `flash`, `noted`, `scanned`, `thin`, `mapped`,
+`R-021`, `october`, `2026-10`. Every other word must appear on the frame (stock, camera,
+lens, roll title, note). The search stays in the address (`?q=`), so a roll's Frames table
+links straight to its contact sheet. At the bottom, a chart of light against density for
+logged frames, a "barcode" of every scan's tonal range per camera, and tables by film and
+by lab.
+
 ## On the portfolio
 
 Every roll that's on the public film desk has an **On the portfolio** card on its page.
@@ -93,6 +145,11 @@ or skip a blank. The strip on the roll's page shows the logged settings under ea
 ("5 of 5 logged frames line up") says how many logged frames land on a scan. For a
 one-off, like a blank skipped mid-roll, edit that frame in the Frames table and pin it to
 its scan. A pin wins over the shift.
+
+**Loaded now.** The owner can also show what's in each camera on the film desk ("In the
+Minolta X-700: Kodak Portra 400, 22 of 36", above the dock). The switch is on the light
+table, under "In the cameras". Like everything here, it goes live with the next publish,
+and the frame count is as of that publish.
 
 **Publishing.** The film desk is prerendered, so changes go live when the site rebuilds.
 Save the card, then press **Publish to portfolio**. It calls a Vercel deploy hook (see
@@ -233,6 +290,13 @@ Vercel if you like.
 | `src/lib/lab/alignment.ts`            | which frame each scan is, and what a frame shows publicly    |
 | `src/lib/lab/server/published.ts`     | the build-time read of what the film desk shows              |
 | `scripts/lib/logbook.mjs`             | the logbook lookups behind `upload-film --roll`              |
+| `src/lib/lab/light.ts`                | EV, Sunny 16 from the sky, dial settings, reciprocity, DoF, sun |
+| `src/lib/lab/sky-weather.ts`          | shooting mode's weather reading (Open-Meteo, cached)         |
+| `src/lib/lab/insight.ts`              | scan tone by camera, film and lab; thin frames by light      |
+| `src/lib/lab/frame-search.ts`         | the Frames search: query parsing and matching                |
+| `src/lib/lab/pace.ts`                 | a loaded roll's pace; how fast each stock leaves the fridge  |
+| `src/lib/lab/server/frames.ts`        | the Frames page's data (frames, their scans, desk tone)      |
+| `src/lib/lab/server/rewind.ts`        | the light table's Rewind pick                                |
 | `public/photography/lab/`             | service worker, web app manifest, icons                      |
 
 ## Changing the schema

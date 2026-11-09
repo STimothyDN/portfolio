@@ -12,7 +12,7 @@ import labels from '../data/film-labels.json';
 import { nextCode, STAGES, type RollStatus } from '../lib/lab/inventory';
 import { labConfig } from '../lib/lab/server/config';
 import { getDb, type LabDb } from '../lib/lab/server/db/client';
-import { camera, filmStock, frame, lab, lens, publish, roll, rollEvent, serviceLog } from '../lib/lab/server/db/schema';
+import { camera, filmStock, frame, lab, labSetting, lens, publish, roll, rollEvent, serviceLog } from '../lib/lab/server/db/schema';
 import {
 	deskRolls,
 	guessCamera,
@@ -499,6 +499,23 @@ export const server = {
 		 * Rebuild the public site so it picks up what the lab now shares, via
 		 * the Vercel deploy hook. Owner only, at most once a minute.
 		 */
+		/** Lab-wide settings. Showing what's loaded on the film desk is the owner's (their portfolio). */
+		updateSettings: defineAction({
+			input: z.object({ shareLoaded: z.boolean() }),
+			handler: async ({ shareLoaded }, context) => {
+				const { d, userId } = await session(context);
+				if ((context.locals.user as { role?: string } | null)?.role !== 'owner') {
+					throw new ActionError({ code: 'FORBIDDEN', message: 'Only the owner’s cameras show on the portfolio.' });
+				}
+				const updatedAt = new Date();
+				await d
+					.insert(labSetting)
+					.values({ userId, shareLoaded, updatedAt })
+					.onConflictDoUpdate({ target: labSetting.userId, set: { shareLoaded, updatedAt } });
+				return { shareLoaded };
+			},
+		}),
+
 		publishSite: defineAction({
 			handler: async (_input, context) => {
 				const { d, userId } = await session(context);

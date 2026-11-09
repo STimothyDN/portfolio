@@ -1,0 +1,54 @@
+---
+/** Switches between the two views of the logbook: rolls (the almanac) and frames. */
+interface Props {
+	current: 'rolls' | 'frames';
+}
+const { current } = Astro.props;
+const tabs = [
+	{ key: 'rolls', label: 'Rolls', href: '/photography/lab/rolls/' },
+	{ key: 'frames', label: 'Frames', href: '/photography/lab/frames/' },
+];
+---
+
+<nav class="rolls-tabs" aria-label="Logbook views">
+	{
+		tabs.map((t) => (
+			<a href={t.href} aria-current={t.key === current ? 'page' : undefined}>
+				{t.label}
+			</a>
+		))
+	}
+</nav>
+
+<style>
+	.rolls-tabs {
+		display: inline-flex;
+		gap: 0.2rem;
+		padding: 0.2rem;
+		border: 1px solid var(--gray-800);
+		border-radius: 999px;
+	}
+
+	a {
+		min-width: 5.5rem;
+		padding: 0.45rem 1rem;
+		border-radius: 999px;
+		color: var(--gray-200);
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		text-align: center;
+		text-decoration: none;
+	}
+
+	a[aria-current='page'] {
+		background: var(--gray-0);
+		color: var(--gray-999);
+	}
+
+	a:focus-visible {
+		outline: 2px solid var(--accent-regular);
+		outline-offset: 2px;
+	}
+</style>
