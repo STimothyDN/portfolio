@@ -14,6 +14,7 @@
 			The fridge is empty. Add the film you have on hand, and each roll gets a code to write on its canister.
 		</p>
 
+		<div v-if="shelves.length || wishlist.length" class="interior">
 		<section v-for="shelf in shelves" :key="shelf.spot" class="shelf-wrap" :aria-label="shelf.spot">
 			<h2 class="shelf-label">{{ shelf.spot }} <span>{{ shelf.count }}</span></h2>
 			<div class="shelf">
@@ -79,6 +80,8 @@
 			</div>
 			<div class="board" aria-hidden="true"></div>
 		</section>
+
+		</div>
 
 		<datalist id="fridge-spots">
 			<option v-for="s in spots" :key="s" :value="s" />
@@ -289,6 +292,27 @@ async function moveGroup(ids: string[]) {
 	gap: 0.75rem 1.5rem;
 }
 
+/* Inside the fridge: cool light from the top, frosted glass shelves. */
+.interior {
+	display: grid;
+	gap: 1.75rem;
+	padding: 1.4rem clamp(0.8rem, 2.5vw, 1.6rem) 0.9rem;
+	border-radius: 1rem;
+	background: linear-gradient(180deg, oklch(96.5% 0.014 230) 0%, oklch(98.8% 0.005 230) 45%, var(--gray-999) 100%);
+	box-shadow:
+		inset 0 0 0 1px oklch(90% 0.016 230),
+		inset 0 22px 36px -26px oklch(68% 0.06 230 / 0.55);
+}
+
+:root.theme-dark .interior {
+	background:
+		radial-gradient(70% 45% at 50% 0%, oklch(36% 0.04 235 / 0.9), transparent 70%),
+		linear-gradient(180deg, oklch(20% 0.02 240), oklch(13% 0.008 240));
+	box-shadow:
+		inset 0 0 0 1px oklch(30% 0.03 235),
+		0 0 50px -30px oklch(70% 0.08 230 / 0.5);
+}
+
 .shelf-wrap {
 	display: grid;
 }
@@ -319,13 +343,22 @@ async function moveGroup(ids: string[]) {
 	padding: 1rem 0.5rem 0;
 }
 
-/* The shelf board the canisters stand on. */
+/* The shelf the canisters stand on: frosted glass with a lit front edge. */
 .board {
 	height: 0.55rem;
 	margin-top: 0.15rem;
 	border-radius: 2px;
-	background: linear-gradient(var(--gray-700), var(--gray-800));
-	box-shadow: 0 6px 12px -8px rgb(0 0 0 / 0.35);
+	background: linear-gradient(180deg, oklch(100% 0 0 / 0.7), oklch(86% 0.02 230 / 0.7));
+	box-shadow:
+		inset 0 -1px 0 oklch(70% 0.03 230 / 0.6),
+		0 8px 14px -10px oklch(40% 0.04 230 / 0.5);
+}
+
+:root.theme-dark .board {
+	background: linear-gradient(180deg, oklch(60% 0.03 230 / 0.55), oklch(32% 0.03 235 / 0.6));
+	box-shadow:
+		inset 0 1px 0 oklch(80% 0.04 230 / 0.5),
+		0 8px 14px -10px rgb(0 0 0 / 0.7);
 }
 
 .slot {
@@ -341,9 +374,23 @@ async function moveGroup(ids: string[]) {
 	cursor: pointer;
 }
 
-.slot:hover,
+.slot .can {
+	transition:
+		translate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+		filter 0.3s ease;
+}
+
+/* Picked up off the shelf. */
+.slot:hover .can,
+.slot:focus-visible .can,
+.slot[aria-expanded='true'] .can {
+	translate: 0 -0.45rem;
+	filter: drop-shadow(0 10px 8px rgb(0 0 0 / 0.25));
+}
+
 .slot[aria-expanded='true'] {
-	background: var(--gray-900);
+	background: color-mix(in oklch, var(--gray-999) 60%, transparent);
+	box-shadow: inset 0 0 0 1px var(--gray-700);
 }
 
 .slot:focus-visible {

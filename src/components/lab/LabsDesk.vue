@@ -11,7 +11,11 @@
 				</div>
 			</header>
 			<p v-if="!shot.length" class="lab-empty">Nothing waiting. Finished rolls land here.</p>
-			<template v-else>
+			<div v-else class="envelope">
+				<div class="env-print" aria-hidden="true">
+					<span>Film for development</span>
+					<span class="stamp">{{ picked.length }}<small>{{ picked.length === 1 ? 'roll' : 'rolls' }}</small></span>
+				</div>
 				<ul class="lab-rows">
 					<li v-for="r in shot" :key="r.id">
 						<input :id="`send-${r.id}`" v-model="picked" type="checkbox" class="pick" :value="r.id" />
@@ -40,7 +44,7 @@
 						<button type="button" class="lab-btn lab-btn--quiet" :disabled="!picked.length" @click="print">Print a slip</button>
 					</div>
 				</form>
-			</template>
+			</div>
 			<p v-if="sendError" class="lab-error" role="alert">{{ sendError }}</p>
 		</section>
 
@@ -53,6 +57,9 @@
 					<span class="lab-grow">
 						<span>{{ r.stock.name }}</span>
 						<span class="lab-meta">{{ [r.lab?.name, r.labOrder ? `#${r.labOrder}` : null].filter(Boolean).join(' · ') }}</span>
+					</span>
+					<span class="timer" :class="{ late: late(r) }" :title="usual(r) != null ? `Usually ${usual(r)} days` : 'No usual time yet'">
+						<i :style="{ width: `${Math.min(100, (daysBetween(r.statusOn, today) / Math.max(1, usual(r) ?? 14)) * 100)}%` }"></i>
 					</span>
 					<span class="lab-chip" :class="{ 'lab-chip--warn': late(r) }">
 						{{ formatDays(daysBetween(r.statusOn, today)) }}<template v-if="usual(r) != null"> · usually {{ usual(r) }}</template>
@@ -255,6 +262,164 @@ async function deleteLab() {
 .sec-head > div {
 	display: grid;
 	gap: 0.3rem;
+}
+
+/* ---------- the lab envelope ---------- */
+.envelope {
+	--kraft: oklch(84% 0.055 78);
+	--kraft-flap: oklch(78% 0.06 74);
+	--kraft-ink: oklch(27% 0.03 55);
+	--kraft-soft: oklch(38% 0.035 58);
+	--kraft-line: oklch(66% 0.06 70);
+	position: relative;
+	display: grid;
+	gap: 0.75rem;
+	padding: 3.2rem clamp(1rem, 3vw, 1.75rem) 1.5rem;
+	border-radius: 0.35rem;
+	background:
+		radial-gradient(120% 80% at 30% 20%, rgb(255 255 255 / 0.18), transparent 60%),
+		repeating-linear-gradient(115deg, rgb(0 0 0 / 0.025) 0 2px, transparent 2px 5px),
+		var(--kraft);
+	color: var(--kraft-ink);
+	box-shadow:
+		0 1px 0 rgb(255 255 255 / 0.3) inset,
+		0 18px 30px -22px rgb(0 0 0 / 0.55);
+}
+
+:root.theme-dark .envelope {
+	--kraft: oklch(33% 0.04 62);
+	--kraft-flap: oklch(29% 0.04 60);
+	--kraft-ink: oklch(93% 0.02 80);
+	--kraft-soft: oklch(80% 0.03 75);
+	--kraft-line: oklch(47% 0.045 65);
+}
+
+/* The flap, folded down over the top. */
+.envelope::before {
+	content: '';
+	position: absolute;
+	inset: 0 0 auto;
+	height: 2.4rem;
+	border-radius: 0.35rem 0.35rem 0 0;
+	background: var(--kraft-flap);
+	clip-path: polygon(0 0, 100% 0, 100% 15%, 50% 100%, 0 15%);
+	filter: drop-shadow(0 2px 1px rgb(0 0 0 / 0.15));
+}
+
+.env-print {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding-bottom: 0.6rem;
+	border-bottom: 1.5px dashed var(--kraft-line);
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+}
+
+/* A rubber stamp with the roll count. */
+.stamp {
+	display: grid;
+	place-items: center;
+	width: 3.2rem;
+	height: 3.2rem;
+	border: 2px solid oklch(52% 0.17 28 / 0.75);
+	border-radius: 50%;
+	color: oklch(52% 0.17 28 / 0.85);
+	font-size: 1.1rem;
+	font-weight: 600;
+	letter-spacing: 0;
+	line-height: 1;
+	rotate: -12deg;
+}
+
+.stamp small {
+	font-size: 0.5rem;
+	letter-spacing: 0.12em;
+}
+
+.envelope .lab-rows > li {
+	border-bottom: 1px solid var(--kraft-line);
+}
+
+.envelope .lab-meta {
+	color: var(--kraft-soft);
+}
+
+.envelope .lab-code {
+	color: var(--kraft-ink);
+}
+
+.envelope .batch {
+	padding: 0.5rem 0 0;
+	background: none;
+}
+
+.envelope .lab-field > span {
+	color: var(--kraft-soft);
+}
+
+/* Fields as lines on a printed form. */
+.envelope .lab-input {
+	min-height: 2.5rem;
+	padding-inline: 0.15rem;
+	border: 0;
+	border-bottom: 1.5px solid var(--kraft-ink);
+	border-radius: 0;
+	background: transparent;
+	color: var(--kraft-ink);
+}
+
+.envelope .lab-select {
+	padding-right: 2rem;
+	background-image:
+		linear-gradient(45deg, transparent 50%, var(--kraft-ink) 50%),
+		linear-gradient(135deg, var(--kraft-ink) 50%, transparent 50%);
+	background-position:
+		calc(100% - 0.9rem) 55%,
+		calc(100% - 0.55rem) 55%;
+	background-size: 0.35rem 0.35rem;
+	background-repeat: no-repeat;
+}
+
+.envelope .lab-btn--quiet {
+	color: var(--kraft-ink);
+	border-color: var(--kraft-ink);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.envelope .stamp {
+		animation: stamp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both 0.5s;
+	}
+
+	@keyframes stamp {
+		from {
+			scale: 1.6;
+			opacity: 0;
+		}
+	}
+}
+
+/* At the lab: a developing timer filling toward the lab's usual turnaround. */
+.timer {
+	width: 5rem;
+	height: 0.35rem;
+	border-radius: 999px;
+	background: var(--gray-800);
+	overflow: hidden;
+}
+
+.timer i {
+	display: block;
+	height: 100%;
+	background: var(--lab-ok);
+	border-radius: inherit;
+}
+
+.timer.late i {
+	background: var(--lab-warn);
 }
 
 .pick {

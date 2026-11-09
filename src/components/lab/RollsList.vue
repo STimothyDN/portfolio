@@ -1,6 +1,17 @@
 <template>
 	<div class="rolls">
-		<div class="toolbar">
+		<RollsAlmanac
+			v-if="rolls.length"
+			:rolls="rolls"
+			:milestones="milestones"
+			:frames="frames"
+			:desk-counts="deskCounts"
+			:today="today"
+			:active="facet"
+			@filter="setFacet"
+		/>
+
+		<div ref="toolbarEl" class="toolbar">
 			<div class="filters" role="group" aria-label="Show rolls">
 				<button
 					v-for="f in filters"
@@ -23,7 +34,12 @@
 			</div>
 		</div>
 
-		<ul v-if="shown.length" class="list">
+		<p v-if="facet" class="facet" role="status">
+			<span>Showing <b>{{ facet.label }}</b> · {{ shown.length }} {{ shown.length === 1 ? 'roll' : 'rolls' }}</span>
+			<button type="button" class="lab-link" @click="facet = null">Show all</button>
+		</p>
+
+		<TransitionGroup v-if="shown.length" tag="ul" name="row" class="list">
 			<li v-for="r in shown" :key="r.id">
 				<a class="row" :href="`/photography/lab/rolls/${r.code}/`">
 					<span class="can" :style="{ '--can-h': '46px' }">
@@ -37,12 +53,20 @@
 						<span class="sub">{{ [r.title ? r.stock.name : null, r.camera?.name, r.lab?.name].filter(Boolean).join(' · ') }}</span>
 					</span>
 					<span class="state">
-						<span class="lab-chip" :class="{ 'lab-chip--warn': r.status === 'lost' }">{{ STATUS_LABEL[r.status] }}</span>
-						<span class="sub">{{ formatDay(r.statusOn) }}</span>
+						<span class="meter" :class="{ lost: r.status === 'lost' }" :aria-label="`${STATUS_LABEL[r.status]}, ${formatDay(r.statusOn)}`">
+							<i v-for="(st, k) in STAGES" :key="st" :class="{ on: k <= stageIndex(r) }" :title="STATUS_LABEL[st]"></i>
+						</span>
+						<span class="state-text">
+							<span class="st">{{ STATUS_LABEL[r.status] }}</span>
+							<span class="sub">{{ formatDay(r.statusOn) }}</span>
+						</span>
+						<span v-if="r.publicRollId || r.frameCount" class="badge">
+							{{ r.publicRollId && deskCounts[r.publicRollId] ? `${deskCounts[r.publicRollId]} scans` : `${r.frameCount} frames` }}
+						</span>
 					</span>
 				</a>
 			</li>
-		</ul>
+		</TransitionGroup>
 		<p v-else class="lab-empty">
 			{{ rolls.length ? 'No rolls match.' : 'No rolls yet. Add the film in your fridge to get started.' }}
 		</p>
@@ -62,13 +86,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
+import { matchesFacet, type Facet, type FrameDigest, type Milestones } from '../../lib/lab/almanac';
 import { formatDay, STAGES, STATUS_LABEL, type RollStatus, type RollView, type StockView } from '../../lib/lab/inventory';
 import FilmCanister from '../film/FilmCanister.vue';
 import AddRollsForm from './AddRollsForm.vue';
 import ImportDesk from './ImportDesk.vue';
 import LabDialog from './LabDialog.vue';
+import RollsAlmanac from './RollsAlmanac.vue';
 
 const props = defineProps<{
 	rolls: RollView[];
@@ -78,7 +104,25 @@ const props = defineProps<{
 	today: string;
 	importable: number;
 	initialStatus: string | null;
+	milestones: Milestones;
+	frames: FrameDigest[];
+	deskCounts: Record<string, number>;
 }>();
+
+const facet = ref<Facet | null>(null);
+const toolbarEl = ref<HTMLElement | null>(null);
+const stageIndex = (r: RollView) => (r.status === 'lost' ? -1 : STAGES.indexOf(r.status));
+
+/** A chart picked something: filter the list and bring it into view if it's off screen. */
+async function setFacet(f: Facet | null) {
+	facet.value = f;
+	if (f) status.value = 'all';
+	await nextTick();
+	const el = toolbarEl.value;
+	if (f && el && el.getBoundingClientRect().top > innerHeight * 0.85) {
+		el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+	}
+}
 
 const rolls = ref<RollView[]>([...props.rolls]);
 const stockList = ref<StockView[]>([...props.stocks]);
@@ -101,6 +145,7 @@ const shown = computed(() => {
 	const q = query.value.trim().toLowerCase();
 	return rolls.value
 		.filter((r) => status.value === 'all' || r.status === status.value)
+		.filter((r) => matchesFacet(r, facet.value, props.milestones))
 		.filter(
 			(r) =>
 				!q ||
@@ -240,23 +285,126 @@ function added(newRolls: RollView[], stock: StockView | null) {
 }
 
 .state {
-	display: grid;
-	justify-items: end;
-	gap: 0.25rem;
+	display: flex;
+	align-items: center;
+	gap: 0.9rem;
 }
 
-@media (max-width: 36em) {
+/* Six segments: how far along the line this roll is. */
+.meter {
+	display: flex;
+	gap: 2px;
+}
+
+.meter i {
+	width: 0.7rem;
+	height: 0.32rem;
+	border-radius: 1px;
+	background: var(--gray-800);
+}
+
+.meter i.on {
+	background: var(--lab-edge-ink);
+}
+
+.meter.lost i {
+	background: repeating-linear-gradient(45deg, var(--lab-warn) 0 2px, transparent 2px 4px);
+	opacity: 0.6;
+}
+
+.state-text {
+	display: grid;
+	justify-items: end;
+	gap: 0.1rem;
+	min-width: 7.5rem;
+}
+
+.st {
+	font-size: var(--text-sm);
+	color: var(--gray-0);
+}
+
+.badge {
+	min-width: 4.8rem;
+	padding: 0.15rem 0.5rem;
+	border-radius: 999px;
+	background: var(--gray-900);
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	color: var(--gray-200);
+	text-align: center;
+}
+
+.facet {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+	padding: 0.65rem 1rem;
+	border-radius: 0.6rem;
+	background: var(--lab-lit);
+	color: oklch(24% 0.01 60);
+	box-shadow: 0 0 22px -8px var(--lab-lit-glow);
+}
+
+.facet .lab-link {
+	color: inherit;
+}
+
+/* The list re-files itself: rows slide to their new places. */
+.row-move,
+.row-enter-active,
+.row-leave-active {
+	transition:
+		transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+		opacity 0.3s ease;
+}
+
+.row-enter-from,
+.row-leave-to {
+	opacity: 0;
+	transform: translateX(-12px);
+}
+
+.row-leave-active {
+	position: absolute;
+	width: 100%;
+}
+
+.list {
+	position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.row-move,
+	.row-enter-active,
+	.row-leave-active {
+		transition: none;
+	}
+}
+
+@media (max-width: 48em) {
 	.row {
 		grid-template-columns: auto minmax(0, 1fr);
 	}
 
 	.state {
 		grid-column: 2;
+		flex-wrap: wrap;
+		gap: 0.4rem 0.75rem;
+	}
+
+	.state-text {
 		justify-items: start;
+		min-width: 0;
 		grid-auto-flow: column;
-		justify-content: start;
-		align-items: center;
 		gap: 0.6rem;
+		align-items: baseline;
+	}
+
+	.badge {
+		min-width: 0;
 	}
 }
 

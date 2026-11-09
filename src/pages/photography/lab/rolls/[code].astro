@@ -7,6 +7,7 @@ import { labConfig } from '../../../../lib/lab/server/config';
 import { getDb } from '../../../../lib/lab/server/db/client';
 import {
 	deskRollPreview,
+	deskRollStrip,
 	listCameras,
 	listFrames,
 	listLenses,
@@ -29,7 +30,7 @@ const data =
 				const d = await getDb(config.config);
 				const found = await rollByCode(d, user.id, code);
 				if (!found) return null;
-				const [choices, stocks, cameras, all, preview, frames, lenses] = await Promise.all([
+				const [choices, stocks, cameras, all, preview, frames, lenses, strip] = await Promise.all([
 					stepChoices(d, user.id),
 					listStocks(d, user.id),
 					listCameras(d, user.id),
@@ -37,6 +38,7 @@ const data =
 					found.roll.publicRollId ? deskRollPreview(found.roll.publicRollId) : Promise.resolve(null),
 					listFrames(d, user.id, [found.roll.id]),
 					listLenses(d, user.id),
+					found.roll.publicRollId ? deskRollStrip(found.roll.publicRollId) : Promise.resolve(null),
 				]);
 				// Lenses that fit the roll's camera (plus any its frames already name).
 				const mount = cameras.find((c) => c.id === found.roll.camera?.id)?.mount?.trim().toLowerCase();
@@ -47,6 +49,17 @@ const data =
 					stocks,
 					cameras: cameras.map((c) => ({ id: c.id, name: c.name })),
 					frames,
+					strip: strip && {
+						profile: strip.profile,
+						scans: strip.scans.map((s) => ({
+							src: bunnyUrl(s.path, { width: 360, format: 'webp', quality: 70 }),
+							full: bunnyUrl(s.path, { width: 2400, quality: 85 }),
+							frame: s.frame,
+							w: s.w,
+							h: s.h,
+							exposure: s.exposure,
+						})),
+					},
 					lenses: lenses.filter((l) => used.has(l.id) || (mount && l.mount.trim().toLowerCase() === mount)),
 					binderHints: [...new Set(all.map((r) => r.negativesAt).filter((v): v is string => !!v))].slice(0, 12),
 					desk: preview && {
@@ -81,6 +94,8 @@ if (user && config.ok && !data) Astro.response.status = 404;
 				desk={data.desk}
 				binderHints={data.binderHints}
 				today={todayInDurham()}
+				strip={data.strip}
+				frames={data.frames.map((f) => ({ number: f.number, aperture: f.aperture, shutter: f.shutter, flash: f.flash }))}
 			/>
 			<RollFrames
 				client:load

@@ -29,11 +29,15 @@
 			<section class="counter" aria-label="Frame counter">
 				<button type="button" class="adj" aria-label="One frame back" @click="adjust(-1)">−</button>
 				<div class="window" aria-live="polite">
-					<div class="digits">
-						<span v-for="n in [next - 2, next - 1]" :key="`p${n}`" :class="{ far: n === next - 2 }">{{ n >= 0 ? n : '' }}</span>
-						<b>{{ next }}</b>
-						<span v-for="n in [next + 1, next + 2]" :key="`n${n}`" :class="{ far: n === next + 2 }">{{ n }}</span>
-					</div>
+					<!-- The counter rolls on like a mechanical one; logging a frame blinks the shutter. -->
+					<Transition :name="rollDir">
+						<div :key="next" class="digits">
+							<span v-for="n in [next - 2, next - 1]" :key="`p${n}`" :class="{ far: n === next - 2 }">{{ n >= 0 ? n : '' }}</span>
+							<b>{{ next }}</b>
+							<span v-for="n in [next + 1, next + 2]" :key="`n${n}`" :class="{ far: n === next + 2 }">{{ n }}</span>
+						</div>
+					</Transition>
+					<span v-if="shutterKey" :key="shutterKey" class="shutter" aria-hidden="true"></span>
 					<span class="of">{{ next > roll.exposures ? `past ${roll.exposures}: still going?` : `next frame · of ${roll.exposures}` }}</span>
 				</div>
 				<button type="button" class="adj" aria-label="Skip a frame" @click="adjust(1)">+</button>
@@ -214,7 +218,11 @@ const lastNumber = computed(() => frames.value.at(-1)?.number ?? 0);
 const isPending = (f: { clientId: string }) => local.value.has(f.clientId);
 
 const override = ref<number | null>(null);
+const shutterKey = ref(0);
+/** Up when the counter advances, down when it goes back (undo, −). */
+const rollDir = ref<'roll-up' | 'roll-down'>('roll-up');
 const next = computed(() => override.value ?? nextFrameNumber(frames.value, roll.value?.rewoundAtFrame ?? null));
+watch(next, (to, from) => (rollDir.value = to >= from ? 'roll-up' : 'roll-down'));
 function adjust(step: number) {
 	override.value = Math.max(0, next.value + step);
 }
@@ -353,6 +361,7 @@ async function logFrame() {
 	};
 	override.value = null;
 	note.value = '';
+	shutterKey.value++;
 	navigator.vibrate?.(12);
 	await put(f);
 	showToast(`Frame ${f.number} logged`, () => {
@@ -752,6 +761,10 @@ onBeforeUnmount(() => {
 	border-top: 8px solid var(--shoot-mark);
 }
 
+.window {
+	min-height: 6.4rem;
+}
+
 .digits {
 	display: flex;
 	align-items: baseline;
@@ -777,6 +790,79 @@ onBeforeUnmount(() => {
 	font-size: 3.4rem;
 	font-weight: 500;
 	line-height: 1;
+}
+
+/* Counter roll: the old row slides out as the new one slides in. */
+.roll-up-enter-active,
+.roll-up-leave-active,
+.roll-down-enter-active,
+.roll-down-leave-active {
+	transition:
+		translate 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+		opacity 0.28s ease;
+}
+
+.roll-up-leave-active,
+.roll-down-leave-active {
+	position: absolute;
+	top: 1.25rem;
+	left: 0;
+	right: 0;
+	justify-content: center;
+}
+
+.roll-up-enter-from,
+.roll-down-leave-to {
+	translate: 0 60%;
+	opacity: 0;
+}
+
+.roll-up-leave-to,
+.roll-down-enter-from {
+	translate: 0 -60%;
+	opacity: 0;
+}
+
+/* The shutter: an iris closing to a pinhole and opening again. */
+.shutter {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 170%;
+	aspect-ratio: 1;
+	translate: -50% -50%;
+	border-radius: 50%;
+	box-shadow: 0 0 0 40rem #000;
+	pointer-events: none;
+	animation: blink 0.34s cubic-bezier(0.5, 0, 0.3, 1) both;
+}
+
+@keyframes blink {
+	0% {
+		width: 170%;
+		opacity: 0;
+	}
+	40% {
+		width: 6%;
+		opacity: 1;
+	}
+	100% {
+		width: 170%;
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.roll-up-enter-active,
+	.roll-up-leave-active,
+	.roll-down-enter-active,
+	.roll-down-leave-active {
+		transition: none;
+	}
+
+	.shutter {
+		display: none;
+	}
 }
 
 .of {

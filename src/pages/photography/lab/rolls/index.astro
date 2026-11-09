@@ -4,7 +4,7 @@ import RollsList from '../../../../components/lab/RollsList.vue';
 import { todayInDurham } from '../../../../lib/lab/inventory';
 import { labConfig } from '../../../../lib/lab/server/config';
 import { getDb } from '../../../../lib/lab/server/db/client';
-import { listStocks, rollViews, stepChoices } from '../../../../lib/lab/server/inventory';
+import { deskRolls, frameDigest, listStocks, rollMilestones, rollViews, stepChoices } from '../../../../lib/lab/server/inventory';
 
 export const prerender = false;
 
@@ -14,10 +14,13 @@ const data =
 	user && config.ok
 		? await (async () => {
 				const d = await getDb(config.config);
-				const [rolls, stocks, choices] = await Promise.all([
+				const [rolls, stocks, choices, milestones, frames, desk] = await Promise.all([
 					rollViews(d, user.id),
 					listStocks(d, user.id),
 					stepChoices(d, user.id),
+					rollMilestones(d, user.id),
+					frameDigest(d, user.id),
+					deskRolls(),
 				]);
 				const unique = (vals: (string | null)[]) => [...new Set(vals.filter((v): v is string => !!v))].sort();
 				return {
@@ -26,6 +29,9 @@ const data =
 					spots: unique(rolls.map((r) => r.storageSpot)),
 					shops: unique(rolls.map((r) => r.purchasedFrom)),
 					importable: choices.deskRolls.length,
+					milestones,
+					frames,
+					deskCounts: Object.fromEntries(desk.map((r) => [r.id, r.count])),
 				};
 			})()
 		: null;
@@ -39,11 +45,9 @@ const status = Astro.url.searchParams.get('status');
 				<section class="lab-head">
 					<div>
 						<span class="lab-edge">Rolls</span>
-						<h1 class="lab-title">Every roll</h1>
+						<h1 class="lab-title">The almanac</h1>
 					</div>
-					<p class="lab-meta">
-						{data.rolls.length} in the logbook · {data.rolls.filter((r) => r.publicRollId).length} on the film desk
-					</p>
+					<p class="lab-edge-print">Every roll you’ve logged, charted · tap any chart to filter the list</p>
 				</section>
 				<RollsList
 					client:load
@@ -54,6 +58,9 @@ const status = Astro.url.searchParams.get('status');
 					today={todayInDurham()}
 					importable={data.rolls.length ? data.importable : 0}
 					initialStatus={status}
+					milestones={data.milestones}
+					frames={data.frames}
+					deskCounts={data.deskCounts}
 				/>
 			</>
 		)

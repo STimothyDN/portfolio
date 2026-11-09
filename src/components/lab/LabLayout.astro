@@ -23,13 +23,15 @@ const { title, door = false, shoot = false, current } = Astro.props;
 const { user, labConfigured } = Astro.locals;
 const config = labConfig();
 const missing = config.ok ? [] : config.missing;
+// Each tab is a frame on a strip of film; the page you're on is the lit one.
+// Icons are 24-unit line drawings (stroke only).
 const tabs = [
-	['home', 'Light table', '/photography/lab/'],
-	['shoot', 'Shoot', '/photography/lab/shoot/'],
-	['rolls', 'Rolls', '/photography/lab/rolls/'],
-	['fridge', 'Fridge', '/photography/lab/fridge/'],
-	['gear', 'Gear', '/photography/lab/gear/'],
-	['labs', 'Labs', '/photography/lab/labs/'],
+	['home', 'Light table', 'Table', '/photography/lab/', 'M3 5.5h18v13H3zM6.5 9h4.5v6H6.5zM13 9h4.5v6H13z'],
+	['shoot', 'Shoot', 'Shoot', '/photography/lab/shoot/', 'M3.5 8h3.5l2-2.5h6L17 8h3.5v11h-17zM12 16.5a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z'],
+	['rolls', 'Rolls', 'Rolls', '/photography/lab/rolls/', 'M8.5 3.5h5v2h-5zM7 5.5h8v15H7zM15 8.5h4v9h-4M7 10h8M7 16h8'],
+	['fridge', 'Fridge', 'Fridge', '/photography/lab/fridge/', 'M6 3h12v18H6zM6 10h12M9 5.5v2.5M9 12.5v3.5'],
+	['gear', 'Gear', 'Gear', '/photography/lab/gear/', 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM12 4v3.5M18.9 8 15.9 9.7'],
+	['labs', 'Labs', 'Labs', '/photography/lab/labs/', 'M8 3.5h8v3H8zM6.5 6.5h11v14h-11zM6.5 11h11M10 14.5h4'],
 ] as const;
 const initials = (user?.name ?? '')
 	.split(/\s+/)
@@ -75,24 +77,37 @@ const initials = (user?.name ?? '')
 						<a class="lab-wordmark" href="/photography/lab/">
 							Film Lab
 						</a>
-						<nav class="lab-tabs" aria-label="Film Lab">
-							{tabs.map(([key, label, href]) => (
-								<a href={href} aria-current={current === key ? 'page' : undefined}>
-									{label}
-								</a>
-							))}
-						</nav>
-						<a
-							class="lab-me"
-							href="/photography/lab/account/"
-							aria-current={current === 'account' ? 'page' : undefined}
-						>
+						<span class="lab-bar-print" aria-hidden="true">
+							Timo3 · Private · Safety film
+						</span>
+						<a class="lab-me" href="/photography/lab/account/" aria-current={current === 'account' ? 'page' : undefined}>
 							<span class="lab-me-label">Account</span>
 							<span class="lab-avatar" aria-hidden="true">
 								{initials || '·'}
 							</span>
 						</a>
 					</header>
+					{/* A strip of film: one frame per page, the current one lit like a light table. On phones it docks at the bottom. */}
+					<nav class="lab-strip-nav" aria-label="Film Lab" transition:name="lab-nav">
+						<ol class="lab-strip-frames">
+							{tabs.map(([key, label, short, href, icon], i) => (
+								<li>
+									<a href={href} aria-current={current === key ? 'page' : undefined}>
+										<span class="lab-strip-no" aria-hidden="true">
+											{i + 1} ▸ {i + 1}A
+										</span>
+										<svg viewBox="0 0 24 24" aria-hidden="true">
+											<path d={icon} />
+										</svg>
+										<span class="lab-strip-label">
+											<span class="long">{label}</span>
+											<span class="short">{short}</span>
+										</span>
+									</a>
+								</li>
+							))}
+						</ol>
+					</nav>
 					<main class="lab-main lab-wrap">
 						<slot />
 					</main>
@@ -113,10 +128,20 @@ const initials = (user?.name ?? '')
 <style is:global>
 	/* ---------- Film Lab: shared pieces (every class is lab- prefixed) ---------- */
 	.lab {
+		/* Film: the strips, frames and edge print every page borrows. */
 		--lab-film: oklch(23% 0.018 50);
 		--lab-film-frame: oklch(31% 0.02 50);
 		--lab-sprocket: oklch(90% 0.01 80);
 		--lab-edge-ink: oklch(74% 0.13 62);
+		/* Edge print set on paper: the same amber, dark enough to read. */
+		--lab-edge-text: oklch(50% 0.12 58);
+		/* A frame held up to a light table. */
+		--lab-lit: oklch(96.5% 0.03 85);
+		--lab-lit-glow: oklch(92% 0.08 85 / 0.55);
+		/* The light table itself: a warm, evenly lit panel with a faint grid. */
+		--lab-table: oklch(98.6% 0.012 85);
+		--lab-table-edge: oklch(91% 0.02 80);
+		--lab-table-grid: oklch(88% 0.02 80 / 0.35);
 		--lab-warn: oklch(52% 0.13 55);
 		--lab-ok: oklch(48% 0.1 150);
 		padding-bottom: 5rem;
@@ -124,6 +149,13 @@ const initials = (user?.name ?? '')
 
 	:root.theme-dark .lab {
 		--lab-sprocket: oklch(78% 0.01 80);
+		--lab-edge-text: oklch(76% 0.12 65);
+		--lab-lit: oklch(93% 0.035 85);
+		--lab-lit-glow: oklch(85% 0.1 80 / 0.45);
+		/* At night the table is dimmed, lit from below. */
+		--lab-table: oklch(19% 0.012 65);
+		--lab-table-edge: oklch(30% 0.02 70);
+		--lab-table-grid: oklch(40% 0.03 70 / 0.25);
 		--lab-warn: oklch(78% 0.13 70);
 		--lab-ok: oklch(76% 0.11 150);
 	}
@@ -146,10 +178,7 @@ const initials = (user?.name ?? '')
 		align-items: center;
 		gap: clamp(1rem, 3vw, 2rem);
 		margin-top: -1.5rem;
-		padding-bottom: 1rem;
-		/* A hairline that stops at the gutters, like the content. */
-		background: linear-gradient(var(--gray-800), var(--gray-800)) bottom / calc(100% - 2 * var(--lab-gutter)) 1px
-			no-repeat;
+		padding-bottom: 0.9rem;
 	}
 
 	.lab-wordmark {
@@ -163,19 +192,16 @@ const initials = (user?.name ?? '')
 		text-decoration: none;
 	}
 
-	.lab-tabs {
-		display: flex;
-		gap: 1.25rem;
-		min-width: 0;
-		overflow-x: auto;
-		scrollbar-width: none;
+	/* Edge print, like the text along a film's rebate. */
+	.lab-bar-print,
+	.lab-edge-print {
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--lab-edge-text);
 	}
 
-	.lab-tabs a {
-		white-space: nowrap;
-	}
-
-	.lab-tabs a,
 	.lab-me-label,
 	.lab-edge {
 		font-size: var(--text-sm);
@@ -183,15 +209,6 @@ const initials = (user?.name ?? '')
 		font-variant-caps: all-small-caps;
 		color: var(--gray-300);
 		text-decoration: none;
-	}
-
-	.lab-tabs a {
-		padding-block: 0.3rem;
-	}
-
-	.lab-tabs a[aria-current='page'] {
-		color: var(--gray-0);
-		box-shadow: inset 0 -1.5px 0 currentColor;
 	}
 
 	.lab-me {
@@ -222,22 +239,214 @@ const initials = (user?.name ?? '')
 		color: var(--accent-text-over);
 	}
 
+	/* ---------- the strip nav ---------- */
+	.lab-strip-nav {
+		--pitch: 1.05rem;
+		position: relative;
+		margin-inline: var(--lab-gutter, 1.5rem);
+		padding: 0.95rem 0.35rem;
+		border-radius: 3px;
+		background: var(--lab-film);
+		box-shadow: 0 10px 24px -18px rgb(0 0 0 / 0.6);
+	}
+
+	@media (min-width: 50em) {
+		.lab-strip-nav {
+			margin-inline: 5rem;
+		}
+	}
+
+	/* Sprocket holes, top and bottom. They wind on a few holes as a page opens. */
+	.lab-strip-nav::before,
+	.lab-strip-nav::after {
+		content: '';
+		position: absolute;
+		inset-inline: 0.45rem;
+		height: 0.42rem;
+		border-radius: 1px;
+		background: repeating-linear-gradient(90deg, var(--lab-sprocket) 0 0.55rem, transparent 0.55rem var(--pitch));
+		opacity: 0.85;
+	}
+
+	.lab-strip-nav::before {
+		top: 0.3rem;
+	}
+
+	.lab-strip-nav::after {
+		bottom: 0.3rem;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.lab-strip-nav::before,
+		.lab-strip-nav::after {
+			animation: lab-wind 0.7s cubic-bezier(0.33, 1, 0.68, 1) both;
+		}
+
+		@keyframes lab-wind {
+			from {
+				background-position-x: calc(var(--pitch) * -3);
+			}
+		}
+	}
+
+	.lab-strip-frames {
+		display: grid;
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		gap: 0.3rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.lab-strip-frames a {
+		position: relative;
+		display: grid;
+		align-content: center;
+		justify-items: start;
+		gap: 0.1rem;
+		min-height: 3.1rem;
+		padding: 0.45rem 0.75rem;
+		border-radius: 2px;
+		background: var(--lab-film-frame);
+		color: oklch(84% 0.012 75);
+		text-decoration: none;
+		transition:
+			background-color 0.25s ease,
+			color 0.25s ease;
+	}
+
+	.lab-strip-frames a:hover {
+		background: oklch(38% 0.022 55);
+		color: oklch(96% 0.006 85);
+	}
+
+	/* The page you're on: a frame held up to the light. */
+	.lab-strip-frames a[aria-current='page'] {
+		background: var(--lab-lit);
+		color: oklch(22% 0.01 60);
+		box-shadow:
+			0 0 0 1px oklch(100% 0 0 / 0.35) inset,
+			0 0 22px -4px var(--lab-lit-glow);
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.lab-strip-frames a[aria-current='page'] {
+			animation: lab-lamp 0.6s ease-out both;
+		}
+
+		@keyframes lab-lamp {
+			from {
+				background-color: var(--lab-film-frame);
+				color: oklch(84% 0.012 75);
+				box-shadow: none;
+			}
+		}
+	}
+
+	.lab-strip-frames a:focus-visible {
+		outline: 2px solid var(--lab-lit);
+		outline-offset: 2px;
+	}
+
+	.lab-strip-no {
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		letter-spacing: 0.12em;
+		color: var(--lab-edge-ink);
+	}
+
+	.lab-strip-frames a[aria-current='page'] .lab-strip-no {
+		color: oklch(46% 0.13 55);
+	}
+
+	.lab-strip-frames svg {
+		display: none;
+		width: 1.3rem;
+		height: 1.3rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.5;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	.lab-strip-label {
+		font-size: var(--text-sm);
+		letter-spacing: 0.08em;
+		font-variant-caps: all-small-caps;
+		white-space: nowrap;
+	}
+
+	.lab-strip-label .short {
+		display: none;
+	}
+
 	@media (max-width: 64em) {
-		.lab-me-label {
+		.lab-me-label,
+		.lab-bar-print {
 			display: none;
 		}
 	}
 
-	@media (max-width: 40em) {
-		.lab-bar {
-			flex-wrap: wrap;
-			row-gap: 0.5rem;
+	/* Phones: the strip docks along the bottom edge, icons over short labels. */
+	@media (max-width: 49.99em) {
+		.lab-strip-nav {
+			position: fixed;
+			z-index: 40;
+			inset: auto 0 0;
+			margin: 0;
+			padding: 0.75rem max(0.3rem, env(safe-area-inset-right, 0px)) calc(0.75rem + env(safe-area-inset-bottom, 0px))
+				max(0.3rem, env(safe-area-inset-left, 0px));
+			border-radius: 0;
+			box-shadow: 0 -12px 28px -20px rgb(0 0 0 / 0.7);
 		}
 
-		.lab-tabs {
-			order: 3;
-			flex-basis: 100%;
-			gap: 1.1rem;
+		.lab-strip-nav::before {
+			top: 0.22rem;
+		}
+
+		.lab-strip-nav::after {
+			bottom: calc(0.22rem + env(safe-area-inset-bottom, 0px));
+		}
+
+		.lab-strip-frames {
+			gap: 0.2rem;
+		}
+
+		.lab-strip-frames a {
+			justify-items: center;
+			min-height: 3.2rem;
+			padding: 0.3rem 0.1rem;
+		}
+
+		.lab-strip-no {
+			display: none;
+		}
+
+		.lab-strip-frames svg {
+			display: block;
+		}
+
+		.lab-strip-label {
+			font-size: 0.7rem;
+			letter-spacing: 0.04em;
+		}
+
+		.lab-strip-label .long {
+			display: none;
+		}
+
+		.lab-strip-label .short {
+			display: inline;
+		}
+
+		/* Room under the page (and the site footer) for the dock. */
+		.lab:has(> .lab-strip-nav) {
+			padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+		}
+
+		.content:has(.lab-strip-nav) > footer {
+			padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
 		}
 	}
 
@@ -245,6 +454,56 @@ const initials = (user?.name ?? '')
 		display: grid;
 		gap: clamp(2rem, 5vw, 3.5rem);
 		padding-top: clamp(1.75rem, 4vw, 3rem);
+	}
+
+	/* ---------- shared motion: page sections rise in, a beat apart ---------- */
+	@media (prefers-reduced-motion: no-preference) {
+		.lab-main > * {
+			animation: lab-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+		}
+
+		.lab-main > :nth-child(2) {
+			animation-delay: 0.06s;
+		}
+
+		.lab-main > :nth-child(3) {
+			animation-delay: 0.12s;
+		}
+
+		.lab-main > :nth-child(n + 4) {
+			animation-delay: 0.18s;
+		}
+
+		@keyframes lab-rise {
+			from {
+				opacity: 0.001;
+				translate: 0 14px;
+			}
+		}
+	}
+
+	/* A backlit panel: the light table and anything laid out on it. */
+	.lab-lightbox {
+		position: relative;
+		border: 1px solid var(--lab-table-edge);
+		border-radius: 0.75rem;
+		background:
+			linear-gradient(var(--lab-table-grid) 1px, transparent 1px) 0 0 / 100% 2rem,
+			linear-gradient(90deg, var(--lab-table-grid) 1px, transparent 1px) 0 0 / 2rem 100%,
+			radial-gradient(120% 90% at 50% 0%, color-mix(in oklch, var(--lab-table) 70%, white) 0%, var(--lab-table) 70%);
+		box-shadow:
+			inset 0 1px 0 color-mix(in oklch, white 60%, transparent),
+			0 18px 40px -30px rgb(0 0 0 / 0.45);
+	}
+
+	:root.theme-dark .lab-lightbox {
+		background:
+			linear-gradient(var(--lab-table-grid) 1px, transparent 1px) 0 0 / 100% 2rem,
+			linear-gradient(90deg, var(--lab-table-grid) 1px, transparent 1px) 0 0 / 2rem 100%,
+			radial-gradient(110% 80% at 50% 0%, oklch(26% 0.025 70) 0%, var(--lab-table) 70%);
+		box-shadow:
+			inset 0 1px 0 oklch(45% 0.04 75 / 0.6),
+			0 0 60px -30px oklch(80% 0.08 80 / 0.25);
 	}
 
 	.lab-door {
@@ -354,7 +613,6 @@ const initials = (user?.name ?? '')
 	.lab-btn:focus-visible,
 	.lab-link:focus-visible,
 	.lab-me:focus-visible,
-	.lab-tabs a:focus-visible,
 	.lab-wordmark:focus-visible {
 		outline: 2px solid var(--accent-regular);
 		outline-offset: 3px;

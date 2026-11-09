@@ -15,6 +15,15 @@
 			</div>
 		</header>
 
+		<RollStrip
+			:code="roll.code"
+			:stock-name="roll.stock.name"
+			:profile="strip?.profile ?? null"
+			:scans="strip?.scans ?? null"
+			:frames="frames"
+			:exposures="roll.exposures"
+		/>
+
 		<div class="grid">
 			<div class="col-main">
 				<!-- Timeline -->
@@ -67,9 +76,6 @@
 						<p>
 							On the film desk as <b>{{ desk.title }}</b>: {{ desk.count }} scans, developed {{ formatDay(desk.developed) }}.
 						</p>
-						<div class="thumbs">
-							<img v-for="s in desk.scans" :key="s.src" :src="s.src" :alt="`Frame ${s.frame}`" loading="lazy" decoding="async" :width="s.w" :height="s.h" />
-						</div>
 						<div class="lab-actions">
 							<a class="lab-btn lab-btn--quiet" href="/photography/">Open the film desk</a>
 							<button type="button" class="lab-btn lab-btn--quiet lab-btn--danger" :disabled="busy" @click="link(null)">Unlink</button>
@@ -197,7 +203,9 @@ import {
 } from '../../lib/lab/inventory';
 import FilmCanister from '../film/FilmCanister.vue';
 import LabDialog from './LabDialog.vue';
+import RollStrip from './RollStrip.vue';
 import StepForm from './StepForm.vue';
+import type { NegativeProfileKey } from '../film/negative';
 
 interface DeskPreview {
 	id: string;
@@ -216,6 +224,11 @@ const props = defineProps<{
 	desk: DeskPreview | null;
 	binderHints: string[];
 	today: string;
+	strip: {
+		profile: NegativeProfileKey;
+		scans: { src: string; full: string; frame: number; w?: number; h?: number; exposure: number }[];
+	} | null;
+	frames: { number: number; aperture: number | null; shutter: string | null; flash: boolean }[];
 }>();
 
 const roll = ref<RollView>(props.roll);

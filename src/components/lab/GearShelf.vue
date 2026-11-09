@@ -9,15 +9,23 @@
 				<button type="button" class="lab-btn lab-btn--quiet" @click="editCamera = 'new'">Add camera</button>
 			</header>
 			<div v-if="inUse.length" class="cards">
-				<button v-for="c in inUse" :key="c.id" type="button" class="card" @click="editCamera = c.id">
+				<button v-for="(c, ci) in inUse" :key="c.id" type="button" class="card" :style="{ '--ci': ci }" @click="editCamera = c.id">
+					<CameraGlyph :kind="c.kind" :mount="c.mount" :format="c.format" />
 					<span class="card-top">
 						<span class="card-name">{{ c.name }}</span>
 						<span v-if="c.status !== 'active'" class="lab-chip" :class="{ 'lab-chip--warn': c.status === 'repair' }">{{ GEAR_STATUS[c.status] }}</span>
 					</span>
 					<span class="spec">{{ [CAMERA_KINDS[c.kind] ?? c.kind, c.format].join(' · ') }}</span>
 					<span class="spec">{{ c.mount ? `${c.mount} mount` : c.fixedLens ? `Fixed ${c.fixedLens}` : 'Lens not recorded' }}</span>
-					<span class="spec">
-						{{ c.battery ? `${c.battery}` : 'Battery not recorded' }}<template v-if="c.batteryChangedOn"> · changed {{ formatDay(c.batteryChangedOn) }}</template>
+					<span class="spec batt-row">
+						<svg class="batt" :class="batteryLevel(c).tone" viewBox="0 0 22 10" aria-hidden="true">
+							<rect x="0.5" y="0.5" width="18" height="9" rx="1.5" />
+							<rect x="19" y="3" width="2.5" height="4" rx="0.5" class="nub" />
+							<rect x="2" y="2" :width="14.5 * batteryLevel(c).fill" height="6" rx="0.6" class="charge" />
+						</svg>
+						<span>
+							{{ c.battery ?? 'Battery not recorded' }}<template v-if="c.batteryChangedOn"> · changed {{ batteryLevel(c).age }}</template>
+						</span>
 					</span>
 					<span class="card-foot">
 						<span class="lab-meta">{{ usage[c.id]?.total ?? 0 }} {{ (usage[c.id]?.total ?? 0) === 1 ? 'roll' : 'rolls' }}</span>
@@ -56,6 +64,7 @@
 				</h3>
 				<ul class="lab-rows">
 					<li v-for="l in m.lenses" :key="l.id">
+						<LensGlyph :min="l.focalMin" :max="l.focalMax" :aperture="l.maxAperture" />
 						<div class="lab-grow">
 							<strong>{{ l.name }}</strong>
 							<span class="lab-meta">{{ lensSpec(l) }}<template v-if="l.status !== 'active'"> · {{ GEAR_STATUS[l.status] }}</template></span>
@@ -96,6 +105,8 @@ import { upsert } from '../../lib/lab/client';
 import { CAMERA_KINDS, formatDay, GEAR_STATUS, type CameraView, type LensView } from '../../lib/lab/inventory';
 import type { ServiceEntry } from '../../lib/lab/server/inventory';
 import CameraForm from './CameraForm.vue';
+import CameraGlyph from './CameraGlyph.vue';
+import LensGlyph from './LensGlyph.vue';
 import LabDialog from './LabDialog.vue';
 import LensForm from './LensForm.vue';
 
@@ -144,13 +155,26 @@ const lensMounts = computed(() => {
 		}));
 });
 
+const hfov = (f: number) => Math.round((2 * Math.atan(36 / (2 * f)) * 180) / Math.PI);
 const lensSpec = (l: LensView) =>
 	[
 		l.focalMin ? (l.focalMax && l.focalMax !== l.focalMin ? `${l.focalMin}–${l.focalMax}mm` : `${l.focalMin}mm`) : null,
+		l.focalMin ? (l.focalMax && l.focalMax !== l.focalMin ? `${hfov(l.focalMin)}°–${hfov(l.focalMax)}°` : `${hfov(l.focalMin)}° across`) : null,
 		l.maxAperture ? `f/${l.maxAperture}` : null,
 	]
 		.filter(Boolean)
-		.join(' ');
+		.join(' · ');
+
+/** How fresh the battery is: full under a year, then draining; unknown shows empty. */
+function batteryLevel(c: CameraView): { fill: number; tone: string; age: string } {
+	if (!c.batteryChangedOn) return { fill: 0, tone: 'unknown', age: '' };
+	const months = Math.max(0, Math.round((Date.parse(props.today) - Date.parse(c.batteryChangedOn)) / (864e5 * 30.4)));
+	const age = months < 1 ? 'this month' : months < 12 ? `${months} mo ago` : `${Math.round(months / 12)} yr ago`;
+	if (months < 12) return { fill: 1, tone: 'ok', age };
+	if (months < 24) return { fill: 0.6, tone: 'ok', age };
+	if (months < 36) return { fill: 0.3, tone: 'low', age };
+	return { fill: 0.1, tone: 'low', age };
+}
 
 const editingCamera = computed(() => (editCamera.value && editCamera.value !== 'new' ? cameras.value.find((c) => c.id === editCamera.value) ?? null : null));
 const editingLens = computed(() => (editLens.value && editLens.value !== 'new' ? lenses.value.find((l) => l.id === editLens.value) ?? null : null));
@@ -207,6 +231,9 @@ function lensDeleted(id: string) {
 	display: grid;
 	align-content: start;
 	gap: 0.3rem;
+	background-image: linear-gradient(var(--lab-table-grid) 1px, transparent 1px), linear-gradient(90deg, var(--lab-table-grid) 1px, transparent 1px);
+	background-size: 0.75rem 0.75rem;
+	background-position: -1px -1px;
 	padding: 1rem 1.1rem;
 	border: 1px solid var(--gray-800);
 	border-radius: 0.6rem;
@@ -259,6 +286,45 @@ function lensDeleted(id: string) {
 	border-top: 1px solid var(--gray-800);
 }
 
+.card :deep(.glyph) {
+	margin: 0.15rem 0 0.6rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.card :deep(.glyph .body > *) {
+		animation-delay: calc(var(--ci) * 70ms);
+	}
+}
+
+.batt-row {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+}
+
+.batt {
+	width: 1.4rem;
+	height: auto;
+	flex: none;
+}
+
+.batt rect:first-child {
+	fill: none;
+	stroke: var(--gray-400);
+}
+
+.batt .nub {
+	fill: var(--gray-400);
+}
+
+.batt .charge {
+	fill: var(--lab-ok);
+}
+
+.batt.low .charge {
+	fill: var(--lab-warn);
+}
+
 .loaded {
 	display: inline-flex;
 	align-items: center;
@@ -288,6 +354,10 @@ function lensDeleted(id: string) {
 .mount {
 	display: grid;
 	gap: 0.25rem;
+}
+
+.mount .lab-rows > li {
+	flex-wrap: nowrap;
 }
 
 .mount-h {

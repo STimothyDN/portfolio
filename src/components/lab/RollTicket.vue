@@ -2,12 +2,13 @@
 	<article
 		class="ticket"
 		:class="{ dragging }"
+		:data-roll="roll.id"
+		:style="{ '--c': color }"
 		:draggable="canMove"
 		@dragstart="onDragStart"
 		@dragend="dragging = false"
 	>
 		<div class="t1">
-			<span class="dot" :style="{ background: color }" aria-hidden="true"></span>
 			<a class="lab-code" :href="`/photography/lab/rolls/${roll.code}/`">{{ roll.code }}</a>
 			<button
 				v-if="canMove"
@@ -22,7 +23,7 @@
 		</div>
 		<p class="stock">{{ roll.title && roll.status !== 'camera' ? roll.title : roll.stock.name }}</p>
 		<p class="where">{{ where }}</p>
-		<span v-if="chip" class="lab-chip" :class="chip.tone && `lab-chip--${chip.tone}`">{{ chip.text }}</span>
+		<span v-if="chip" class="lab-chip" :class="chip.tone && `lab-chip--${chip.tone}`" :title="chip.title">{{ chip.text }}</span>
 	</article>
 </template>
 
@@ -62,18 +63,20 @@ const where = computed(() => {
 	}
 });
 
-const chip = computed((): { text: string; tone?: 'warn' | 'ok' } | null => {
+// Short: the column already says which stage it's in.
+const chip = computed((): { text: string; tone?: 'warn' | 'ok'; title?: string } | null => {
 	const r = props.roll;
-	if (r.status === 'camera') return { text: `loaded ${formatDays(days.value)}${days.value > 0 ? ' ago' : ''}` };
+	if (r.status === 'camera') return { text: formatDays(days.value), title: `Loaded ${formatDays(days.value)} ago` };
 	if (r.status === 'lab') {
 		const late = props.usualDays != null && days.value > props.usualDays + 1;
 		return {
-			text: `${formatDays(days.value)}${late ? ` · usually ${props.usualDays}` : ''}`,
+			text: formatDays(days.value),
 			tone: late ? 'warn' : undefined,
+			title: props.usualDays != null ? `At the lab ${formatDays(days.value)}; usually ${props.usualDays} days` : undefined,
 		};
 	}
-	if (r.status === 'scanned') return r.publicRollId ? { text: '✓ on the film desk', tone: 'ok' } : { text: 'not on the desk yet' };
-	if (r.status === 'shot' && days.value > 30) return { text: `waiting ${formatDays(days.value)}`, tone: 'warn' };
+	if (r.status === 'scanned') return r.publicRollId ? { text: '✓ on the desk', tone: 'ok' } : { text: 'scans not linked' };
+	if (r.status === 'shot' && days.value > 30) return { text: `${formatDays(days.value)} waiting`, tone: 'warn' };
 	return null;
 });
 
@@ -87,13 +90,50 @@ function onDragStart(e: DragEvent) {
 
 <style scoped>
 .ticket {
+	position: relative;
+	min-width: 0;
 	display: grid;
 	gap: 0.3rem;
-	padding: 0.65rem 0.75rem 0.7rem;
+	padding: 0.65rem 0.75rem 0.7rem 0.95rem;
 	border: 1px solid var(--gray-800);
-	border-radius: 0.5rem;
+	border-radius: 0.4rem;
 	background: var(--gray-999);
+	/* Lying on the light table: a soft contact shadow. */
+	box-shadow: 0 1px 1px rgb(0 0 0 / 0.06), 0 6px 14px -10px rgb(0 0 0 / 0.5);
 	cursor: default;
+	overflow: hidden;
+	transition:
+		box-shadow 0.2s ease,
+		translate 0.2s ease;
+}
+
+/* The canister's color, as a strip of leader down the side. */
+.ticket::before {
+	content: '';
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: 0.3rem;
+	background: var(--c);
+	box-shadow: inset -1px 0 0 rgb(0 0 0 / 0.15);
+}
+
+.ticket:hover {
+	translate: 0 -1px;
+	box-shadow: 0 1px 1px rgb(0 0 0 / 0.06), 0 10px 20px -10px rgb(0 0 0 / 0.55);
+}
+
+/* Just moved here: it catches the light for a moment. */
+.ticket.arrived {
+	animation: arrive 1.2s ease-out;
+}
+
+@keyframes arrive {
+	0%,
+	30% {
+		box-shadow:
+			0 0 0 2px var(--lab-edge-ink),
+			0 0 26px -2px var(--lab-lit-glow);
+	}
 }
 
 .ticket[draggable='true'] {
@@ -108,14 +148,6 @@ function onDragStart(e: DragEvent) {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-}
-
-.dot {
-	width: 0.6rem;
-	height: 0.6rem;
-	border-radius: 50%;
-	flex: none;
-	box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
 }
 
 .lab-code {
@@ -157,6 +189,7 @@ function onDragStart(e: DragEvent) {
 }
 
 .stock {
+	overflow-wrap: anywhere;
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
@@ -179,5 +212,7 @@ function onDragStart(e: DragEvent) {
 
 .lab-chip {
 	justify-self: start;
+	max-width: 100%;
+	white-space: normal;
 }
 </style>

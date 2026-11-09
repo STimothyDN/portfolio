@@ -4,7 +4,8 @@
  */
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 
-import { filmBrand, filmLabel, getFilmRolls, rollFolder } from '../../../utils/film';
+import { frameExposure, negativeProfileKey, type NegativeProfileKey } from '../../../components/film/negative';
+import { filmBrand, filmLabel, getFilmRolls, isMonochrome, rollFolder } from '../../../utils/film';
 import type {
 	CameraView,
 	DeskRollOption,
@@ -138,6 +139,37 @@ export async function rollByCode(d: LabDb, userId: string, code: string) {
 	return { roll: toRollView(row), events: events as RollEventView[] };
 }
 
+/* ---------- almanac ---------- */
+
+/** The latest date each roll reached each stage: roll id → stage → 'YYYY-MM-DD'. */
+export async function rollMilestones(d: LabDb, userId: string): Promise<Record<string, Partial<Record<RollStatus, string>>>> {
+	const rows = await d
+		.select({ rollId: rollEvent.rollId, status: rollEvent.status, on: rollEvent.on })
+		.from(rollEvent)
+		.where(eq(rollEvent.userId, userId))
+		.orderBy(asc(rollEvent.on), asc(rollEvent.createdAt));
+	const out: Record<string, Partial<Record<RollStatus, string>>> = {};
+	for (const r of rows) (out[r.rollId] ??= {})[r.status as RollStatus] = r.on;
+	return out;
+}
+
+/**
+ * Every logged frame, compactly: [aperture, shutter, hour of day where it was
+ * taken (or null), roll id]. Enough for the exposure map and the clock.
+ */
+export async function frameDigest(d: LabDb, userId: string): Promise<[number | null, string | null, number | null, string][]> {
+	const rows = await d
+		.select({ aperture: frame.aperture, shutter: frame.shutter, shotAt: frame.shotAt, tzOffset: frame.tzOffset, rollId: frame.rollId })
+		.from(frame)
+		.where(eq(frame.userId, userId));
+	return rows.map((f) => [
+		f.aperture,
+		f.shutter,
+		f.shotAt ? new Date(f.shotAt + f.tzOffset * 60_000).getUTCHours() : null,
+		f.rollId,
+	]);
+}
+
 /* ---------- catalogue ---------- */
 
 export async function listStocks(d: LabDb, userId: string): Promise<StockView[]> {
@@ -265,6 +297,31 @@ export async function deskRollPreview(id: string) {
 		developed: r.data.developed.toISOString().slice(0, 10),
 		count: r.data.photos.length,
 		scans: picks.map(({ p, i }) => ({ path: `${folder}/${p.filename}`, frame: i + 1, w: p.width, h: p.height })),
+	};
+}
+
+/**
+ * Every scan of a linked desk roll, for the roll page's strip: storage path,
+ * frame number, and the exposure its negative is drawn at (from the scan's
+ * measured tone), plus which stock profile draws the negatives.
+ */
+export async function deskRollStrip(id: string): Promise<{
+	profile: NegativeProfileKey;
+	scans: { path: string; frame: number; w?: number; h?: number; exposure: number }[];
+} | null> {
+	const r = (await getFilmRolls()).find((x) => x.id === id);
+	if (!r) return null;
+	const label = filmLabel('stocks', r.data.stock);
+	const folder = rollFolder(r);
+	return {
+		profile: negativeProfileKey(label, filmBrand('stocks', r.data.stock), isMonochrome(label)),
+		scans: r.data.photos.map((p, i) => ({
+			path: `${folder}/${p.filename}`,
+			frame: i + 1,
+			w: p.width,
+			h: p.height,
+			exposure: p.tone ? frameExposure(p.tone) : 0,
+		})),
 	};
 }
 

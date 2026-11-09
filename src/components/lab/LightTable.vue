@@ -1,5 +1,10 @@
 <template>
 	<div class="light-table">
+		<!-- A status line in edge print: where everything is, at a glance -->
+		<p class="ticker lab-edge-print" aria-label="Where your film is">
+			<span v-for="t in ticker" :key="t.label" class="tick" :class="{ zero: !t.n }">▸ {{ t.n }} {{ t.label }}</span>
+		</p>
+
 		<!-- In the cameras -->
 		<section class="lab-section" aria-labelledby="cams-h">
 			<header class="row-head">
@@ -8,18 +13,24 @@
 				<button v-if="storage.length" type="button" class="lab-btn lab-btn--quiet push" @click="openLoad()">Load a roll</button>
 			</header>
 			<div v-if="loaded.length" class="loaded">
-				<article v-for="r in loaded" :key="r.id" class="lcard">
-					<div class="lcard-top" :style="{ '--can-h': '68px' }">
-						<FilmCanister :stock="r.stock.token ?? r.stock.id" :stock-label="r.stock.name" :stock-brand="r.stock.brand" />
+				<article v-for="(r, ci) in loaded" :key="r.id" class="lcard" :style="{ '--ci': ci }">
+					<header class="lcard-head">
 						<div class="names">
 							<span class="cam">{{ r.camera?.name ?? 'Unknown camera' }}</span>
-							<span class="sub">{{ r.stock.name }}</span>
-							<span class="sub">{{ isoLine(r) }}</span>
+							<span class="sub">{{ [r.stock.name, isoLine(r)].filter(Boolean).join(' · ') }}</span>
 						</div>
 						<a class="lab-code" :href="`/photography/lab/rolls/${r.code}/`">{{ r.code }}</a>
-					</div>
-					<div class="frames" :title="`${r.frameCount} of ${r.exposures} frames logged`">
-						<i v-for="n in Math.min(r.exposures, 40)" :key="n" :class="{ shot: n <= r.frameCount }"></i>
+					</header>
+					<!-- The roll spooling out of its canister: exposed frames, and the next one under the index mark -->
+					<div class="spool" :style="{ '--can-h': '64px' }" :title="`${r.frameCount} of ${r.exposures} frames logged`">
+						<FilmCanister :stock="r.stock.token ?? r.stock.id" :stock-label="r.stock.name" :stock-brand="r.stock.brand" />
+						<div class="leader">
+							<i
+								v-for="n in Math.min(r.exposures, 40)"
+								:key="n"
+								:class="{ shot: n <= r.frameCount, next: n === r.frameCount + 1 }"
+							></i>
+						</div>
 					</div>
 					<div class="lcard-foot">
 						<span class="lab-meta">
@@ -45,7 +56,7 @@
 				<h2 id="line-h" class="lab-h2">On the line</h2>
 				<span class="lab-edge hide-touch">Drag a roll to its next stage</span>
 			</header>
-			<div class="line" role="list">
+			<div ref="lineEl" class="line lab-lightbox" role="list">
 				<div
 					v-for="(stage, i) in STAGES"
 					:key="stage"
@@ -144,7 +155,7 @@
 
 <script setup lang="ts">
 import { actions } from 'astro:actions';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 import { run, upsert } from '../../lib/lab/client';
 import {
@@ -180,6 +191,7 @@ const props = defineProps<{
 }>();
 
 const rolls = ref<RollView[]>([...props.rolls]);
+const lineEl = ref<HTMLElement | null>(null);
 const negativesCount = ref(props.negativesCount);
 const recent = ref<RollView[]>([...props.recentNegatives]);
 const step = ref<{ roll: RollView; to: RollStatus } | null>(null);
@@ -201,6 +213,14 @@ const byStage = computed(() => {
 const loaded = computed(() => byStage.value.camera);
 const storage = computed(() => byStage.value.storage);
 const counts = computed(() => ({ ...Object.fromEntries(STAGES.map((s) => [s, byStage.value[s].length])), negatives: negativesCount.value }) as Record<Stage, number>);
+const ticker = computed(() => [
+	{ n: byStage.value.camera.length, label: 'in cameras' },
+	{ n: byStage.value.shot.length, label: 'shot' },
+	{ n: byStage.value.lab.length, label: 'at the lab' },
+	{ n: byStage.value.scanned.length, label: 'scans in' },
+	{ n: byStage.value.storage.length, label: 'in the fridge' },
+	{ n: negativesCount.value, label: 'filed' },
+]);
 const storageStocks = computed(() => new Set(storage.value.map((r) => r.stock.id)).size);
 const expiredCount = computed(() => storage.value.filter((r) => expiryNote(r.expires, props.today)?.expired).length);
 const expiringCount = computed(() => storage.value.filter((r) => expiryNote(r.expires, props.today)?.soon).length);
@@ -257,8 +277,45 @@ function place(view: RollView) {
 	}
 }
 
+/**
+ * Move tickets the way film moves on a table: measure every ticket, apply the
+ * change, then slide each one from where it was to where it lands (FLIP).
+ */
+async function flip(mutate: () => void, arrivedId?: string) {
+	const root = lineEl.value;
+	if (!root || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		mutate();
+		return;
+	}
+	const before = new Map<string, DOMRect>();
+	for (const el of root.querySelectorAll<HTMLElement>('[data-roll]')) before.set(el.dataset.roll!, el.getBoundingClientRect());
+	mutate();
+	await nextTick();
+	for (const el of root.querySelectorAll<HTMLElement>('[data-roll]')) {
+		const was = before.get(el.dataset.roll!);
+		const now = el.getBoundingClientRect();
+		if (was) {
+			const dx = was.left - now.left;
+			const dy = was.top - now.top;
+			if (Math.abs(dx) + Math.abs(dy) > 1) {
+				el.animate([{ translate: `${dx}px ${dy}px`, scale: 1.04 }, { translate: '0 0', scale: 1 }], {
+					duration: 560,
+					easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+				});
+			}
+		} else {
+			el.animate([{ opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1 }], { duration: 360, easing: 'ease-out' });
+		}
+		if (el.dataset.roll === arrivedId) {
+			el.classList.remove('arrived');
+			void el.offsetWidth;
+			el.classList.add('arrived');
+		}
+	}
+}
+
 function stepped(view: RollView) {
-	place(view);
+	void flip(() => place(view), view.id);
 	step.value = null;
 	loading.value = false;
 	showToast(`${view.code} is now ${STATUS_LABEL[view.status].toLowerCase()}.`, view.id);
@@ -267,7 +324,8 @@ function stepped(view: RollView) {
 async function undo(rollId: string) {
 	toast.value = null;
 	try {
-		place(await run(actions.lab.undoRollStep({ rollId })));
+		const view = await run(actions.lab.undoRollStep({ rollId }));
+		void flip(() => place(view), view.id);
 	} catch (e) {
 		error.value = (e as Error).message;
 	}
@@ -318,21 +376,28 @@ function onDrop(e: DragEvent, stage: Stage) {
 
 .lcard {
 	display: grid;
-	gap: 0.9rem;
+	gap: 0.85rem;
 	padding: 1rem 1.1rem;
 	border: 1px solid var(--gray-800);
-	border-radius: 0.6rem;
+	border-radius: 0.75rem;
+	background: color-mix(in oklch, var(--gray-999) 92%, var(--gray-900));
 }
 
-.lcard-top {
+.lcard-head {
 	display: flex;
-	align-items: center;
-	gap: 0.9rem;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.lcard-head .lab-code {
+	flex: none;
+	white-space: nowrap;
 }
 
 .names {
 	display: grid;
-	gap: 0.1rem;
+	gap: 0.15rem;
 	min-width: 0;
 }
 
@@ -350,53 +415,93 @@ function onDrop(e: DragEvent, stage: Stage) {
 	color: var(--gray-300);
 }
 
-.lcard-top .lab-code {
-	margin-left: auto;
-	align-self: start;
+/* Canister + the film drawn out of it. */
+.spool {
+	display: flex;
+	align-items: center;
 }
 
-/* The roll as a strip of frames; logged ones show as exposed negative. */
-.frames {
+.spool :deep(.canister) {
+	z-index: 1;
+}
+
+.leader {
 	position: relative;
+	flex: 1;
 	display: flex;
 	gap: 2px;
-	padding: 8px 4px;
-	border-radius: 2px;
+	margin-left: -4px;
+	padding: 9px 5px 9px 8px;
+	border-radius: 0 2px 2px 0;
 	background: var(--lab-film);
+	/* The film's tongue, cut at an angle. */
+	clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 30%, 100% 100%, 0 100%);
 }
 
-.frames::before,
-.frames::after {
+.leader::before,
+.leader::after {
 	content: '';
 	position: absolute;
-	inset-inline: 4px;
+	inset-inline: 8px 12px;
 	height: 3px;
 	background: repeating-linear-gradient(90deg, var(--lab-sprocket) 0 4px, transparent 4px 8px);
 	opacity: 0.8;
 }
 
-.frames::before {
-	top: 2.5px;
+.leader::before {
+	top: 3px;
 }
 
-.frames::after {
-	bottom: 2.5px;
+.leader::after {
+	bottom: 3px;
 }
 
-.frames i {
+.leader i {
+	position: relative;
 	flex: 1;
-	height: 14px;
+	height: 18px;
 	border-radius: 1px;
 	background: var(--lab-film-frame);
 }
 
-.frames i.shot {
-	background: oklch(63% 0.12 58);
+/* Exposed: the warm orange of a C-41 negative. */
+.leader i.shot {
+	background: linear-gradient(180deg, oklch(66% 0.13 58), oklch(56% 0.12 50));
+}
+
+/* The next frame, under the counter's index mark. */
+.leader i.next {
+	box-shadow: inset 0 0 0 1px oklch(95% 0.02 85);
+}
+
+.leader i.next::before {
+	content: '';
+	position: absolute;
+	top: -8px;
+	left: 50%;
+	translate: -50% 0;
+	border-left: 3px solid transparent;
+	border-right: 3px solid transparent;
+	border-top: 4px solid oklch(62% 0.2 28);
 }
 
 .count {
 	color: var(--gray-0);
 	font-weight: 600;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* The film draws out of the canister as the page opens. */
+	.leader {
+		animation: draw-out 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+		animation-delay: calc(0.25s + var(--ci, 0) * 0.12s);
+	}
+
+	@keyframes draw-out {
+		from {
+			clip-path: polygon(0 0, 0 0, 0 30%, 0 100%, 0 100%);
+		}
+	}
 }
 
 .lcard-foot {
@@ -412,6 +517,18 @@ function onDrop(e: DragEvent, stage: Stage) {
 	display: grid;
 	grid-template-columns: repeat(6, minmax(0, 1fr));
 	gap: 0.6rem;
+	padding: 0.7rem;
+}
+
+.ticker {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem 1.2rem;
+	margin-top: -1.25rem;
+}
+
+.tick.zero {
+	opacity: 0.45;
 }
 
 @media (max-width: 72em) {
@@ -430,22 +547,31 @@ function onDrop(e: DragEvent, stage: Stage) {
 .col {
 	display: grid;
 	align-content: start;
+	min-width: 0;
 	gap: 0.55rem;
 	min-height: 12rem;
-	padding: 0.65rem;
-	border-radius: 0.6rem;
-	background: var(--gray-900);
-	outline: 2px dashed transparent;
-	outline-offset: -2px;
-	transition: outline-color 0.15s ease;
+	padding: 0.6rem;
+	border-radius: 0.5rem;
+	/* A sleeve lane on the light table: translucent, so the table glows through. */
+	background: color-mix(in oklch, var(--lab-table) 55%, transparent);
+	box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--lab-table-edge) 80%, transparent);
+	transition:
+		box-shadow 0.25s ease,
+		background-color 0.25s ease;
 }
 
+/* While dragging, the lane it can go to lights up; hovering it, brighter. */
 .col.droppable {
-	outline-color: var(--gray-600);
+	box-shadow:
+		inset 0 0 0 1px var(--lab-edge-ink),
+		0 0 24px -10px var(--lab-lit-glow);
 }
 
 .col.target {
-	outline-color: var(--accent-regular);
+	background: color-mix(in oklch, var(--lab-lit) 55%, transparent);
+	box-shadow:
+		inset 0 0 0 2px var(--lab-edge-ink),
+		0 0 36px -8px var(--lab-lit-glow);
 }
 
 .col-h {
