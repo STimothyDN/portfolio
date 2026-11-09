@@ -9,6 +9,15 @@ interface ImportMeta {
 	readonly env: ImportMetaEnv;
 }
 
+declare namespace App {
+	interface Locals {
+		/** Film Lab: the signed-in user on /photography/lab pages (src/middleware.ts). */
+		user: import('./lib/lab/server/auth').LabUser | null;
+		/** Film Lab: false when the deployment is missing its env vars. */
+		labConfigured: boolean;
+	}
+}
+
 interface Window {
 	/** Guards the theme after-swap listener against re-registration on each swap. */
 	__themeObserver?: boolean;

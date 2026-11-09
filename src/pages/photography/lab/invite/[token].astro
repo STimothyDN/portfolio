@@ -1,0 +1,33 @@
+---
+import LabClaim from '../../../../components/lab/LabClaim.vue';
+import LabLayout from '../../../../components/lab/LabLayout.astro';
+import { labConfig } from '../../../../lib/lab/server/config';
+import { inviteUsable } from '../../../../lib/lab/server/plugin';
+
+export const prerender = false;
+
+const token = Astro.params.token ?? '';
+const config = labConfig();
+const usable = config.ok && token ? await inviteUsable(config.config, token) : false;
+// Keep the token out of anything the page sends elsewhere.
+Astro.response.headers.set('Referrer-Policy', 'no-referrer');
+---
+
+<LabLayout title="Invite" door>
+	<span class="lab-edge">Invitation</span>
+	<h1 class="lab-title">Join Film Lab</h1>
+	{
+		usable ? (
+			<>
+				<p class="lab-lede">
+					You’ve been invited to keep your own film log here. Make an account, then save a passkey on this
+					device. There’s no password.
+				</p>
+				<div class="lab-sprockets" aria-hidden="true" />
+				<LabClaim client:load kind="invite" token={token} />
+			</>
+		) : (
+			<p class="lab-lede">This invite link has expired, been used, or been withdrawn. Ask for a new one.</p>
+		)
+	}
+</LabLayout>

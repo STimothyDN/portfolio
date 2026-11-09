@@ -1,0 +1,21 @@
+---
+/*
+ * Links shared before the photography reshuffle keep working: film became
+ * the photography home, and digital shoots moved under /digital. These are
+ * prerendered redirect pages (they used to be `redirects` in astro.config,
+ * but with the Vercel adapter a rest-param redirect becomes a catch-all 301
+ * rule that runs before any file, including /photography/digital/* and the
+ * Film Lab).
+ */
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+	const shoots = await getCollection('photography');
+	return [
+		{ params: { legacy: 'film' }, props: { to: '/photography/' } },
+		...shoots.map((shoot) => ({ params: { legacy: shoot.id }, props: { to: `/photography/digital/${shoot.id}` } })),
+	];
+}
+
+return Astro.redirect(Astro.props.to, 301);
+---

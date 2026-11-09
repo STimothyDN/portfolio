@@ -1,0 +1,456 @@
+---
+/*
+ * Frame for every Film Lab page. Lives inside the photography section's
+ * editorial world (paper, ink, Fraunces/Newsreader) and borrows the edge print
+ * found on film rebates for its labels. `door` pages (sign-in, setup, invite)
+ * get a single centred column and no lab bar.
+ */
+import '@fontsource-variable/geist-mono';
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { labConfig } from '../../lib/lab/server/config';
+
+interface Props {
+	title: string;
+	door?: boolean;
+	current?: 'home' | 'account';
+}
+
+const { title, door = false, current } = Astro.props;
+const { user, labConfigured } = Astro.locals;
+const config = labConfig();
+const missing = config.ok ? [] : config.missing;
+const initials = (user?.name ?? '')
+	.split(/\s+/)
+	.filter(Boolean)
+	.slice(0, 2)
+	.map((part) => part[0]?.toUpperCase())
+	.join('');
+---
+
+<BaseLayout title={`${title} · Film Lab`} description="A private film logbook." noindex>
+	<div class="lab" data-lab>
+		{
+			!labConfigured ? (
+				<main class="lab-door">
+					<p class="lab-edge">Film Lab</p>
+					<h1 class="lab-title">Not set up here yet</h1>
+					<p class="lab-lede">
+						This deployment is missing the settings Film Lab needs: {missing.join(', ')}. Add them in the
+						Vercel project's environment variables and redeploy.
+					</p>
+				</main>
+			) : door ? (
+				<main class="lab-door">
+					<slot />
+				</main>
+			) : (
+				<>
+					<header class="lab-bar lab-wrap">
+						<a class="lab-wordmark" href="/photography/lab/">
+							Film Lab
+						</a>
+						<nav class="lab-tabs" aria-label="Film Lab">
+							<a href="/photography/lab/" aria-current={current === 'home' ? 'page' : undefined}>
+								Light table
+							</a>
+						</nav>
+						<a
+							class="lab-me"
+							href="/photography/lab/account/"
+							aria-current={current === 'account' ? 'page' : undefined}
+						>
+							<span class="lab-me-label">Account</span>
+							<span class="lab-avatar" aria-hidden="true">
+								{initials || '·'}
+							</span>
+						</a>
+					</header>
+					<main class="lab-main lab-wrap">
+						<slot />
+					</main>
+				</>
+			)
+		}
+	</div>
+</BaseLayout>
+
+<style is:global>
+	/* ---------- Film Lab: shared pieces (every class is lab- prefixed) ---------- */
+	.lab {
+		--lab-film: oklch(23% 0.018 50);
+		--lab-film-frame: oklch(31% 0.02 50);
+		--lab-sprocket: oklch(90% 0.01 80);
+		--lab-edge-ink: oklch(74% 0.13 62);
+		--lab-warn: oklch(52% 0.13 55);
+		--lab-ok: oklch(48% 0.1 150);
+		padding-bottom: 5rem;
+	}
+
+	:root.theme-dark .lab {
+		--lab-sprocket: oklch(78% 0.01 80);
+		--lab-warn: oklch(78% 0.13 70);
+		--lab-ok: oklch(76% 0.11 150);
+	}
+
+	/* Same side gutters as the site nav and footer. */
+	.lab-wrap {
+		--lab-gutter: 1.5rem;
+		width: 100%;
+		padding-inline: var(--lab-gutter);
+	}
+
+	@media (min-width: 50em) {
+		.lab-wrap {
+			--lab-gutter: 5rem;
+		}
+	}
+
+	.lab-bar {
+		display: flex;
+		align-items: center;
+		gap: clamp(1rem, 3vw, 2rem);
+		margin-top: -1.5rem;
+		padding-bottom: 1rem;
+		/* A hairline that stops at the gutters, like the content. */
+		background: linear-gradient(var(--gray-800), var(--gray-800)) bottom / calc(100% - 2 * var(--lab-gutter)) 1px
+			no-repeat;
+	}
+
+	.lab-wordmark {
+		font-family: var(--font-brand);
+		font-style: italic;
+		font-weight: 400;
+		font-variation-settings: 'opsz' 144, 'SOFT' 60, 'WONK' 1;
+		font-size: var(--text-2xl);
+		line-height: 1;
+		color: var(--gray-0);
+		text-decoration: none;
+	}
+
+	.lab-tabs {
+		display: flex;
+		gap: 1.25rem;
+	}
+
+	.lab-tabs a,
+	.lab-me-label,
+	.lab-edge {
+		font-size: var(--text-sm);
+		letter-spacing: 0.1em;
+		font-variant-caps: all-small-caps;
+		color: var(--gray-300);
+		text-decoration: none;
+	}
+
+	.lab-tabs a {
+		padding-block: 0.3rem;
+	}
+
+	.lab-tabs a[aria-current='page'] {
+		color: var(--gray-0);
+		box-shadow: inset 0 -1.5px 0 currentColor;
+	}
+
+	.lab-me {
+		margin-left: auto;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6rem;
+		text-decoration: none;
+		border-radius: 999px;
+	}
+
+	.lab-avatar {
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 50%;
+		border: 1px solid var(--gray-700);
+		background: var(--gray-900);
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		color: var(--gray-0);
+	}
+
+	.lab-me[aria-current='page'] .lab-avatar {
+		background: var(--accent-regular);
+		border-color: var(--accent-regular);
+		color: var(--accent-text-over);
+	}
+
+	@media (max-width: 30em) {
+		.lab-me-label {
+			display: none;
+		}
+	}
+
+	.lab-main {
+		display: grid;
+		gap: clamp(2rem, 5vw, 3.5rem);
+		padding-top: clamp(1.75rem, 4vw, 3rem);
+	}
+
+	.lab-door {
+		width: 100%;
+		max-width: 33rem;
+		margin-inline: auto;
+		padding-inline: 1.5rem;
+		display: grid;
+		gap: 1.25rem;
+		padding-top: clamp(1rem, 8vh, 5rem);
+	}
+
+	.lab-edge {
+		display: block;
+	}
+
+	.lab-title {
+		font-family: var(--font-brand);
+		font-style: italic;
+		font-weight: 380;
+		font-variation-settings: 'opsz' 144, 'SOFT' 60, 'WONK' 1;
+		font-size: var(--text-4xl);
+		line-height: 1;
+		letter-spacing: -0.01em;
+		text-wrap: balance;
+	}
+
+	.lab-lede {
+		font-size: var(--text-lg);
+		color: var(--gray-200);
+		max-width: 38rem;
+		text-wrap: pretty;
+	}
+
+	.lab-h2 {
+		font-family: var(--font-brand);
+		font-size: var(--text-xl);
+		font-weight: 560;
+		font-variation-settings: 'opsz' 30;
+		letter-spacing: -0.01em;
+	}
+
+	.lab-meta {
+		font-size: var(--text-sm);
+		color: var(--gray-300);
+	}
+
+	.lab-mono {
+		font-family: var(--font-mono);
+		font-size: 0.8125rem;
+		letter-spacing: 0.01em;
+	}
+
+	/* Buttons: ink pills, like the film desk's controls. */
+	.lab-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		min-height: 2.75rem;
+		padding: 0.55rem 1.3rem;
+		border: 1px solid var(--accent-regular);
+		border-radius: 999px;
+		background: var(--accent-regular);
+		color: var(--accent-text-over);
+		font: inherit;
+		font-size: var(--text-base);
+		letter-spacing: 0.01em;
+		text-decoration: none;
+		cursor: pointer;
+		transition:
+			opacity var(--theme-transition),
+			background-color var(--theme-transition);
+	}
+
+	.lab-btn--wide {
+		width: 100%;
+		min-height: 3.25rem;
+		font-size: var(--text-md);
+	}
+
+	.lab-btn--ghost {
+		background: transparent;
+		color: var(--gray-0);
+		border-color: var(--gray-600);
+	}
+
+	.lab-btn--quiet {
+		min-height: 2.25rem;
+		padding: 0.3rem 0.9rem;
+		background: transparent;
+		color: var(--gray-0);
+		border-color: var(--gray-700);
+		font-size: var(--text-sm);
+	}
+
+	.lab-btn--danger {
+		color: var(--lab-warn);
+		border-color: color-mix(in oklch, var(--lab-warn) 55%, transparent);
+	}
+
+	.lab-btn:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+
+	.lab-btn:focus-visible,
+	.lab-link:focus-visible,
+	.lab-me:focus-visible,
+	.lab-tabs a:focus-visible,
+	.lab-wordmark:focus-visible {
+		outline: 2px solid var(--accent-regular);
+		outline-offset: 3px;
+	}
+
+	.lab-link {
+		background: none;
+		border: 0;
+		padding: 0;
+		font: inherit;
+		color: var(--gray-0);
+		text-decoration: underline;
+		text-decoration-color: var(--gray-600);
+		text-underline-offset: 0.2em;
+		cursor: pointer;
+	}
+
+	/* Fields */
+	.lab-form {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.lab-field {
+		display: grid;
+		gap: 0.35rem;
+	}
+
+	.lab-field > span {
+		font-size: var(--text-sm);
+		letter-spacing: 0.08em;
+		font-variant-caps: all-small-caps;
+		color: var(--gray-300);
+	}
+
+	.lab-input {
+		width: 100%;
+		min-height: 2.9rem;
+		padding: 0.55rem 0.85rem;
+		border: 1px solid var(--gray-700);
+		border-radius: 0.6rem;
+		background: var(--gray-999);
+		color: var(--gray-0);
+		font: inherit;
+		font-size: 1rem;
+	}
+
+	.lab-input:focus-visible {
+		outline: 2px solid var(--accent-regular);
+		outline-offset: 1px;
+		border-color: transparent;
+	}
+
+	.lab-input.lab-mono {
+		font-size: 1rem;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.lab-hint {
+		font-size: var(--text-sm);
+		color: var(--gray-300);
+	}
+
+	.lab-error {
+		padding: 0.7rem 0.9rem;
+		border-radius: 0.6rem;
+		border: 1px solid color-mix(in oklch, var(--lab-warn) 45%, transparent);
+		color: var(--lab-warn);
+		font-size: var(--text-sm);
+	}
+
+	.lab-notice {
+		padding: 0.85rem 1rem;
+		border-radius: 0.6rem;
+		background: var(--gray-900);
+		border: 1px solid var(--gray-800);
+		font-size: var(--text-base);
+	}
+
+	.lab-chip {
+		display: inline-block;
+		padding: 0.1rem 0.55rem;
+		border-radius: 999px;
+		border: 1px solid var(--gray-700);
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.04em;
+		color: var(--gray-300);
+		white-space: nowrap;
+	}
+
+	.lab-chip--ok {
+		color: var(--lab-ok);
+		border-color: color-mix(in oklch, var(--lab-ok) 45%, transparent);
+	}
+
+	.lab-chip--warn {
+		color: var(--lab-warn);
+		border-color: color-mix(in oklch, var(--lab-warn) 45%, transparent);
+	}
+
+	/* A short run of 35mm film, used as a divider. */
+	.lab-sprockets {
+		height: 1.1rem;
+		border-radius: 2px;
+		background:
+			repeating-linear-gradient(90deg, var(--lab-sprocket) 0 0.45rem, transparent 0.45rem 0.95rem) center 0.2rem / calc(100% - 0.5rem) 0.25rem no-repeat,
+			repeating-linear-gradient(90deg, var(--lab-sprocket) 0 0.45rem, transparent 0.45rem 0.95rem) center calc(100% - 0.2rem) / calc(100% - 0.5rem) 0.25rem no-repeat,
+			var(--lab-film);
+	}
+
+	.lab-section {
+		display: grid;
+		gap: 1rem;
+		align-content: start;
+	}
+
+	.lab-section > header {
+		display: grid;
+		gap: 0.3rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--gray-800);
+	}
+
+	.lab-rows {
+		display: grid;
+		list-style: none;
+		padding: 0;
+	}
+
+	.lab-rows > li {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem 1rem;
+		padding-block: 0.85rem;
+		border-bottom: 1px solid var(--gray-800);
+	}
+
+	.lab-rows .lab-grow {
+		flex: 1 1 12rem;
+		min-width: 0;
+		display: grid;
+		gap: 0.15rem;
+	}
+
+	.lab-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: center;
+	}
+</style>

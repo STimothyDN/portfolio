@@ -1,0 +1,177 @@
+---
+import LabLayout from '../../../components/lab/LabLayout.astro';
+import { labConfig } from '../../../lib/lab/server/config';
+import { listPasskeys } from '../../../lib/lab/server/plugin';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const passkeys = user && config.ok ? await listPasskeys(config.config, user.id) : [];
+const firstName = user?.name.split(/\s+/)[0] ?? '';
+
+// The six stages every roll moves through (counts arrive with the inventory).
+const stages = [
+	['In storage', 'Fridge, freezer or shelf'],
+	['In camera', 'Loaded and shooting'],
+	['Shot', 'Waiting to go to a lab'],
+	['At the lab', 'Dropped off or mailed'],
+	['Scans in', 'Linked to the film desk'],
+	['Negatives home', 'Sleeved and filed'],
+];
+---
+
+<LabLayout title="Light table" current="home">
+	{
+		user && (
+			<>
+				<section class="lab-hello">
+					<span class="lab-edge">Light table</span>
+					<h1 class="lab-title">Hello, {firstName}.</h1>
+					<p class="lab-lede">
+						Nothing is on the line yet. Cameras, lenses and film stock come next, and every roll will move
+						along this strip from the fridge to the negative binder.
+					</p>
+				</section>
+
+				{passkeys.length < 2 && (
+					<aside class="lab-notice lab-nudge">
+						<p>
+							You have {passkeys.length === 1 ? 'one passkey' : 'no passkeys'}. Add one from your other
+							device too, so losing a phone never locks you out.
+						</p>
+						<a class="lab-btn lab-btn--quiet" href="/photography/lab/account/">
+							Manage passkeys
+						</a>
+					</aside>
+				)}
+
+				<section class="lab-section" aria-labelledby="line-h">
+					<header>
+						<h2 class="lab-h2" id="line-h">
+							On the line
+						</h2>
+					</header>
+					<ol class="lab-strip">
+						{stages.map(([name, hint], i) => (
+							<li class="lab-frame">
+								<span class="lab-frame-no">
+									{i + 1} ▸ {i + 1}A
+								</span>
+								<span class="lab-frame-count">0</span>
+								<span class="lab-frame-name">{name}</span>
+								<span class="lab-frame-hint">{hint}</span>
+							</li>
+						))}
+					</ol>
+				</section>
+			</>
+		)
+	}
+</LabLayout>
+
+<style>
+	.lab-hello {
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.lab-nudge {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem 1.5rem;
+	}
+
+	.lab-nudge p {
+		flex: 1 1 20rem;
+	}
+
+	/* The six stages as frames on a strip of film. */
+	.lab-strip {
+		position: relative;
+		display: grid;
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		gap: 0.4rem;
+		padding: 1.5rem 0.4rem;
+		list-style: none;
+		border-radius: 3px;
+		background: var(--lab-film);
+	}
+
+	.lab-strip::before,
+	.lab-strip::after {
+		content: '';
+		position: absolute;
+		inset-inline: 0.5rem;
+		height: 0.5rem;
+		border-radius: 2px;
+		background: repeating-linear-gradient(90deg, var(--lab-sprocket) 0 0.6rem, transparent 0.6rem 1.25rem);
+		opacity: 0.9;
+	}
+
+	.lab-strip::before {
+		top: 0.45rem;
+	}
+
+	.lab-strip::after {
+		bottom: 0.45rem;
+	}
+
+	.lab-frame {
+		display: grid;
+		gap: 0.2rem;
+		align-content: start;
+		min-height: 9rem;
+		padding: 0.8rem 0.85rem;
+		border-radius: 2px;
+		background: var(--lab-film-frame);
+		color: oklch(92% 0.01 80);
+	}
+
+	.lab-frame-no {
+		font-family: var(--font-mono);
+		font-size: 0.6875rem;
+		letter-spacing: 0.08em;
+		color: var(--lab-edge-ink);
+	}
+
+	.lab-frame-count {
+		margin-top: 0.4rem;
+		font-family: var(--font-brand);
+		font-size: var(--text-3xl);
+		font-weight: 400;
+		font-variation-settings: 'opsz' 72;
+		line-height: 1;
+		color: oklch(97% 0.005 85);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.lab-frame-name {
+		font-family: var(--font-brand);
+		font-size: var(--text-md);
+		font-weight: 520;
+		line-height: 1.15;
+		color: oklch(97% 0.005 85);
+	}
+
+	.lab-frame-hint {
+		font-size: var(--text-sm);
+		line-height: 1.35;
+		color: oklch(80% 0.012 75);
+	}
+
+	@media (max-width: 56em) {
+		.lab-strip {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			row-gap: 1.6rem;
+		}
+	}
+
+	@media (max-width: 26em) {
+		.lab-strip {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+</style>

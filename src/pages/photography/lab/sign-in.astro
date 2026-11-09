@@ -1,0 +1,19 @@
+---
+import LabLayout from '../../../components/lab/LabLayout.astro';
+import LabSignIn from '../../../components/lab/LabSignIn.vue';
+import { labConfig } from '../../../lib/lab/server/config';
+import { setupOpen } from '../../../lib/lab/server/plugin';
+
+export const prerender = false;
+
+const config = labConfig();
+const canSetUp = config.ok ? await setupOpen(config.config) : false;
+---
+
+<LabLayout title="Sign in" door>
+	<span class="lab-edge">Private · timo3.dev</span>
+	<h1 class="lab-title">Film Lab</h1>
+	<p class="lab-lede">Timothy’s film logbook: cameras, film, and every roll from fridge to binder.</p>
+	<div class="lab-sprockets" aria-hidden="true"></div>
+	<LabSignIn client:load setupOpen={canSetUp} />
+</LabLayout>
