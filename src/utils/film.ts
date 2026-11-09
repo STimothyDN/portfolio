@@ -24,7 +24,7 @@ export function humanizeToken(token: string): string {
 }
 
 /** Black-and-white stocks, by display name (their negatives carry no orange mask). */
-const MONOCHROME = /\b(hp5|fp4|delta|pan ?f|tri-?x|t-?max|kentmere|fomapan|acros|ortho|retro \d|xp2|double-x)\b/i;
+const MONOCHROME = /\b(hp5|fp4|delta|pan ?f|tri-?x|t-?max|kentmere|fomapan|acros|ortho|retro \d|xp2|double-x|lady ?grey)\b/i;
 export const isMonochrome = (stockLabel: string) => MONOCHROME.test(stockLabel);
 
 export function filmLabel(kind: LabelKind, key: string): string {

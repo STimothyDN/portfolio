@@ -119,8 +119,8 @@ const stageIndex = (s: string) => (s === 'lost' ? 99 : STAGES.indexOf(s as (type
  */
 async function planCatalogue(d: LabDb, userId: string, extra: { stocks: string[]; cameras: string[]; labs: string[] }) {
 	const [stocks, cams, labsHave] = await Promise.all([
-		d.select({ id: filmStock.id, token: filmStock.token, name: filmStock.name }).from(filmStock).where(eq(filmStock.userId, userId)),
-		d.select({ id: camera.id, token: camera.token, name: camera.name }).from(camera).where(eq(camera.userId, userId)),
+		d.select({ id: filmStock.id, token: filmStock.token, name: filmStock.name, brand: filmStock.brand }).from(filmStock).where(eq(filmStock.userId, userId)),
+		d.select({ id: camera.id, token: camera.token, name: camera.name, brand: camera.brand }).from(camera).where(eq(camera.userId, userId)),
 		d.select({ id: lab.id, token: lab.token, name: lab.name }).from(lab).where(eq(lab.userId, userId)),
 	]);
 	const writes: unknown[] = [];
@@ -128,9 +128,9 @@ async function planCatalogue(d: LabDb, userId: string, extra: { stocks: string[]
 
 	function plan<R>(
 		kind: 'stocks' | 'cameras' | 'labs',
-		rows: { id: string; token: string | null; name: string }[],
+		rows: { id: string; token: string | null; name: string; brand?: string | null }[],
 		table: typeof filmStock | typeof camera | typeof lab,
-		make: (token: string) => R & { name: string }
+		make: (token: string) => R & { name: string; brand?: string }
 	) {
 		const ids = new Map<string, string>();
 		for (const r of rows) if (r.token) ids.set(r.token, r.id);
@@ -139,7 +139,7 @@ async function planCatalogue(d: LabDb, userId: string, extra: { stocks: string[]
 		for (const token of tokens) {
 			if (ids.has(token)) continue;
 			const row = make(token);
-			const handMade = rows.find((r) => !r.token && sameName(r.name, row.name));
+			const handMade = rows.find((r) => !r.token && sameName(r.name, row.name, r.brand, row.brand));
 			if (handMade) {
 				ids.set(token, handMade.id);
 				handMade.token = token;

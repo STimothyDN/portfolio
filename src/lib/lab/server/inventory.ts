@@ -352,6 +352,11 @@ const STOCK_NOTES: Record<string, string> = {
 	cinestill400d: 'Daylight-balanced Vision3 without remjet; red halation around bright highlights. Processed C-41.',
 	cinestill50d: 'Daylight-balanced, very fine grain, no remjet. Processed C-41.',
 	candido800: 'Respooled motion-picture film, tungsten-leaning. Processed C-41.',
+	candido400: 'Respooled motion-picture film with the remjet removed. Processed C-41.',
+	ektar100: 'Very fine grain, high saturation and contrast; less forgiving of underexposure than Portra. Processed C-41.',
+	ektacolorpro400: 'Discontinued Kodak professional stock, so any roll today is expired: rate it slower (about a stop per decade past date).',
+	ektacolorpro800: 'Discontinued Kodak professional stock, so any roll today is expired: rate it slower (about a stop per decade past date).',
+	ladygrey400: 'Lomography’s black-and-white 400. Develops in standard B&W chemistry; labs list it as B&W.',
 };
 
 export function guessStock(token: string, isMono: (name: string) => boolean) {
@@ -362,10 +367,19 @@ export function guessStock(token: string, isMono: (name: string) => boolean) {
 	return { token, name, brand: filmBrand('stocks', token), iso, process, notes: STOCK_NOTES[token] ?? null };
 }
 
-/** Names compared loosely: "CineStill 800T" = "cinestill 800 t". */
-export const sameName = (a: string, b: string) => a.toLowerCase().replace(/[^a-z0-9]+/g, '') === b.toLowerCase().replace(/[^a-z0-9]+/g, '');
+const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
 
-type Named = { token: string | null; name: string };
+/**
+ * Names compared loosely, with or without the brand in front:
+ * "CineStill 800T" = "cinestill 800 t", and "Ektar 100" (brand Kodak) = "Kodak Ektar 100".
+ */
+export function sameName(a: string, b: string, brandA?: string | null, brandB?: string | null): boolean {
+	const forms = (name: string, brand?: string | null) => [squash(name), brand ? squash(`${brand} ${name}`) : null].filter(Boolean);
+	const fa = forms(a, brandA);
+	return forms(b, brandB).some((x) => fa.includes(x));
+}
+
+type Named = { token: string | null; name: string; brand?: string | null };
 
 /**
  * film-labels.json entries the logbook doesn't have yet, per kind. A row you
@@ -375,12 +389,17 @@ export function labelGaps(
 	labels: { stocks: Record<string, string>; cameras: Record<string, string>; labs: Record<string, string> },
 	have: { stocks: Named[]; cameras: Named[]; labs: Named[] }
 ) {
-	const missing = (entries: Record<string, string>, rows: Named[]) =>
-		Object.entries(entries).filter(([token, name]) => !rows.some((r) => r.token === token || (!r.token && sameName(r.name, name))));
+	const missing = (kind: 'stocks' | 'cameras' | 'labs', rows: Named[]) =>
+		Object.entries(labels[kind]).filter(
+			([token, name]) =>
+				!rows.some(
+					(r) => r.token === token || (!r.token && sameName(r.name, name, r.brand, kind === 'labs' ? null : filmBrand(kind, token)))
+				)
+		);
 	return {
-		stocks: missing(labels.stocks, have.stocks).map(([t]) => t),
-		cameras: missing(labels.cameras, have.cameras).map(([t]) => t),
-		labs: missing(labels.labs, have.labs).map(([t]) => t),
+		stocks: missing('stocks', have.stocks).map(([t]) => t),
+		cameras: missing('cameras', have.cameras).map(([t]) => t),
+		labs: missing('labs', have.labs).map(([t]) => t),
 	};
 }
 

@@ -88,14 +88,18 @@ Already named, ready for your next folders (use the token in the folder name):
 | `hp5` | Ilford HP5 Plus 400 |
 | `proimage100` | Kodak ProImage 100 |
 | `ektacolorpro400` | Kodak Ektacolor Pro 400 |
+| `ektacolorpro800` | Kodak Ektacolor Pro 800 |
+| `ektar100` | Kodak Ektar 100 |
 | `kodacolor200` | Kodak Kodacolor 200 |
 | `fujisuperia` | Fujicolor Superia |
 | `samesamebutdifferent400` | Same Same But Different! 400 (Mr. Negative) |
 | `secretsauce100` | Secret Sauce 100 (Mr. Negative) |
+| `candido400` | Candido 400 |
 | `candido800` | Candido 800 |
 | `cinestill800t` | CineStill 800T (black canister, tungsten negative look) |
 | `lomocolor92` | Color '92 (Lomography) |
 | `lomocolor92sunkissed` | Color '92 Sun-kissed (Lomography) |
+| `ladygrey400` | Lady Grey 400 (Lomography, black-and-white) |
 
 e.g. `20261101_ricohxrm_hp5_fotoshoppe_eno-river`.
 
