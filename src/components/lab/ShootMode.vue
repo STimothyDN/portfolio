@@ -1039,6 +1039,93 @@ onBeforeUnmount(() => {
 	scale: 0.98;
 }
 
+/*
+ * Out of the safelight, the counter sits in the camera's top plate: brushed
+ * chrome by day, black paint at night, with knurled wind knobs either side;
+ * and logging a frame is the shutter release.
+ */
+.shoot:not(.safelight) .counter {
+	padding: 0.7rem 0.65rem;
+	border-radius: 1.4rem;
+	background:
+		repeating-linear-gradient(90deg, oklch(100% 0 0 / 0.05) 0 1px, transparent 1px 3px),
+		linear-gradient(180deg, oklch(93% 0.004 80), oklch(82% 0.006 80) 48%, oklch(88% 0.005 80) 52%, oklch(76% 0.008 75));
+	box-shadow:
+		inset 0 1px 0 oklch(100% 0 0 / 0.7),
+		inset 0 -2px 0 rgb(0 0 0 / 0.2),
+		0 10px 22px -14px rgb(0 0 0 / 0.55);
+}
+
+:root.theme-dark .shoot:not(.safelight) .counter {
+	background:
+		repeating-linear-gradient(90deg, oklch(100% 0 0 / 0.04) 0 1px, transparent 1px 3px),
+		linear-gradient(180deg, oklch(29% 0.004 60), oklch(18% 0.004 60) 50%, oklch(22% 0.004 60));
+	box-shadow:
+		inset 0 1px 0 oklch(100% 0 0 / 0.12),
+		0 0 0 1px oklch(100% 0 0 / 0.05),
+		0 12px 24px -14px rgb(0 0 0 / 0.9);
+}
+
+.shoot:not(.safelight) .counter .adj {
+	border: 0;
+	background:
+		radial-gradient(circle, oklch(30% 0.004 60) 0 54%, transparent 55%),
+		repeating-conic-gradient(oklch(22% 0.004 60) 0 6deg, oklch(42% 0.004 60) 6deg 12deg);
+	color: oklch(95% 0.006 85);
+	box-shadow:
+		0 2px 4px rgb(0 0 0 / 0.45),
+		inset 0 0 0 1px rgb(0 0 0 / 0.5);
+	transition: rotate 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.shoot:not(.safelight) .counter .adj:active {
+	rotate: 24deg;
+}
+
+.shoot:not(.safelight) .counter .window {
+	box-shadow:
+		inset 0 3px 8px rgb(0 0 0 / 0.75),
+		0 1px 0 oklch(100% 0 0 / 0.45);
+}
+
+.shoot:not(.safelight) .log:not(.as-link) {
+	position: relative;
+	gap: 0.6rem;
+	grid-auto-flow: column;
+	justify-content: center;
+	background:
+		radial-gradient(120% 140% at 50% 0%, oklch(100% 0 0 / 0.14), transparent 60%),
+		var(--shoot-btn);
+	box-shadow:
+		inset 0 1px 0 oklch(100% 0 0 / 0.18),
+		inset 0 -3px 0 rgb(0 0 0 / 0.25),
+		0 10px 22px -12px rgb(0 0 0 / 0.6);
+	transition:
+		scale 0.12s ease,
+		box-shadow 0.12s ease;
+}
+
+/* The release: a chrome button with a red dot. */
+.shoot:not(.safelight) .log:not(.as-link)::before {
+	content: '';
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 50%;
+	background:
+		radial-gradient(circle, oklch(58% 0.21 28) 0 22%, transparent 24%),
+		radial-gradient(circle at 40% 35%, oklch(98% 0.003 80), oklch(70% 0.005 80) 70%);
+	box-shadow:
+		0 0 0 2px oklch(25% 0.004 60),
+		0 1px 2px rgb(0 0 0 / 0.5);
+}
+
+.shoot:not(.safelight) .log:not(.as-link):active {
+	scale: 0.975;
+	box-shadow:
+		inset 0 3px 8px rgb(0 0 0 / 0.4),
+		0 4px 10px -8px rgb(0 0 0 / 0.6);
+}
+
 .recent {
 	display: grid;
 	gap: 0.4rem;

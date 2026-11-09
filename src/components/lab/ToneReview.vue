@@ -151,9 +151,9 @@ const scatterLabel = computed(() => {
 .findings {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
-	gap: 0.75rem;
+	gap: 1.4rem 1rem;
 	list-style: none;
-	padding: 0;
+	padding: 0.7rem 0 0;
 }
 
 /* On a phone the findings swipe sideways (the next one peeks in), so the frames aren't a scroll away. */
@@ -168,29 +168,59 @@ const scatterLabel = computed(() => {
 		scroll-padding-inline: var(--lab-gutter, 1.5rem);
 	}
 
+	.findings {
+		padding-top: 0.75rem;
+		padding-bottom: 0.5rem;
+	}
+
 	.finding {
 		flex: 0 0 84%;
 		scroll-snap-align: start;
 	}
 }
 
+/* Notes on index cards, taped to the table; what matters gets the highlighter. */
 .finding {
+	--card: oklch(98% 0.012 88);
+	position: relative;
 	display: grid;
 	gap: 0.35rem;
 	align-content: start;
-	padding: 0.9rem 1rem 1rem;
-	border: 1px solid var(--gray-800);
-	border-left: 3px solid var(--gray-500);
-	border-radius: 0.5rem;
-	background: var(--gray-999);
+	padding: 1.25rem 1.1rem 1.05rem;
+	border-radius: 2px;
+	background:
+		linear-gradient(oklch(62% 0.14 25 / 0.45), oklch(62% 0.14 25 / 0.45)) 0 2.55rem / 100% 1px no-repeat,
+		var(--card);
+	box-shadow:
+		0 1px 1px rgb(0 0 0 / 0.08),
+		0 10px 20px -14px rgb(0 0 0 / 0.45);
+	rotate: -0.5deg;
 }
 
-.finding.warn {
-	border-left-color: var(--lab-warn);
+.finding:nth-child(2n) {
+	rotate: 0.6deg;
 }
 
-.finding.good {
-	border-left-color: var(--lab-ok);
+:root.theme-dark .finding {
+	--card: oklch(22% 0.01 60);
+	box-shadow:
+		0 0 0 1px oklch(100% 0 0 / 0.05),
+		0 14px 24px -14px rgb(0 0 0 / 0.9);
+}
+
+/* A strip of tape holding it down. */
+.finding::before {
+	content: '';
+	position: absolute;
+	top: -0.55rem;
+	left: 50%;
+	width: 4.5rem;
+	height: 1.2rem;
+	translate: -50% 0;
+	background: oklch(92% 0.035 88 / 0.8);
+	clip-path: polygon(3% 10%, 12% 0, 30% 8%, 50% 0, 70% 9%, 88% 0, 100% 6%, 97% 92%, 86% 100%, 66% 93%, 46% 100%, 26% 92%, 8% 100%, 0 94%);
+	box-shadow: 0 1px 1px rgb(0 0 0 / 0.1);
+	rotate: -2deg;
 }
 
 .finding .kind {
@@ -202,9 +232,28 @@ const scatterLabel = computed(() => {
 }
 
 .finding b {
+	justify-self: start;
 	color: var(--gray-0);
 	font-size: 1.05rem;
-	line-height: 1.25;
+	line-height: 1.3;
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
+}
+
+.finding.warn b {
+	background: linear-gradient(transparent 52%, oklch(88% 0.15 95 / 0.65) 52%, oklch(88% 0.15 95 / 0.65) 92%, transparent 92%);
+}
+
+.finding.good b {
+	background: linear-gradient(transparent 52%, oklch(86% 0.13 150 / 0.55) 52%, oklch(86% 0.13 150 / 0.55) 92%, transparent 92%);
+}
+
+:root.theme-dark .finding.warn b {
+	background: linear-gradient(transparent 55%, oklch(60% 0.13 85 / 0.5) 55%, oklch(60% 0.13 85 / 0.5) 92%, transparent 92%);
+}
+
+:root.theme-dark .finding.good b {
+	background: linear-gradient(transparent 55%, oklch(55% 0.1 150 / 0.5) 55%, oklch(55% 0.1 150 / 0.5) 92%, transparent 92%);
 }
 
 .finding p {

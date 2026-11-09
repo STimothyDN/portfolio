@@ -23,6 +23,24 @@ film desk).
 | **Labels** (`/photography/lab/labels/`) | Printable QR stickers for canisters and camera backs. The phone's own camera opens them: shooting mode if the roll is loaded, otherwise its page (`/photography/lab/r/R-031`). |
 | **Labs** | Shot rolls waiting to be sent: tick a batch, pick the lab, say whether it's **dropped off** or **mailed in** (with an optional tracking number for the envelope), the price per roll and whether it includes prints (or what prints cost), and print a slip with each roll's process and push/pull. Mailed rolls show where their envelope is; once scans are in, rolls whose negatives are in the post show under "Negatives on the way back". Lab cards show typical turnaround once rolls go from "sent" to "scans in". |
 
+**The look: a darkroom you walk around.** Each page is a station in one room, and the
+room changes with the light: daylight through the studio window by day, the safelight's
+amber-red pooling from the corner at night. Moving between stations winds the film: the
+page slides out through the gate as the next frame comes in, in the strip nav's order
+(opening a roll from its list lifts it toward you instead). A roll on the line takes the
+shape it has in real life at each stage: a length of film in the camera, a rewound
+canister, a kraft envelope at the lab (airmail-bordered if mailed, postmarked), a
+darkroom print once scans are in, a glassine sleeve once it's filed. Loaded cameras show
+their top plate with a frame counter that winds up to the frames logged, the box end in
+the memo holder and the film across the gate. The fridge door swings open as you arrive
+(drawers, door bins and the freezer look the part when their shelf is named that way);
+gear sits in a foam-lined case, named on embossed label tape, with a film window and a
+lit LED on loaded cameras; labs are business cards, and a roll at the lab travels the road
+from home to the lab as its days count toward the usual turnaround. Frames lie on the
+light table under a loupe (hover a frame with a mouse). Everything that moves stays still
+under "reduce motion". The transition and room styles live in `LabLayout.astro`; each
+station's objects live in its own component.
+
 The six stages: **In storage → In camera → Shot → At the lab → Scans in → Negatives home**
 (plus **Lost or ruined**). Rolls get codes like `R-023`, short enough to write on the
 canister.

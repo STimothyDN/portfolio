@@ -65,6 +65,13 @@ const initials = (user?.name ?? '')
 				</main>
 			) : door ? (
 				<main class="lab-door">
+					{/* Over the darkroom door: the lamp that says someone's working inside. */}
+					<div class="lab-sign" aria-hidden="true">
+						<span class="lab-sign-glass">
+							<b>Darkroom</b>
+							<i>In use · keep the door shut</i>
+						</span>
+					</div>
 					<slot />
 				</main>
 			) : shoot ? (
@@ -180,11 +187,54 @@ const initials = (user?.name ?? '')
 		if (on) safety = setTimeout(() => busy(false), 12000);
 		else document.querySelectorAll('.lab-pending').forEach((el) => el.classList.remove('lab-pending'));
 	};
+	/*
+	 * Moving between stations winds the film: the page you're on slides out
+	 * through the gate as the next frame slides in, in the strip nav's order.
+	 * Into a roll from the list (and back out) the table lifts toward you
+	 * instead, like a negative raised to the loupe. The header, the lab bar and
+	 * the strip hold still (they're named for the transition only while it runs).
+	 */
+	const STATION: Record<string, number> = { '': 0, shoot: 1, rolls: 2, r: 2, frames: 2.5, fridge: 3, labels: 3.5, gear: 4, labs: 5, account: 6 };
+	const stationOf = (url: URL) => {
+		if (!url.pathname.startsWith('/photography/lab')) return null;
+		const parts = url.pathname.replace(/^\/photography\/lab\/?/, '').split('/').filter(Boolean);
+		const head = parts[0] ?? '';
+		// The doors (sign-in, setup, invite) aren't stations.
+		return head in STATION ? { at: STATION[head], depth: parts.length } : null;
+	};
+	const turnFor = (from: URL, to: URL) => {
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+		const a = stationOf(from);
+		const b = stationOf(to);
+		if (!a || !b) return null;
+		if (b.at !== a.at) return b.at > a.at ? 'next' : 'prev';
+		if (b.depth !== a.depth) return b.depth > a.depth ? 'in' : 'out';
+		return null;
+	};
+	let turnDone: ReturnType<typeof setTimeout> | undefined;
+	const endTurn = () => {
+		clearTimeout(turnDone);
+		delete root.dataset.labTurn;
+	};
+
 	document.addEventListener('astro:before-preparation', (e) => {
-		const ev = e as Event & { to: URL; sourceElement?: Element };
+		const ev = e as Event & { from: URL; to: URL; sourceElement?: Element };
+		endTurn();
 		if (!ev.to.pathname.startsWith('/photography/lab')) return;
+		const turn = turnFor(ev.from, ev.to);
+		if (turn) root.dataset.labTurn = turn;
 		ev.sourceElement?.classList.add('lab-pending');
 		busy(true);
+	});
+	// The router copies the incoming page's <html> attributes over: carry the turn
+	// across so the new frame is named too, and clear it once the film has moved.
+	document.addEventListener('astro:before-swap', (e) => {
+		const ev = e as Event & { newDocument?: Document; viewTransition?: { finished: Promise<void> } };
+		const turn = root.dataset.labTurn;
+		if (!turn || !ev.newDocument) return;
+		ev.newDocument.documentElement.dataset.labTurn = turn;
+		ev.viewTransition?.finished.finally(endTurn);
+		turnDone = setTimeout(endTurn, 1500);
 	});
 	// Full page loads (links the router leaves alone) get the same signal.
 	document.addEventListener('click', (e) => {
@@ -350,10 +400,16 @@ const initials = (user?.name ?? '')
 	@media (prefers-reduced-motion: no-preference) {
 		.lab-strip-nav::before,
 		.lab-strip-nav::after {
-			animation: lab-wind 0.7s cubic-bezier(0.33, 1, 0.68, 1) both;
+			animation: lab-sprocket-wind 0.7s cubic-bezier(0.33, 1, 0.68, 1) both;
 		}
 
-		@keyframes lab-wind {
+		/* Going back a station winds it the other way (the holes repeat every pitch). */
+		html[data-lab-turn='prev'] .lab-strip-nav::before,
+		html[data-lab-turn='prev'] .lab-strip-nav::after {
+			animation-direction: reverse;
+		}
+
+		@keyframes lab-sprocket-wind {
 			from {
 				background-position-x: calc(var(--pitch) * -3);
 			}
@@ -553,28 +609,60 @@ const initials = (user?.name ?? '')
 		}
 	}
 
-	/* A backlit panel: the light table and anything laid out on it. */
+	/*
+	 * A backlit panel: the light table and anything laid out on it. Opal
+	 * acrylic, brightest where the tubes run under the middle, in an aluminium
+	 * frame (rings of shadow, so a scrolling panel doesn't clip it).
+	 */
 	.lab-lightbox {
 		position: relative;
-		border: 1px solid var(--lab-table-edge);
 		border-radius: 0.75rem;
 		background:
 			linear-gradient(var(--lab-table-grid) 1px, transparent 1px) 0 0 / 100% 2rem,
 			linear-gradient(90deg, var(--lab-table-grid) 1px, transparent 1px) 0 0 / 2rem 100%,
-			radial-gradient(120% 90% at 50% 0%, color-mix(in oklch, var(--lab-table) 70%, white) 0%, var(--lab-table) 70%);
+			radial-gradient(90% 70% at 50% 45%, color-mix(in oklch, var(--lab-table) 40%, white) 0%, var(--lab-table) 75%);
 		box-shadow:
-			inset 0 1px 0 color-mix(in oklch, white 60%, transparent),
-			0 18px 40px -30px rgb(0 0 0 / 0.45);
+			inset 0 0 0 1px var(--lab-table-edge),
+			inset 0 1px 0 color-mix(in oklch, white 70%, transparent),
+			0 0 0 5px oklch(86% 0.005 80),
+			0 0 0 6px oklch(70% 0.008 75),
+			0 22px 44px -28px rgb(0 0 0 / 0.5);
 	}
 
 	:root.theme-dark .lab-lightbox {
 		background:
 			linear-gradient(var(--lab-table-grid) 1px, transparent 1px) 0 0 / 100% 2rem,
 			linear-gradient(90deg, var(--lab-table-grid) 1px, transparent 1px) 0 0 / 2rem 100%,
-			radial-gradient(110% 80% at 50% 0%, oklch(26% 0.025 70) 0%, var(--lab-table) 70%);
+			radial-gradient(90% 70% at 50% 45%, oklch(30% 0.03 72) 0%, var(--lab-table) 75%);
 		box-shadow:
-			inset 0 1px 0 oklch(45% 0.04 75 / 0.6),
-			0 0 60px -30px oklch(80% 0.08 80 / 0.25);
+			inset 0 0 0 1px var(--lab-table-edge),
+			inset 0 1px 0 oklch(50% 0.04 75 / 0.6),
+			0 0 0 5px oklch(26% 0.005 60),
+			0 0 0 6px oklch(34% 0.006 60),
+			0 0 70px -30px oklch(80% 0.08 80 / 0.3);
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		/* Switched on: the tubes flicker and settle. */
+		.lab-lightbox {
+			animation: lab-tubes 1.1s 0.15s ease-out both;
+		}
+
+		@keyframes lab-tubes {
+			0% {
+				filter: brightness(0.7);
+			}
+			10% {
+				filter: brightness(1.05);
+			}
+			16% {
+				filter: brightness(0.78);
+			}
+			30%,
+			100% {
+				filter: none;
+			}
+		}
 	}
 
 	.lab-door {
@@ -752,10 +840,10 @@ const initials = (user?.name ?? '')
 	}
 
 	html.lab-navigating .lab-progress {
-		animation: lab-wind 0.6s linear infinite;
+		animation: lab-progress-wind 0.6s linear infinite;
 	}
 
-	@keyframes lab-wind {
+	@keyframes lab-progress-wind {
 		to {
 			background-position: 44px 0;
 		}
@@ -769,6 +857,247 @@ const initials = (user?.name ?? '')
 	@media (prefers-reduced-motion: reduce) {
 		html.lab-navigating .lab-progress {
 			animation: none;
+		}
+	}
+
+	/* ---------- the room: ambient light over every station ---------- */
+	.lab {
+		position: relative;
+		isolation: isolate;
+		/* Daylight through the studio window, warm and low. */
+		--lab-ambient: oklch(93% 0.05 82 / 0.55);
+		--lab-ambient-2: oklch(95% 0.03 70 / 0.35);
+	}
+
+	/* The advance lever's throw: slow off the mark, quick through, settling. On
+	   the root, since the transition's pseudo-elements inherit from <html>. */
+	:root {
+		--lab-advance: cubic-bezier(0.7, 0, 0.2, 1);
+	}
+
+	/* At night it's a darkroom: the safelight's amber-red, pooling from the corner. */
+	:root.theme-dark .lab {
+		--lab-ambient: oklch(42% 0.15 32 / 0.26);
+		--lab-ambient-2: oklch(35% 0.09 45 / 0.16);
+	}
+
+	.lab::before {
+		content: '';
+		position: fixed;
+		inset: 0;
+		z-index: -1;
+		pointer-events: none;
+		background:
+			radial-gradient(70vmax 50vmax at 100% -10%, var(--lab-ambient), transparent 70%),
+			radial-gradient(60vmax 40vmax at -10% 110%, var(--lab-ambient-2), transparent 70%);
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		:root.theme-dark .lab::before {
+			animation: lab-safelight 9s ease-in-out infinite alternate;
+		}
+
+		@keyframes lab-safelight {
+			to {
+				opacity: 0.78;
+			}
+		}
+	}
+
+	/* ---------- winding the film between stations ---------- */
+	html[data-lab-turn] .content > nav {
+		view-transition-name: lab-site-nav;
+	}
+
+	html[data-lab-turn] .lab-bar {
+		view-transition-name: lab-bar;
+	}
+
+	/* Between two frames: the film base, glimpsed as the next frame comes in. */
+	html[data-lab-turn]::view-transition {
+		background: oklch(16% 0.015 50);
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		html[data-lab-turn='next']::view-transition-old(root) {
+			animation: lab-frame-out-l 0.62s var(--lab-advance) both;
+		}
+
+		html[data-lab-turn='next']::view-transition-new(root) {
+			animation: lab-frame-in-r 0.62s var(--lab-advance) both;
+		}
+
+		html[data-lab-turn='prev']::view-transition-old(root) {
+			animation: lab-frame-out-r 0.62s var(--lab-advance) both;
+		}
+
+		html[data-lab-turn='prev']::view-transition-new(root) {
+			animation: lab-frame-in-l 0.62s var(--lab-advance) both;
+		}
+
+		/* Into a roll: the table drops back and dims as the roll comes up to the eye. */
+		html[data-lab-turn='in']::view-transition-old(root) {
+			animation: lab-lift-under 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+		}
+
+		html[data-lab-turn='in']::view-transition-new(root) {
+			animation: lab-lift-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+		}
+
+		html[data-lab-turn='out']::view-transition-old(root) {
+			animation: lab-lift-away 0.45s cubic-bezier(0.4, 0, 1, 1) both;
+		}
+
+		html[data-lab-turn='out']::view-transition-new(root) {
+			animation: lab-lift-back 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+		}
+
+		html[data-lab-turn='in']::view-transition,
+		html[data-lab-turn='out']::view-transition {
+			background: var(--gray-999);
+		}
+
+		html[data-lab-turn]::view-transition-group(lab-site-nav),
+		html[data-lab-turn]::view-transition-group(lab-bar) {
+			animation-duration: 0.5s;
+			animation-timing-function: var(--lab-advance);
+		}
+	}
+
+	/* A frame line's width apart, so the film base shows between them. */
+	@keyframes lab-frame-out-l {
+		to {
+			translate: calc(-100% - 1.5rem) 0;
+			filter: brightness(0.82);
+		}
+	}
+
+	@keyframes lab-frame-in-r {
+		from {
+			translate: calc(100% + 1.5rem) 0;
+			filter: brightness(0.82);
+		}
+	}
+
+	@keyframes lab-frame-out-r {
+		to {
+			translate: calc(100% + 1.5rem) 0;
+			filter: brightness(0.82);
+		}
+	}
+
+	@keyframes lab-frame-in-l {
+		from {
+			translate: calc(-100% - 1.5rem) 0;
+			filter: brightness(0.82);
+		}
+	}
+
+	@keyframes lab-lift-under {
+		to {
+			scale: 0.94;
+			opacity: 0;
+			filter: blur(3px);
+		}
+	}
+
+	@keyframes lab-lift-up {
+		from {
+			translate: 0 3rem;
+			scale: 1.015;
+			opacity: 0;
+		}
+	}
+
+	@keyframes lab-lift-away {
+		to {
+			translate: 0 3rem;
+			opacity: 0;
+		}
+	}
+
+	@keyframes lab-lift-back {
+		from {
+			scale: 0.95;
+			opacity: 0;
+			filter: blur(3px);
+		}
+	}
+
+	/* ---------- the darkroom door's lamp (sign-in, setup, invite) ---------- */
+	.lab-sign {
+		justify-self: center;
+		padding: 0.45rem;
+		border-radius: 0.5rem;
+		background: linear-gradient(180deg, oklch(26% 0.01 50), oklch(16% 0.01 50));
+		box-shadow:
+			0 1px 0 oklch(40% 0.01 50) inset,
+			0 14px 30px -14px rgb(0 0 0 / 0.6);
+	}
+
+	.lab-sign-glass {
+		--lit: oklch(62% 0.23 28);
+		display: grid;
+		justify-items: center;
+		gap: 0.2rem;
+		padding: 0.55rem 1.6rem 0.6rem;
+		border-radius: 0.25rem;
+		background: radial-gradient(120% 140% at 50% 50%, oklch(45% 0.17 28), oklch(24% 0.09 28));
+		color: oklch(97% 0.04 40);
+		text-align: center;
+		box-shadow:
+			inset 0 0 0 1px oklch(70% 0.2 30 / 0.4),
+			inset 0 0 18px oklch(75% 0.2 35 / 0.5),
+			0 0 34px 4px oklch(58% 0.22 28 / 0.45);
+	}
+
+	.lab-sign-glass b {
+		font-family: var(--font-mono);
+		font-size: 0.95rem;
+		font-weight: 600;
+		letter-spacing: 0.42em;
+		margin-right: -0.42em;
+		text-transform: uppercase;
+		text-shadow: 0 0 10px oklch(80% 0.2 35 / 0.9);
+	}
+
+	.lab-sign-glass i {
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		font-style: normal;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		opacity: 0.85;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		/* The tube struggles, then catches. */
+		.lab-sign-glass {
+			animation: lab-sign-on 1.6s 0.3s steps(1, end) both;
+		}
+
+		@keyframes lab-sign-on {
+			0% {
+				filter: brightness(0.25) saturate(0.4);
+				box-shadow: inset 0 0 0 1px oklch(70% 0.2 30 / 0.2);
+			}
+			12% {
+				filter: none;
+			}
+			18% {
+				filter: brightness(0.3) saturate(0.4);
+				box-shadow: inset 0 0 0 1px oklch(70% 0.2 30 / 0.2);
+			}
+			26% {
+				filter: none;
+			}
+			30% {
+				filter: brightness(0.45) saturate(0.6);
+			}
+			44%,
+			100% {
+				filter: none;
+			}
 		}
 	}
 

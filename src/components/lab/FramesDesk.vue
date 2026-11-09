@@ -19,8 +19,9 @@
 		</header>
 
 		<div class="layout" :class="{ 'no-map': !located.length }">
-			<div class="sheet-wrap">
-				<div v-if="groups.length" class="sheets">
+			<div class="sheet-wrap lab-lightbox">
+				<!-- On the light table with a loupe: hover a frame to see it up close. -->
+				<div v-if="groups.length" class="sheets" @pointermove="onLoupe" @pointerleave="hideLoupe">
 					<section v-for="g in groups" :key="g.rollId" class="sheet-group" :aria-label="`${g.code}, ${g.rows.length} frames`">
 						<header class="sg-head">
 							<a class="lab-code" :href="`/photography/lab/rolls/${g.code}/`">{{ g.code }}</a>
@@ -28,7 +29,7 @@
 							<span class="sg-meta">{{ [g.title ? g.stock : null, g.camera].filter(Boolean).join(' · ') }}</span>
 						</header>
 						<ol class="sheet">
-							<li v-for="r in g.rows" :key="r.id" class="cell" :class="{ thin: r.thin, unscanned: !r.scan }">
+							<li v-for="r in g.rows" :key="r.id" class="cell" :class="{ thin: r.thin, unscanned: !r.scan }" :data-frame="r.id">
 								<a :href="`/photography/lab/rolls/${r.code}/#frames`" class="cell-link">
 									<span class="edge">{{ r.number }} <span aria-hidden="true">▸</span> {{ r.number }}A<template v-if="r.scan"> · scan {{ r.scan.n }}</template></span>
 									<span class="img">
@@ -46,6 +47,13 @@
 					</section>
 				</div>
 				<p v-else class="lab-empty">{{ props.rows.length ? 'No frame matches all of that.' : 'No frames logged yet. Shooting mode logs them as you go.' }}</p>
+				<div ref="loupeEl" class="loupe" :class="{ on: loupe.on }" aria-hidden="true">
+					<span v-if="loupe.scan" class="loupe-scan" :style="{ backgroundImage: `url('${loupe.scan.big}'), url('${loupe.scan.thumb}')` }"></span>
+					<span v-else-if="loupe.latent" class="loupe-latent latent" :class="{ auto: loupe.latent.lit == null }" :style="loupe.latent.lit != null ? { '--lit': loupe.latent.lit } : undefined">
+						<i>{{ loupe.latent.edge }}</i>
+						<b>{{ loupe.latent.exp }}</b>
+					</span>
+				</div>
 				<button v-if="visible.length > limit" type="button" class="lab-btn lab-btn--quiet more" @click="limit += 48">Show {{ Math.min(48, visible.length - limit) }} more</button>
 			</div>
 			<aside v-if="located.length" class="side">
@@ -57,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 
 import { describe, isEmpty, matches, parseQuery } from '../../lib/lab/frame-search';
 import { formatExposure, frameTime } from '../../lib/lab/inventory';
@@ -96,6 +104,54 @@ const groups = computed(() => {
 });
 /** EV 3 (night) to 16 (snow) as 0–1, for a latent frame's brightness. */
 const lit = (ev: number) => Math.round(Math.min(1, Math.max(0, (ev - 3) / 13)) * 100) / 100;
+/*
+ * The loupe: over a frame on the sheet (with a mouse), a lens follows the
+ * pointer and shows the scan about 2.6× larger, or, for a frame not scanned
+ * yet, its edge number and exposure written large.
+ */
+const ZOOM = 2.6;
+const loupeEl = ref<HTMLElement | null>(null);
+const loupe = reactive<{ on: boolean; id: string; scan: { thumb: string; big: string } | null; latent: { lit: number | null; edge: string; exp: string } | null }>({
+	on: false,
+	id: '',
+	scan: null,
+	latent: null,
+});
+const byId = computed(() => new Map(shown.value.map((r) => [r.id, r])));
+let loupeFrame = 0;
+function hideLoupe() {
+	loupe.on = false;
+}
+function onLoupe(e: PointerEvent) {
+	if (e.pointerType !== 'mouse' || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+	const cell = (e.target as Element).closest<HTMLElement>('.cell');
+	const img = cell?.querySelector<HTMLElement>('.img');
+	const rect = img?.getBoundingClientRect();
+	if (!cell || !rect || e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return hideLoupe();
+	const row = byId.value.get(cell.dataset.frame ?? '');
+	if (!row) return hideLoupe();
+	if (loupe.id !== row.id) {
+		loupe.id = row.id;
+		loupe.scan = row.scan ? { thumb: row.scan.thumb, big: row.scan.thumb.replace(/([?&])width=\d+/, '$1width=900') } : null;
+		loupe.latent = row.scan
+			? null
+			: { lit: row.ev != null ? lit(row.ev) : null, edge: `${row.number} ▸ ${row.number}A`, exp: [formatExposure(row), row.ev != null ? `EV ${formatEv(row.ev)}` : null].filter(Boolean).join(' · ') };
+	}
+	loupe.on = true;
+	const { clientX: x, clientY: y } = e;
+	cancelAnimationFrame(loupeFrame);
+	loupeFrame = requestAnimationFrame(() => {
+		const el = loupeEl.value;
+		if (!el) return;
+		const half = el.offsetWidth / 2;
+		el.style.translate = `${x - half}px ${y - half}px`;
+		el.style.setProperty('--w', `${rect.width * ZOOM}px`);
+		el.style.setProperty('--h', `${rect.height * ZOOM}px`);
+		el.style.setProperty('--x', `${half - (x - rect.left) * ZOOM}px`);
+		el.style.setProperty('--y', `${half - (y - rect.top) * ZOOM}px`);
+	});
+}
+
 const located = computed(() => results.value.filter((r) => r.lat != null && r.lng != null).map((r) => ({ id: r.id, lat: r.lat!, lng: r.lng!, thin: r.thin })));
 watch(q, () => (limit.value = 36));
 
@@ -382,6 +438,97 @@ onMounted(() => {
 
 .more {
 	margin-top: 0.75rem;
+}
+
+/* The sheets lie on the light table. */
+.sheet-wrap {
+	padding: clamp(0.6rem, 2vw, 1.1rem);
+}
+
+.sheet-wrap .sg-title {
+	color: var(--gray-0);
+}
+
+/* A loupe: black barrel, chrome ring, the glass's own vignette and glint. */
+.loupe {
+	position: fixed;
+	left: 0;
+	top: 0;
+	z-index: 30;
+	width: 11rem;
+	height: 11rem;
+	border-radius: 50%;
+	overflow: hidden;
+	background: var(--lab-film-frame);
+	box-shadow:
+		0 0 0 4px oklch(16% 0.004 60),
+		0 0 0 6px oklch(70% 0.005 80),
+		0 0 0 9px oklch(20% 0.004 60),
+		0 20px 34px -8px rgb(0 0 0 / 0.55);
+	opacity: 0;
+	scale: 0.5;
+	pointer-events: none;
+	transition:
+		opacity 0.15s ease,
+		scale 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.loupe.on {
+	opacity: 1;
+	scale: 1;
+}
+
+.loupe::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.22), transparent 38%);
+	box-shadow:
+		inset 0 0 22px rgb(0 0 0 / 0.6),
+		inset 0 0 0 1px rgb(255 255 255 / 0.25);
+}
+
+.loupe-scan {
+	position: absolute;
+	left: var(--x, 0);
+	top: var(--y, 0);
+	width: var(--w, 100%);
+	height: var(--h, 100%);
+	background-size: cover;
+	background-position: center;
+}
+
+.loupe-latent {
+	display: grid;
+	place-content: center;
+	justify-items: center;
+	gap: 0.35rem;
+	padding: 1rem;
+	text-align: center;
+}
+
+.loupe-latent i {
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+	font-style: normal;
+	letter-spacing: 0.12em;
+	color: var(--lab-edge-ink);
+}
+
+.loupe-latent b {
+	font-family: var(--font-mono);
+	font-size: 1.05rem;
+	font-weight: 600;
+	color: oklch(97% 0.01 85);
+	text-shadow: 0 1px 6px rgb(0 0 0 / 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.loupe {
+		transition: opacity 0.1s ease;
+		scale: 1;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {

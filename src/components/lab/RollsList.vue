@@ -14,10 +14,11 @@
 		<div ref="toolbarEl" class="toolbar">
 			<div class="filters" role="group" aria-label="Show rolls">
 				<button
-					v-for="f in filters"
+					v-for="(f, fi) in filters"
 					:key="f.key"
 					type="button"
 					class="filter"
+					:style="{ '--fi': fi }"
 					:aria-pressed="status === f.key"
 					@click="status = f.key"
 				>
@@ -174,31 +175,53 @@ function added(newRolls: RollView[], stock: StockView | null) {
 	gap: 1rem;
 }
 
+/* Index tabs along the top of the binder. */
 .filters {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.4rem;
+	align-items: flex-end;
+	gap: 0.3rem 0.25rem;
+	padding-inline: 0.5rem;
+	border-bottom: 1.5px solid var(--gray-700);
 }
 
 .filter {
+	--tab: oklch(from var(--lab-lit) l c calc(60 + var(--fi) * 38));
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
-	min-height: 2.25rem;
-	padding: 0.3rem 0.85rem;
-	border: 1px solid var(--gray-700);
-	border-radius: 999px;
-	background: none;
+	min-height: 2.35rem;
+	margin-bottom: -1.5px;
+	padding: 0.35rem 0.9rem 0.3rem;
+	border: 1.5px solid var(--gray-700);
+	border-bottom-color: transparent;
+	border-radius: 0.55rem 0.55rem 0 0;
+	background: linear-gradient(180deg, color-mix(in oklch, var(--tab) 70%, var(--gray-999)), color-mix(in oklch, var(--tab) 35%, var(--gray-999)));
 	color: var(--gray-200);
 	font: inherit;
 	font-size: var(--text-sm);
 	cursor: pointer;
+	translate: 0 3px;
+	transition:
+		translate 0.2s ease,
+		background-color 0.2s ease;
 }
 
+:root.theme-dark .filter {
+	background: linear-gradient(180deg, color-mix(in oklch, var(--tab) 22%, var(--gray-900)), var(--gray-900));
+}
+
+.filter:hover {
+	translate: 0 1px;
+}
+
+/* The tab you're on: pulled up, joined to the page below. */
 .filter[aria-pressed='true'] {
-	background: var(--accent-regular);
-	border-color: var(--accent-regular);
-	color: var(--accent-text-over);
+	translate: 0 0;
+	background: var(--gray-999);
+	border-bottom-color: var(--gray-999);
+	color: var(--gray-0);
+	font-weight: 600;
 }
 
 .filter:focus-visible {
@@ -222,26 +245,46 @@ function added(newRolls: RollView[], stock: StockView | null) {
 	flex: 1 1 16rem;
 }
 
+/*
+ * The binder page: punched for the rings down the left, a margin rule, and
+ * each roll filed as a strip in its sleeve.
+ */
 .list {
 	list-style: none;
-	padding: 0;
+	padding: 0.5rem 0.5rem 0.5rem 2.6rem;
 	display: grid;
+	border-radius: 0 0 0.5rem 0.5rem;
+	background:
+		radial-gradient(circle, var(--gray-999) 0.42rem, color-mix(in oklch, var(--gray-0) 18%, transparent) 0.46rem, transparent 0.52rem) 0.55rem 2.2rem / 1rem 9rem repeat-y,
+		linear-gradient(90deg, transparent 2.05rem, oklch(62% 0.13 25 / 0.35) 2.05rem 2.15rem, transparent 2.15rem),
+		color-mix(in oklch, var(--gray-900) 55%, var(--gray-999));
+	box-shadow: inset 0 0 0 1px var(--gray-800);
 }
 
 .row {
+	position: relative;
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr) auto;
 	align-items: center;
 	gap: 1rem;
-	padding: 0.7rem 0.5rem;
+	padding: 0.7rem 0.7rem;
 	border-bottom: 1px solid var(--gray-800);
 	color: inherit;
 	text-decoration: none;
-	border-radius: 0.4rem;
+	border-radius: 0.35rem;
+	transition:
+		translate 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+		background-color 0.2s ease,
+		box-shadow 0.25s ease;
 }
 
+/* Slid a little out of its sleeve. */
 .row:hover {
-	background: var(--gray-900);
+	translate: 0.4rem 0;
+	background: var(--gray-999);
+	box-shadow:
+		0 1px 2px rgb(0 0 0 / 0.08),
+		0 8px 16px -12px rgb(0 0 0 / 0.4);
 }
 
 .row:focus-visible {
@@ -290,21 +333,33 @@ function added(newRolls: RollView[], stock: StockView | null) {
 	gap: 0.9rem;
 }
 
-/* Six segments: how far along the line this roll is. */
+/* Six frames on a scrap of film: how far along the line this roll is. */
 .meter {
 	display: flex;
 	gap: 2px;
+	padding: 4px 4px;
+	border-radius: 2px;
+	background:
+		repeating-linear-gradient(90deg, oklch(80% 0.01 80) 0 2px, transparent 2px 5px) 0 1px / 100% 1.5px no-repeat,
+		repeating-linear-gradient(90deg, oklch(80% 0.01 80) 0 2px, transparent 2px 5px) 0 calc(100% - 1px) / 100% 1.5px no-repeat,
+		var(--lab-film);
 }
 
 .meter i {
-	width: 0.7rem;
-	height: 0.32rem;
+	width: 0.72rem;
+	height: 0.5rem;
 	border-radius: 1px;
-	background: var(--gray-800);
+	background: var(--lab-film-frame);
 }
 
 .meter i.on {
-	background: var(--lab-edge-ink);
+	background: linear-gradient(180deg, oklch(68% 0.13 58), oklch(57% 0.12 50));
+}
+
+/* The stage it's at: lit. */
+.meter i.on:not(:has(+ i.on)) {
+	background: var(--lab-lit);
+	box-shadow: 0 0 6px var(--lab-lit-glow);
 }
 
 .meter.lost i {

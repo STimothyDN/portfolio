@@ -57,7 +57,7 @@
 		<!-- At the lab -->
 		<section v-if="atLab.length" class="lab-section" aria-labelledby="atlab-h">
 			<header class="sec-head"><h2 id="atlab-h" class="lab-h2">At the lab now</h2></header>
-			<ul class="lab-rows">
+			<TransitionGroup tag="ul" name="post" class="lab-rows">
 				<li v-for="r in atLab" :key="r.id">
 					<a class="lab-code" :href="`/photography/lab/rolls/${r.code}/`">{{ r.code }}</a>
 					<span class="lab-grow">
@@ -65,14 +65,17 @@
 						<span class="lab-meta">{{ [r.lab?.name, r.labOrder ? `#${r.labOrder}` : null, r.labDelivery ? DELIVERY[r.labDelivery].toLowerCase() : null].filter(Boolean).join(' · ') }}</span>
 						<TrackingNumber v-if="r.trackingOut" :number="r.trackingOut" :track="tracks[r.trackingOut]" />
 					</span>
-					<span class="timer" :class="{ late: late(r) }" :title="usual(r) != null ? `Usually ${usual(r)} days` : 'No usual time yet'">
+					<!-- The way to the lab: home on the left, the lab on the right, and the
+					     roll (an envelope if it was mailed) as far along as the days are
+					     toward the lab's usual turnaround. -->
+					<span class="timer" :class="{ late: late(r) }" :data-delivery="r.labDelivery ?? undefined" :title="usual(r) != null ? `Usually ${usual(r)} days` : 'No usual time yet'">
 						<i :style="{ width: `${Math.min(100, (daysBetween(r.statusOn, today) / Math.max(1, usual(r) ?? 14)) * 100)}%` }"></i>
 					</span>
 					<span class="lab-chip" :class="{ 'lab-chip--warn': late(r) }">
 						{{ formatDays(daysBetween(r.statusOn, today)) }}<template v-if="usual(r) != null"> · usually {{ usual(r) }}</template>
 					</span>
 				</li>
-			</ul>
+			</TransitionGroup>
 		</section>
 
 		<!-- Mailed rolls: scans are in, the negatives are in the post -->
@@ -103,7 +106,7 @@
 				<button type="button" class="lab-btn lab-btn--quiet" @click="editLab = 'new'">Add lab</button>
 			</header>
 			<div class="cards">
-				<article v-for="l in labs" :key="l.id" class="card">
+				<article v-for="l in labs" :key="l.id" class="card" :data-initial="l.name.trim().charAt(0).toUpperCase()">
 					<h3 class="card-name">{{ l.name }}</h3>
 					<p class="lab-meta">{{ [l.location, l.costCents != null ? `${formatMoney(l.costCents)} a roll` : null].filter(Boolean).join(' · ') || 'No details yet' }}</p>
 					<dl class="stats">
@@ -461,24 +464,121 @@ async function deleteLab() {
 	}
 }
 
-/* At the lab: a developing timer filling toward the lab's usual turnaround. */
+/*
+ * At the lab: the road there. A dotted line from home (left) to the lab
+ * (right); the roll travels along it as the days count toward the lab's
+ * usual turnaround: an envelope if it was mailed, a canister if dropped off.
+ */
 .timer {
-	width: 5rem;
-	height: 0.35rem;
-	border-radius: 999px;
-	background: var(--gray-800);
-	overflow: hidden;
+	--road: var(--gray-500);
+	--mark: var(--gray-300);
+	position: relative;
+	flex: none;
+	width: clamp(7.5rem, 20vw, 12rem);
+	height: 1.5rem;
+	background: radial-gradient(circle, var(--road) 0.9px, transparent 1.3px) 1.1rem 50% / 6px 4px repeat-x;
+	background-clip: content-box;
+	padding-inline: 1.1rem;
+}
+
+/* Home. */
+.timer::before,
+.timer::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	width: 0.85rem;
+	height: 0.85rem;
+	translate: 0 -55%;
+	background: var(--mark);
+}
+
+.timer::before {
+	left: 0;
+	clip-path: polygon(50% 0, 100% 45%, 86% 45%, 86% 100%, 14% 100%, 14% 45%, 0 45%);
+}
+
+/* The lab, with its sawtooth roof. */
+.timer::after {
+	right: 0;
+	width: 1rem;
+	clip-path: polygon(0 30%, 33% 0, 33% 30%, 66% 0, 66% 30%, 100% 0, 100% 100%, 0 100%);
 }
 
 .timer i {
+	position: absolute;
+	top: 50%;
+	left: 1.1rem;
 	display: block;
-	height: 100%;
-	background: var(--lab-ok);
-	border-radius: inherit;
+	max-width: calc(100% - 2.2rem);
+	height: 2px;
+	translate: 0 -50%;
+	border-radius: 2px;
+	background: var(--gray-0);
+}
+
+/* The roll on its way. */
+.timer i::after {
+	content: '';
+	position: absolute;
+	right: 0;
+	top: 50%;
+	width: 0.6rem;
+	height: 1rem;
+	translate: 50% -50%;
+	border-radius: 1.5px;
+	background:
+		linear-gradient(90deg, rgb(0 0 0 / 0.3), rgb(255 255 255 / 0.3) 30%, rgb(0 0 0 / 0.3)),
+		linear-gradient(180deg, oklch(76% 0.006 80) 0 0.16rem, oklch(62% 0.13 58) 0.16rem calc(100% - 0.16rem), oklch(76% 0.006 80) calc(100% - 0.16rem));
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+.timer[data-delivery='mail'] i::after {
+	width: 1.15rem;
+	height: 0.78rem;
+	border-radius: 1px;
+	background:
+		linear-gradient(to bottom right, transparent calc(50% - 0.6px), oklch(45% 0.05 60 / 0.6) 50%, transparent calc(50% + 0.6px)) 0 0 / 50% 60% no-repeat,
+		linear-gradient(to bottom left, transparent calc(50% - 0.6px), oklch(45% 0.05 60 / 0.6) 50%, transparent calc(50% + 0.6px)) 100% 0 / 50% 60% no-repeat,
+		oklch(82% 0.06 75);
+}
+
+.timer.late {
+	--mark: var(--lab-warn);
 }
 
 .timer.late i {
 	background: var(--lab-warn);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.timer i {
+		animation: travel 1.4s 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+	}
+
+	@keyframes travel {
+		from {
+			max-width: 0;
+		}
+	}
+
+	/* Fresh off the envelope: a sent roll drops into the list. */
+	.post-enter-active {
+		transition:
+			opacity 0.5s ease,
+			translate 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	.post-enter-from {
+		opacity: 0;
+		translate: 0 -1.5rem;
+	}
+}
+
+@media (max-width: 40em) {
+	.labs .lab-rows > li:has(> .timer) {
+		flex-wrap: wrap;
+	}
 }
 
 .pick {
@@ -526,19 +626,85 @@ async function deleteLab() {
 	color: var(--kraft-soft);
 }
 
+/*
+ * Labs: their business cards, letterpressed on heavy stock, dealt out on the
+ * table a little askew.
+ */
 .cards {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
-	gap: 0.85rem;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+	gap: 1.25rem;
+	padding: 0.25rem;
 }
 
 .card {
+	--stock: oklch(97.4% 0.012 85);
+	--press: oklch(26% 0.012 50);
+	--press-soft: oklch(44% 0.015 55);
+	position: relative;
 	display: grid;
 	align-content: start;
 	gap: 0.5rem;
-	padding: 1rem 1.1rem;
-	border: 1px solid var(--gray-800);
-	border-radius: 0.6rem;
+	padding: 1.15rem 1.25rem 1.05rem 4rem;
+	border-radius: 4px;
+	background:
+		radial-gradient(circle at 1px 1px, oklch(0% 0 0 / 0.025) 0.6px, transparent 1px) 0 0 / 3px 3px,
+		var(--stock);
+	color: var(--press);
+	box-shadow:
+		0 0 0 1px oklch(0% 0 0 / 0.05),
+		0 1px 1px rgb(0 0 0 / 0.08),
+		0 3px 6px -2px rgb(0 0 0 / 0.12),
+		0 14px 24px -16px rgb(0 0 0 / 0.4);
+	rotate: -0.6deg;
+	transition:
+		rotate 0.3s ease,
+		translate 0.3s ease,
+		box-shadow 0.3s ease;
+}
+
+.card:nth-child(2n) {
+	rotate: 0.5deg;
+}
+
+.card:nth-child(3n) {
+	rotate: -0.25deg;
+}
+
+@media (hover: hover) {
+	.card:hover {
+		rotate: 0deg;
+		translate: 0 -3px;
+	}
+}
+
+:root.theme-dark .card {
+	--stock: oklch(22% 0.01 60);
+	--press: oklch(93% 0.012 80);
+	--press-soft: oklch(76% 0.014 75);
+	box-shadow:
+		0 0 0 1px oklch(100% 0 0 / 0.05),
+		0 16px 28px -16px rgb(0 0 0 / 0.9);
+}
+
+/* The lab's mark: its initial in a ring, pressed in. */
+.card::before {
+	content: attr(data-initial);
+	position: absolute;
+	top: 1.1rem;
+	left: 1.1rem;
+	display: grid;
+	place-items: center;
+	width: 2.2rem;
+	height: 2.2rem;
+	border: 1.5px solid currentColor;
+	border-radius: 50%;
+	font-family: var(--font-brand);
+	font-size: 1.1rem;
+	font-style: italic;
+	font-weight: 500;
+	box-shadow: inset 0 0 0 3px var(--stock), inset 0 0 0 4px currentColor;
+	opacity: 0.85;
 }
 
 .card-name {
@@ -546,26 +712,40 @@ async function deleteLab() {
 	font-size: var(--text-lg);
 	font-weight: 560;
 	line-height: 1.15;
+	color: var(--press);
+	text-shadow: 0 1px 0 color-mix(in oklch, var(--stock) 80%, white);
+}
+
+.card .lab-meta,
+.card .lab-hint {
+	color: var(--press-soft);
+}
+
+.card .lab-link {
+	color: var(--press);
 }
 
 .stats {
 	display: flex;
 	gap: 1.5rem;
-	margin: 0.25rem 0 0;
+	margin: 0.35rem 0 0;
+	padding-top: 0.6rem;
+	border-top: 1px solid color-mix(in oklch, var(--press) 18%, transparent);
 }
 
 .stats dt {
-	font-size: var(--text-sm);
-	letter-spacing: 0.08em;
-	font-variant-caps: all-small-caps;
-	color: var(--gray-300);
+	font-family: var(--font-mono);
+	font-size: 0.62rem;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--press-soft);
 }
 
 .stats dd {
 	margin: 0;
 	font-family: var(--font-brand);
 	font-size: var(--text-xl);
-	color: var(--gray-0);
+	color: var(--press);
 	font-variant-numeric: tabular-nums;
 }
 

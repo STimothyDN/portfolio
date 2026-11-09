@@ -11,7 +11,7 @@
 				<p class="lab-meta lab-mono summary">
 					<span v-for="(part, i) in summary" :key="i">{{ part }}</span>
 				</p>
-				<span class="lab-chip" :class="{ 'lab-chip--warn': roll.status === 'lost' }">{{ stageLabel(roll.status, roll.labDelivery) }}</span>
+				<span class="lab-chip stage-stamp" :class="{ 'lab-chip--warn': roll.status === 'lost' }">{{ stageLabel(roll.status, roll.labDelivery) }}</span>
 			</div>
 		</header>
 
@@ -112,6 +112,10 @@
 					@saved="roll = $event"
 				/>
 				<form class="lab-form details" @submit.prevent="saveDetails">
+					<div class="docket" aria-hidden="true">
+						<span class="docket-no">Roll docket · {{ roll.code }}</span>
+						<span class="barcode" :style="{ background: barcode }"></span>
+					</div>
 					<h2 class="lab-h2">Details</h2>
 					<label class="lab-field">
 						<span>Title</span>
@@ -352,6 +356,22 @@ const stageDetail = computed(() => {
 	return '';
 });
 
+/** A docket's barcode, drawn from the roll's code (decoration only). */
+const barcode = computed(() => {
+	const bits = [...roll.value.code].flatMap((c) => {
+		const n = c.charCodeAt(0);
+		return [1 + (n % 3), 1 + ((n >> 2) % 2), 1 + ((n >> 1) % 3), 1 + (n % 2)];
+	});
+	let x = 0;
+	const stops: string[] = [];
+	bits.forEach((w, i) => {
+		const ink = i % 2 === 0 ? 'currentColor' : 'transparent';
+		stops.push(`${ink} ${x}px ${x + w}px`);
+		x += w;
+	});
+	return `linear-gradient(90deg, ${stops.join(', ')}, transparent ${x}px)`;
+});
+
 const stageRank = (s: RollStatus) => STAGES.indexOf(s as (typeof STAGES)[number]);
 function stepState(stage: (typeof STAGES)[number]) {
 	if (roll.value.status === 'lost') return events.value.some((e) => e.status === stage) ? 'done' : 'later';
@@ -531,17 +551,72 @@ async function remove() {
 	gap: clamp(2rem, 5vw, 3rem);
 }
 
+/* ---- The roll, standing on the table under a lamp ---- */
 .roll-head {
 	display: flex;
 	align-items: center;
-	gap: clamp(1.25rem, 4vw, 2.5rem);
+	gap: clamp(1.25rem, 4vw, 2.75rem);
 }
 
 .can {
+	position: relative;
 	display: grid;
 	place-items: center;
 	flex: none;
-	padding-inline: 0.5rem;
+	padding: 1.25rem 1rem 0.75rem;
+}
+
+/* The pool of lamplight it stands in, and its shadow on the table. */
+.can::before {
+	content: '';
+	position: absolute;
+	inset: -1.5rem -2rem -0.5rem;
+	z-index: -1;
+	border-radius: 50%;
+	background: radial-gradient(closest-side, oklch(97% 0.05 85 / 0.9), oklch(95% 0.04 85 / 0.35) 55%, transparent);
+}
+
+:root.theme-dark .can::before {
+	background: radial-gradient(closest-side, oklch(55% 0.13 40 / 0.4), oklch(40% 0.1 35 / 0.15) 55%, transparent);
+}
+
+.can::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	bottom: 0.45rem;
+	width: 70%;
+	height: 0.7rem;
+	translate: -50% 0;
+	z-index: -1;
+	border-radius: 50%;
+	background: radial-gradient(closest-side, rgb(0 0 0 / 0.35), transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* Set down on the table. */
+	.can :deep(.canister) {
+		animation: set-down 0.8s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+	}
+
+	.can::after {
+		animation: shadow-in 0.8s ease-out both;
+	}
+
+	@keyframes set-down {
+		from {
+			translate: 0 -1.6rem;
+			rotate: -6deg;
+			opacity: 0;
+		}
+	}
+
+	@keyframes shadow-in {
+		from {
+			scale: 0.4;
+			opacity: 0;
+		}
+	}
 }
 
 .head-text {
@@ -570,8 +645,32 @@ async function remove() {
 	margin-right: 0.5rem;
 }
 
+/* The code, on a strip of masking tape. */
 .big-code {
-	font-size: 1.6rem;
+	font-size: 1.55rem;
+	padding: 0.4rem 0.85rem 0.3rem;
+	background: linear-gradient(180deg, oklch(93% 0.035 88), oklch(88% 0.042 85));
+	color: oklch(20% 0.01 60);
+	clip-path: polygon(1% 10%, 8% 0, 22% 7%, 39% 1%, 57% 8%, 74% 0, 90% 6%, 100% 2%, 99% 90%, 91% 100%, 73% 93%, 55% 100%, 36% 94%, 18% 100%, 5% 93%, 0 100%);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+}
+
+/* Where it is now, as a rubber stamp. */
+.stage-stamp {
+	padding: 0.2rem 0.65rem;
+	border: 1.5px solid currentColor;
+	border-radius: 3px;
+	color: oklch(48% 0.14 28);
+	font-size: 0.68rem;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	rotate: -2deg;
+	box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 25%, transparent);
+}
+
+:root.theme-dark .stage-stamp {
+	color: oklch(72% 0.14 32);
 }
 
 .grid {
@@ -592,75 +691,119 @@ async function remove() {
 	gap: 2.5rem;
 }
 
+/*
+ * ---- Where it's been: a strip of film running down the page ----
+ * Each stage is a frame: developed (done), lit on the light table (now),
+ * or still dark (to come).
+ */
 .steps {
 	list-style: none;
-	padding: 0;
+	padding: 0.4rem 0 0;
 	display: grid;
 }
 
 .step {
+	--strip: 2.2rem;
 	position: relative;
 	display: grid;
-	grid-template-columns: 1.6rem minmax(0, 1fr);
-	gap: 0.9rem;
-	padding-bottom: 1.15rem;
+	grid-template-columns: var(--strip) minmax(0, 1fr);
+	gap: 1.1rem;
+	padding-bottom: 1.4rem;
 }
 
 .step::before {
 	content: '';
 	position: absolute;
-	left: calc(0.8rem - 1px);
-	top: 1.7rem;
-	bottom: 0.15rem;
-	width: 2px;
-	background: var(--gray-800);
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: var(--strip);
+	background:
+		repeating-linear-gradient(180deg, oklch(84% 0.01 80) 0 4px, transparent 4px 9px) 3px 2px / 4px 100% no-repeat,
+		repeating-linear-gradient(180deg, oklch(84% 0.01 80) 0 4px, transparent 4px 9px) calc(100% - 3px) 2px / 4px 100% no-repeat,
+		var(--lab-film);
 }
 
+.step:first-child::before {
+	top: -0.4rem;
+	border-radius: 3px 3px 0 0;
+}
+
+/* The roll's end: the tongue, cut at an angle. */
 .step:last-child::before {
-	display: none;
+	bottom: -0.6rem;
+	clip-path: polygon(0 0, 100% 0, 100% calc(100% - 0.9rem), 0 100%);
 }
 
 .pip {
+	position: relative;
+	z-index: 1;
 	display: grid;
 	place-items: center;
-	width: 1.6rem;
+	justify-self: center;
+	width: 1.25rem;
 	height: 1.6rem;
-	border-radius: 50%;
-	border: 1.5px solid var(--gray-700);
-	background: var(--gray-999);
+	margin-top: 0.05rem;
+	border-radius: 2px;
+	background: var(--lab-film-frame);
 	font-family: var(--font-mono);
-	font-size: 0.72rem;
-	color: var(--gray-300);
-	z-index: 1;
+	font-size: 0.68rem;
+	color: oklch(70% 0.02 70);
 }
 
+/* Developed: the orange of a C-41 negative. */
 .step.done .pip {
-	background: var(--accent-regular);
-	border-color: var(--accent-regular);
-	color: var(--accent-text-over);
+	background: linear-gradient(180deg, oklch(68% 0.13 58), oklch(57% 0.12 50));
+	color: oklch(22% 0.03 50);
+	font-weight: 600;
 }
 
+/* Now: held up to the light. */
 .step.now .pip {
-	border-color: var(--gray-0);
-	color: var(--gray-0);
-	box-shadow: 0 0 0 4px var(--gray-900);
+	background: var(--lab-lit);
+	color: oklch(22% 0.01 60);
+	font-weight: 600;
+	box-shadow:
+		0 0 0 1px oklch(100% 0 0 / 0.5) inset,
+		0 0 16px 2px var(--lab-lit-glow);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.step.now .pip {
+		animation: lit 2.8s ease-in-out infinite alternate;
+	}
+
+	@keyframes lit {
+		to {
+			box-shadow:
+				0 0 0 1px oklch(100% 0 0 / 0.5) inset,
+				0 0 26px 5px var(--lab-lit-glow);
+		}
+	}
 }
 
 .step.lost .pip {
-	border-color: var(--lab-warn);
-	color: var(--lab-warn);
+	background: oklch(52% 0.18 28);
+	color: oklch(97% 0.01 80);
 }
 
 .step-body {
 	display: grid;
 	gap: 0.3rem;
 	padding-top: 0.15rem;
+	min-width: 0;
 }
 
 .step-t {
 	color: var(--gray-0);
 	font-size: var(--text-md);
 	line-height: 1.2;
+}
+
+.step.now .step-t {
+	font-family: var(--font-brand);
+	font-size: var(--text-lg);
+	font-weight: 560;
 }
 
 .step.later .step-t {
@@ -729,10 +872,135 @@ async function remove() {
 	align-content: start;
 }
 
+/*
+ * ---- Details: the roll's docket, torn off a pad ----
+ * Card stock with a perforated top edge, fields as ruled lines.
+ */
 .details {
-	padding: 1.25rem;
-	border: 1px solid var(--gray-800);
-	border-radius: 0.75rem;
+	--card: oklch(97.6% 0.014 85);
+	--rule: oklch(72% 0.03 240 / 0.45);
+	--card-ink: oklch(24% 0.01 60);
+	--card-soft: oklch(42% 0.015 60);
+	position: relative;
+	padding: 1.6rem 1.35rem 1.35rem;
+	background: var(--card);
+	color: var(--card-ink);
+	border-radius: 0 0 0.35rem 0.35rem;
+	box-shadow:
+		0 1px 1px rgb(0 0 0 / 0.08),
+		0 14px 30px -18px rgb(0 0 0 / 0.45);
+}
+
+/* The perforations it was torn along. */
+.details::before {
+	content: '';
+	position: absolute;
+	inset: 0 0 auto;
+	height: 5px;
+	background: radial-gradient(circle at 7px 0, var(--gray-999) 3.4px, transparent 3.9px) 0 0 / 14px 5px repeat-x;
+	pointer-events: none;
+}
+
+:root.theme-dark .details {
+	--card: oklch(21% 0.01 60);
+	--rule: oklch(60% 0.03 240 / 0.3);
+	--card-ink: oklch(93% 0.008 80);
+	--card-soft: oklch(76% 0.012 75);
+	box-shadow:
+		0 0 0 1px oklch(100% 0 0 / 0.04),
+		0 18px 34px -18px rgb(0 0 0 / 0.9);
+}
+
+.docket {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding-bottom: 0.7rem;
+	border-bottom: 1.5px solid var(--card-ink);
+	color: var(--card-ink);
+}
+
+.docket-no {
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+}
+
+.barcode {
+	flex: none;
+	width: 4.5rem;
+	height: 1.4rem;
+	background-size: 100% 100%;
+	opacity: 0.85;
+}
+
+.details .lab-h2 {
+	color: var(--card-ink);
+}
+
+.details :is(.lab-field > span, .check, .lab-hint) {
+	color: var(--card-soft);
+}
+
+.details .lab-input {
+	min-height: 2.4rem;
+	padding-inline: 0.15rem;
+	border: 0;
+	border-bottom: 1px solid var(--rule);
+	border-radius: 0;
+	background-color: transparent;
+	color: var(--card-ink);
+}
+
+.details .lab-input:focus-visible {
+	outline: none;
+	border-bottom: 2px solid var(--card-ink);
+	background-color: color-mix(in oklch, var(--card-ink) 5%, transparent);
+}
+
+.details .lab-select {
+	padding-right: 1.8rem;
+	background-image:
+		linear-gradient(45deg, transparent 50%, var(--card-soft) 50%),
+		linear-gradient(135deg, var(--card-soft) 50%, transparent 50%);
+	background-position:
+		calc(100% - 0.85rem) 52%,
+		calc(100% - 0.5rem) 52%;
+	background-size: 0.35rem 0.35rem;
+	background-repeat: no-repeat;
+}
+
+/* Notes: lined paper. */
+.details textarea.lab-input {
+	line-height: 1.75rem;
+	padding-top: 0.2rem;
+	border-bottom: 0;
+	background-image: repeating-linear-gradient(transparent 0 calc(1.75rem - 1px), var(--rule) calc(1.75rem - 1px) 1.75rem);
+	background-attachment: local;
+	background-position: 0 0.2rem;
+}
+
+.details .lab-btn:not(.lab-btn--quiet) {
+	background: var(--card-ink);
+	border-color: var(--card-ink);
+	color: var(--card);
+}
+
+.details .lab-btn--quiet {
+	color: var(--card-ink);
+	border-color: color-mix(in oklch, var(--card-ink) 35%, transparent);
+}
+
+.details .lab-btn--danger {
+	color: oklch(50% 0.16 35);
+	border-color: oklch(50% 0.16 35 / 0.5);
+}
+
+:root.theme-dark .details .lab-btn--danger {
+	color: oklch(76% 0.13 45);
+	border-color: oklch(76% 0.13 45 / 0.5);
 }
 
 fieldset {
@@ -740,14 +1008,30 @@ fieldset {
 	gap: 0.75rem;
 	padding: 0;
 	border: 0;
+	min-width: 0;
 }
 
+/* Section labels, stamped on with a rule running out to the edge. */
 legend {
-	padding: 0 0 0.35rem;
-	font-family: var(--font-brand);
-	font-size: var(--text-md);
-	font-weight: 560;
-	color: var(--gray-0);
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	width: 100%;
+	padding: 0.4rem 0 0.35rem;
+	font-family: var(--font-mono);
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	color: var(--card-ink);
+}
+
+legend::after {
+	content: '';
+	flex: 1;
+	height: 1px;
+	background: var(--card-ink);
+	opacity: 0.35;
 }
 
 textarea.lab-input {
@@ -765,6 +1049,7 @@ textarea.lab-input {
 
 	.can {
 		--can-h: 92px !important;
+		padding-inline: 0.5rem;
 	}
 }
 </style>

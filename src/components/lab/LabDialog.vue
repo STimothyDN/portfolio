@@ -40,26 +40,54 @@ function onBackdrop(e: MouseEvent) {
 </script>
 
 <style scoped>
+/* A slip off the lab's pad: warm card stock under a strip of leader. */
 .lab-dialog {
 	/* The site's reset zeroes margins; the browser centres modal dialogs with margin: auto. */
 	margin: auto;
 	width: min(32rem, calc(100vw - 1.5rem));
 	max-height: calc(100dvh - 2rem);
 	padding: 0;
-	border: 1px solid var(--gray-800);
-	border-radius: 1rem;
-	background: var(--gray-999);
+	border: 0;
+	border-radius: 0.6rem;
+	background:
+		radial-gradient(circle at 1px 1px, oklch(0% 0 0 / 0.02) 0.6px, transparent 1px) 0 0 / 3px 3px,
+		color-mix(in oklch, var(--gray-999) 94%, oklch(92% 0.04 85));
 	color: var(--gray-200);
-	box-shadow: var(--shadow-lg);
+	box-shadow:
+		0 0 0 1px color-mix(in oklch, var(--gray-0) 8%, transparent),
+		0 30px 60px -24px rgb(0 0 0 / 0.55);
 	overflow: auto;
+}
+
+:root.theme-dark .lab-dialog {
+	background:
+		radial-gradient(circle at 1px 1px, oklch(100% 0 0 / 0.025) 0.6px, transparent 1px) 0 0 / 3px 3px,
+		oklch(17% 0.008 60);
+	box-shadow:
+		0 0 0 1px oklch(100% 0 0 / 0.07),
+		0 30px 60px -20px rgb(0 0 0 / 0.9);
+}
+
+.lab-dialog::before {
+	content: '';
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	display: block;
+	height: 0.85rem;
+	background:
+		repeating-linear-gradient(90deg, oklch(84% 0.01 80) 0 0.42rem, transparent 0.42rem 0.9rem) center 0.2rem / calc(100% - 0.6rem) 0.2rem no-repeat,
+		repeating-linear-gradient(90deg, oklch(84% 0.01 80) 0 0.42rem, transparent 0.42rem 0.9rem) center calc(100% - 0.2rem) / calc(100% - 0.6rem) 0.2rem no-repeat,
+		var(--lab-film);
 }
 
 .lab-dialog.wide {
 	width: min(46rem, calc(100vw - 1.5rem));
 }
 
+/* The room dims, as if the safelight came on. */
 .lab-dialog::backdrop {
-	background: rgb(0 0 0 / 0.35);
+	background: radial-gradient(120% 90% at 50% 40%, oklch(20% 0.03 40 / 0.35), oklch(12% 0.04 30 / 0.6));
 	backdrop-filter: blur(2px);
 }
 
@@ -106,14 +134,26 @@ function onBackdrop(e: MouseEvent) {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+	/* Fed up out of the pad, settling square. */
 	.lab-dialog[open] {
-		animation: rise 0.22s cubic-bezier(0.33, 1, 0.68, 1);
+		animation: rise 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	@keyframes rise {
 		from {
 			opacity: 0;
-			translate: 0 8px;
+			translate: 0 18px;
+			rotate: -1.2deg;
+		}
+	}
+
+	.lab-dialog[open]::backdrop {
+		animation: dim 0.3s ease-out;
+	}
+
+	@keyframes dim {
+		from {
+			opacity: 0;
 		}
 	}
 }

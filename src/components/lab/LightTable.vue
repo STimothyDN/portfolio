@@ -19,23 +19,36 @@
 				<PublishButton v-if="shareChanged" quiet />
 			</div>
 			<div v-if="loaded.length" class="loaded">
-				<article v-for="(r, ci) in loaded" :key="r.id" class="lcard" :style="{ '--ci': ci }">
+				<!-- Each loaded camera, seen from above and behind: the top plate with its
+				     frame counter, the box end tucked in the memo holder, and the film
+				     drawn across the gate. -->
+				<article v-for="(r, ci) in loaded" :key="r.id" class="lcard" :style="{ '--ci': ci, '--can': canOf(r).can, '--can-ink': canOf(r).ink }">
 					<header class="lcard-head">
 						<div class="names">
 							<span class="cam">{{ r.camera?.name ?? 'Unknown camera' }}</span>
 							<span class="sub">{{ [r.stock.name, isoLine(r)].filter(Boolean).join(' · ') }}</span>
 						</div>
-						<a class="lab-code" :href="`/photography/lab/rolls/${r.code}/`">{{ r.code }}</a>
+						<FrameCounter :count="r.frameCount" :exposures="r.exposures" :delay="0.35 + ci * 0.12" />
 					</header>
-					<!-- The roll spooling out of its canister: exposed frames, and the next one under the index mark -->
-					<div class="spool" :style="{ '--can-h': '64px' }" :title="`${r.frameCount} of ${r.exposures} frames logged`">
-						<FilmCanister :stock="r.stock.token ?? r.stock.id" :stock-label="r.stock.name" :stock-brand="r.stock.brand" />
-						<div class="leader">
-							<i
-								v-for="n in Math.min(r.exposures, 40)"
-								:key="n"
-								:class="{ shot: n <= r.frameCount, next: n === r.frameCount + 1 }"
-							></i>
+					<div class="back">
+						<div class="memo">
+							<span class="box-end" aria-hidden="true">
+								<b>{{ r.stock.name }}</b>
+								<i>{{ r.stock.iso ? `ISO ${r.stock.iso}` : r.stock.process }} · {{ r.exposures }} exp</i>
+							</span>
+							<a class="lab-code" :href="`/photography/lab/rolls/${r.code}/`">{{ r.code }}</a>
+						</div>
+						<!-- The roll spooling out of its canister: exposed frames, and the next one under the index mark -->
+						<div class="spool" :style="{ '--can-h': '58px' }" :title="`${r.frameCount} of ${r.exposures} frames logged`">
+							<FilmCanister :stock="r.stock.token ?? r.stock.id" :stock-label="r.stock.name" :stock-brand="r.stock.brand" />
+							<div class="leader">
+								<i
+									v-for="n in Math.min(r.exposures, 40)"
+									:key="n"
+									:class="{ shot: n <= r.frameCount, next: n === r.frameCount + 1 }"
+								></i>
+							</div>
+							<span class="takeup" aria-hidden="true"></span>
 						</div>
 					</div>
 					<div class="lcard-foot">
@@ -51,11 +64,28 @@
 					</div>
 				</article>
 			</div>
-			<p v-else class="lab-empty">
-				No film in any camera.
-				<template v-if="storage.length"> <button type="button" class="lab-link" @click="openLoad()">Load a roll</button> from the fridge.</template>
-				<template v-else> <a class="lab-link" href="/photography/lab/fridge/">Add film to the fridge</a> first.</template>
-			</p>
+			<!-- Nothing loaded: a camera with its back open and the counter on S. -->
+			<div v-else class="loaded">
+				<article class="lcard lcard--empty">
+					<header class="lcard-head">
+						<div class="names">
+							<span class="cam">No film loaded</span>
+							<span class="sub">Back open · counter on S</span>
+						</div>
+						<FrameCounter :count="-2" :exposures="36" />
+					</header>
+					<div class="back">
+						<div class="spool empty-gate" aria-hidden="true"><span class="takeup"></span></div>
+					</div>
+					<p class="lcard-foot lab-meta">
+						<span>
+							No film in any camera.
+							<template v-if="storage.length"> <button type="button" class="lab-link" @click="openLoad()">Load a roll</button> from the fridge.</template>
+							<template v-else> <a class="lab-link" href="/photography/lab/fridge/">Add film to the fridge</a> first.</template>
+						</span>
+					</p>
+				</article>
+			</div>
 		</section>
 
 		<!-- The line -->
@@ -77,6 +107,7 @@
 					@drop="onDrop($event, stage)"
 				>
 					<div class="col-h">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path :d="STAGE_ICON[stage]" /></svg>
 						<span>{{ i + 1 }} · {{ STATUS_LABEL[stage] }}</span>
 						<b>{{ counts[stage] }}</b>
 					</div>
@@ -190,6 +221,8 @@ import { rollPace } from '../../lib/lab/pace';
 import { useTracks } from '../../lib/lab/use-tracks';
 import PublishButton from './PublishButton.vue';
 import FilmCanister from '../film/FilmCanister.vue';
+import { canisterColors } from '../film/canister';
+import FrameCounter from './FrameCounter.vue';
 import LabDialog from './LabDialog.vue';
 import RollTicket from './RollTicket.vue';
 import StepForm from './StepForm.vue';
@@ -277,6 +310,16 @@ const storageByStock = computed(() => {
 const loadRoll = computed(() => storage.value.find((r) => r.id === loadId.value) ?? null);
 
 const isoLine = (r: RollView) => ratingLine(r);
+const canOf = (r: RollView) => canisterColors({ stock: r.stock.token ?? r.stock.id, stockLabel: r.stock.name, stockBrand: r.stock.brand });
+/** What the roll is, physically, at each stage: fridge, camera, canister, envelope, print, sleeve. */
+const STAGE_ICON: Record<Stage, string> = {
+	storage: 'M6 3h12v18H6zM6 10h12M9 5.5v2.5M9 12.5v3.5',
+	camera: 'M3.5 8h3.5l2-2.5h6L17 8h3.5v11h-17zM12 16.5a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z',
+	shot: 'M9.5 3.5h4v2h-4zM7.5 5.5h8v15h-8zM15.5 9h3.5v7.5h-3.5M7.5 9h8M7.5 17h8',
+	lab: 'M3.5 6.5h17v11h-17zM3.5 7l8.5 6.5L20.5 7',
+	scanned: 'M4.5 4.5h15v15h-15zM7 7h10v8H7zM7 15l3-3 2.5 2 2-1.5L17 15',
+	negatives: 'M5 3.5h13v17H5zM8.5 3.5v17M11 7.5h4.5M11 11h4.5M11 14.5h4.5',
+};
 // Mailed rolls at a lab: where the envelope is, asked for once the page is up.
 const { tracks } = useTracks(() => rolls.value.filter((r) => r.status === 'lab').map((r) => r.trackingOut));
 
@@ -462,55 +505,176 @@ function onDrop(e: DragEvent, stage: Stage) {
 
 .loaded {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
-	gap: 1rem;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+	gap: 1.5rem 1.25rem;
+	padding-top: 0.25rem;
 }
 
+/*
+ * A camera on the table. Its top plate (brushed chrome by day, black paint at
+ * night) carries the engraved name and the frame counter; below it, the back,
+ * in pebbled leatherette, with the memo holder and the film in the gate.
+ */
 .lcard {
+	--ink: oklch(94% 0.01 80);
+	--dim: oklch(78% 0.012 75);
+	--plate: linear-gradient(180deg, oklch(93% 0.004 80), oklch(82% 0.006 80) 48%, oklch(88% 0.005 80) 52%, oklch(76% 0.008 75));
+	--plate-ink: oklch(30% 0.01 60);
+	--plate-sub: oklch(40% 0.012 60);
+	--plate-shine: oklch(100% 0 0 / 0.65);
+	position: relative;
 	display: grid;
-	gap: 0.85rem;
-	padding: 1rem 1.1rem;
-	border: 1px solid var(--gray-800);
-	border-radius: 0.75rem;
-	background: color-mix(in oklch, var(--gray-999) 92%, var(--gray-900));
+	align-content: start;
+	border-radius: 0.9rem 0.9rem 0.7rem 0.7rem;
+	background:
+		radial-gradient(circle at 1px 1px, oklch(100% 0 0 / 0.06) 0.7px, transparent 1.1px) 0 0 / 3px 3px,
+		radial-gradient(circle at 2px 2px, oklch(0% 0 0 / 0.35) 0.8px, transparent 1.2px) 0 0 / 4px 4px,
+		linear-gradient(180deg, oklch(24% 0.006 60), oklch(19% 0.006 60));
+	color: var(--ink);
+	box-shadow:
+		0 1px 0 oklch(100% 0 0 / 0.08) inset,
+		0 2px 3px rgb(0 0 0 / 0.25),
+		0 18px 34px -16px rgb(0 0 0 / 0.55);
+	transition:
+		translate 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.35s ease;
+}
+
+:root.theme-dark .lcard {
+	--plate: linear-gradient(180deg, oklch(29% 0.004 60), oklch(18% 0.004 60) 50%, oklch(22% 0.004 60));
+	--plate-ink: oklch(93% 0.006 80);
+	--plate-sub: oklch(76% 0.01 75);
+	--plate-shine: oklch(100% 0 0 / 0.12);
+	box-shadow:
+		0 1px 0 oklch(100% 0 0 / 0.07) inset,
+		0 0 0 1px oklch(100% 0 0 / 0.05),
+		0 22px 40px -18px rgb(0 0 0 / 0.9);
+}
+
+@media (hover: hover) {
+	.lcard:hover {
+		translate: 0 -3px;
+		box-shadow:
+			0 1px 0 oklch(100% 0 0 / 0.08) inset,
+			0 3px 6px rgb(0 0 0 / 0.25),
+			0 26px 44px -18px rgb(0 0 0 / 0.6);
+	}
 }
 
 .lcard-head {
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
 	justify-content: space-between;
 	gap: 0.75rem;
-}
-
-.lcard-head .lab-code {
-	flex: none;
-	white-space: nowrap;
+	padding: 0.75rem 0.9rem 0.65rem 1.1rem;
+	border-radius: 0.9rem 0.9rem 0 0;
+	background:
+		repeating-linear-gradient(90deg, oklch(100% 0 0 / 0.05) 0 1px, transparent 1px 3px),
+		var(--plate);
+	box-shadow:
+		0 1px 0 var(--plate-shine) inset,
+		0 -1px 0 rgb(0 0 0 / 0.25) inset,
+		0 3px 6px -3px rgb(0 0 0 / 0.6);
 }
 
 .names {
 	display: grid;
-	gap: 0.15rem;
+	gap: 0.2rem;
 	min-width: 0;
 }
 
+/* Engraved into the plate. */
 .cam {
-	font-family: var(--font-brand);
-	font-size: var(--text-lg);
-	font-weight: 560;
-	line-height: 1.15;
-	color: var(--gray-0);
+	font-family: var(--font-mono);
+	font-size: 0.95rem;
+	font-weight: 600;
+	letter-spacing: 0.16em;
+	line-height: 1.2;
+	font-variant-caps: all-small-caps;
+	color: var(--plate-ink);
+	text-shadow: 0 1px 0 var(--plate-shine);
+	overflow-wrap: anywhere;
 }
 
 .sub {
 	font-family: var(--font-mono);
-	font-size: 0.75rem;
-	color: var(--gray-300);
+	font-size: 0.7rem;
+	letter-spacing: 0.02em;
+	color: var(--plate-sub);
 }
 
-/* Canister + the film drawn out of it. */
+.back {
+	display: grid;
+	gap: 0.7rem;
+	padding: 0.9rem 0.9rem 0.2rem;
+}
+
+/* The memo holder: a box end slid in, and the roll's code on a strip of tape. */
+.memo {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.box-end {
+	display: grid;
+	gap: 0.05rem;
+	min-width: 0;
+	max-width: 70%;
+	padding: 0.32rem 0.6rem 0.36rem;
+	border-radius: 2px;
+	background: linear-gradient(180deg, color-mix(in oklch, var(--can) 100%, white 12%), var(--can));
+	color: var(--can-ink);
+	box-shadow:
+		0 0 0 2px oklch(14% 0.004 60),
+		0 0 0 3px oklch(40% 0.006 60),
+		0 4px 8px -4px rgb(0 0 0 / 0.8);
+	rotate: -0.6deg;
+}
+
+.box-end b {
+	font-family: var(--font-brand);
+	font-size: 0.8rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	line-height: 1.1;
+	text-transform: uppercase;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.box-end i {
+	font-family: var(--font-mono);
+	font-size: 0.6rem;
+	font-style: normal;
+	letter-spacing: 0.06em;
+	opacity: 0.85;
+}
+
+/* Masking tape, written on in marker. */
+.memo .lab-code {
+	flex: none;
+	padding: 0.32rem 0.6rem 0.28rem;
+	background: linear-gradient(180deg, oklch(92% 0.035 88 / 0.95), oklch(88% 0.04 85 / 0.95));
+	color: oklch(22% 0.01 60);
+	white-space: nowrap;
+	clip-path: polygon(2% 8%, 9% 0, 24% 6%, 41% 1%, 58% 7%, 76% 0, 91% 5%, 100% 1%, 98% 92%, 89% 100%, 72% 94%, 55% 100%, 37% 95%, 19% 100%, 6% 94%, 0 100%);
+	rotate: 2.5deg;
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+/* Canister, the film across the gate, and the take-up spool. */
 .spool {
 	display: flex;
 	align-items: center;
+	padding: 0.55rem 0.5rem;
+	border-radius: 0.35rem;
+	background: linear-gradient(180deg, oklch(13% 0.004 60), oklch(16% 0.004 60) 50%, oklch(13% 0.004 60));
+	box-shadow:
+		inset 0 2px 6px rgb(0 0 0 / 0.7),
+		0 1px 0 oklch(100% 0 0 / 0.06);
 }
 
 .spool :deep(.canister) {
@@ -524,20 +688,17 @@ function onDrop(e: DragEvent, stage: Stage) {
 	gap: 2px;
 	margin-left: -4px;
 	padding: 9px 5px 9px 8px;
-	border-radius: 0 2px 2px 0;
 	background: var(--lab-film);
-	/* The film's tongue, cut at an angle. */
-	clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 30%, 100% 100%, 0 100%);
 }
 
 .leader::before,
 .leader::after {
 	content: '';
 	position: absolute;
-	inset-inline: 8px 12px;
+	inset-inline: 8px 4px;
 	height: 3px;
-	background: repeating-linear-gradient(90deg, var(--lab-sprocket) 0 4px, transparent 4px 8px);
-	opacity: 0.8;
+	background: repeating-linear-gradient(90deg, oklch(80% 0.01 80) 0 4px, transparent 4px 8px);
+	opacity: 0.75;
 }
 
 .leader::before {
@@ -551,7 +712,7 @@ function onDrop(e: DragEvent, stage: Stage) {
 .leader i {
 	position: relative;
 	flex: 1;
-	height: 18px;
+	height: 16px;
 	border-radius: 1px;
 	background: var(--lab-film-frame);
 }
@@ -577,21 +738,40 @@ function onDrop(e: DragEvent, stage: Stage) {
 	border-top: 4px solid oklch(62% 0.2 28);
 }
 
-.count {
-	color: var(--gray-0);
-	font-weight: 600;
+/* The take-up spool's teeth. */
+.takeup {
+	flex: none;
+	width: 14px;
+	height: 44px;
+	margin-left: -2px;
+	border-radius: 3px;
+	background:
+		repeating-linear-gradient(180deg, oklch(55% 0.005 70) 0 3px, oklch(32% 0.005 70) 3px 6px),
+		oklch(40% 0.005 70);
+	box-shadow: inset -2px 0 3px rgb(0 0 0 / 0.5);
 }
 
 @media (prefers-reduced-motion: no-preference) {
 	/* The film draws out of the canister as the page opens. */
 	.leader {
-		animation: draw-out 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+		animation: draw-out 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
 		animation-delay: calc(0.25s + var(--ci, 0) * 0.12s);
 	}
 
 	@keyframes draw-out {
 		from {
-			clip-path: polygon(0 0, 0 0, 0 30%, 0 100%, 0 100%);
+			clip-path: inset(0 100% 0 0);
+		}
+	}
+
+	.takeup {
+		animation: takeup-spin 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+		animation-delay: calc(0.25s + var(--ci, 0) * 0.12s);
+	}
+
+	@keyframes takeup-spin {
+		from {
+			background-position: 0 -18px, 0 0;
 		}
 	}
 }
@@ -601,7 +781,58 @@ function onDrop(e: DragEvent, stage: Stage) {
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 0.5rem;
+	gap: 0.6rem;
+	padding: 0.7rem 0.9rem 0.9rem;
+}
+
+.lcard-foot .lab-meta {
+	color: var(--dim);
+}
+
+.count {
+	color: var(--ink);
+	font-weight: 600;
+}
+
+/* The empty camera: an open gate with only the take-up spool and pressure plate. */
+.empty-gate {
+	justify-content: flex-end;
+	min-height: 4.6rem;
+	background:
+		linear-gradient(90deg, transparent 18%, oklch(30% 0.004 60) 18% 82%, transparent 82%) center / 100% 62% no-repeat,
+		linear-gradient(180deg, oklch(13% 0.004 60), oklch(16% 0.004 60) 50%, oklch(13% 0.004 60));
+}
+
+.lcard--empty .lcard-foot {
+	color: var(--dim);
+}
+
+.lcard--empty .lab-link {
+	color: var(--ink);
+	text-decoration-color: oklch(100% 0 0 / 0.4);
+}
+
+.lcard .pace {
+	color: var(--lab-edge-ink);
+}
+
+.lcard .nudge {
+	color: oklch(80% 0.13 70);
+}
+
+.lcard .lab-btn--quiet {
+	color: var(--ink);
+	border-color: oklch(100% 0 0 / 0.28);
+	background: oklch(100% 0 0 / 0.04);
+}
+
+.lcard .lab-btn--quiet:hover {
+	background: oklch(100% 0 0 / 0.12);
+}
+
+.lcard .lab-btn--quiet:focus-visible,
+.lcard .lab-code:focus-visible {
+	outline-color: var(--lab-lit);
 }
 
 /* The line: six columns; a sideways-scrolling row of them on small screens. */
@@ -675,6 +906,24 @@ function onDrop(e: DragEvent, stage: Stage) {
 	letter-spacing: 0.08em;
 	font-variant-caps: all-small-caps;
 	color: var(--gray-300);
+}
+
+.col-h svg {
+	flex: none;
+	width: 1.05rem;
+	height: 1.05rem;
+	margin-right: 0.35rem;
+	align-self: center;
+	fill: none;
+	stroke: var(--lab-edge-text);
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.col-h span {
+	flex: 1;
+	min-width: 0;
 }
 
 .col-h b {

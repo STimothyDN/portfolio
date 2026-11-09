@@ -8,8 +8,11 @@
 				<h2 id="cam-h" class="lab-h2">Cameras</h2>
 				<button type="button" class="lab-btn lab-btn--quiet" @click="editCamera = 'new'">Add camera</button>
 			</header>
+			<!-- The case: each camera pressed into its own cutout in the foam, named on a strip of embossed label tape. -->
 			<div v-if="inUse.length" class="cards">
-				<button v-for="(c, ci) in inUse" :key="c.id" type="button" class="card" :style="{ '--ci': ci }" @click="editCamera = c.id">
+				<span class="latch latch--l" aria-hidden="true"></span>
+				<span class="latch latch--r" aria-hidden="true"></span>
+				<button v-for="(c, ci) in inUse" :key="c.id" type="button" class="card" :data-kind="c.kind" :style="{ '--ci': ci }" @click="editCamera = c.id">
 					<CameraGlyph :kind="c.kind" :mount="c.mount" :format="c.format" />
 					<span class="card-top">
 						<span class="card-name">{{ c.name }}</span>
@@ -29,13 +32,19 @@
 					</span>
 					<span class="card-foot">
 						<span class="lab-meta">{{ usage[c.id]?.total ?? 0 }} {{ (usage[c.id]?.total ?? 0) === 1 ? 'roll' : 'rolls' }}</span>
-						<span v-if="usage[c.id]?.loaded" class="loaded">
-							<span class="lab-code">{{ usage[c.id]!.loaded!.code }}</span> {{ usage[c.id]!.loaded!.stock }}
+						<!-- Loaded: the film window on the back shows the canister inside. -->
+						<span v-if="usage[c.id]?.loaded" class="loaded" :style="windowColors(usage[c.id]!.loaded!.stock)">
+							<span class="led" aria-hidden="true"></span>
+							<span class="window"><span class="lab-code">{{ usage[c.id]!.loaded!.code }}</span> {{ usage[c.id]!.loaded!.stock }}</span>
 						</span>
 					</span>
 				</button>
 			</div>
-			<p v-else class="lab-empty">No cameras yet.</p>
+			<div v-else class="cards cards--empty">
+				<span class="latch latch--l" aria-hidden="true"></span>
+				<span class="latch latch--r" aria-hidden="true"></span>
+				<p class="empty-cut">No cameras yet. Add one and it gets its own place in the case.</p>
+			</div>
 
 			<details v-for="grp in otherGroups" :key="grp.key" class="others">
 				<summary>{{ grp.label }} <span>{{ grp.list.length }}</span></summary>
@@ -109,6 +118,7 @@ import CameraGlyph from './CameraGlyph.vue';
 import LensGlyph from './LensGlyph.vue';
 import LabDialog from './LabDialog.vue';
 import LensForm from './LensForm.vue';
+import { canisterColors } from '../film/canister';
 
 const props = defineProps<{
 	cameras: CameraView[];
@@ -125,6 +135,11 @@ const editCamera = ref<string | null>(null);
 const editLens = ref<string | null>(null);
 
 const ORDER = ['active', 'repair', 'shelf'];
+/** The canister seen through a camera's film window, from the stock's name. */
+const windowColors = (stock: string) => {
+	const { can, ink } = canisterColors({ stock, stockLabel: stock });
+	return { '--can': can, '--can-ink': ink };
+};
 const inUse = computed(() =>
 	cameras.value
 		.filter((c) => ORDER.includes(c.status))
@@ -221,58 +236,161 @@ function lensDeleted(id: string) {
 	border-bottom: 1px solid var(--gray-800);
 }
 
+/*
+ * The case: a black shell with latches, pick-and-pluck foam inside, and a
+ * cutout per camera (darker, deeper foam where it was pulled away).
+ */
 .cards {
+	--foam: oklch(25% 0.004 60);
+	--foam-cut: oklch(16% 0.004 60);
+	--ink: oklch(93% 0.008 80);
+	--dim: oklch(76% 0.01 75);
+	position: relative;
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
-	gap: 0.85rem;
+	gap: 1rem;
+	margin: 0.75rem 0.6rem 0.6rem;
+	padding: clamp(1rem, 2.5vw, 1.5rem);
+	border-radius: 1rem;
+	background:
+		linear-gradient(90deg, oklch(0% 0 0 / 0.5) 1px, transparent 1px) 0 0 / 10px 10px,
+		linear-gradient(oklch(0% 0 0 / 0.5) 1px, transparent 1px) 0 0 / 10px 10px,
+		radial-gradient(circle at 45% 40%, oklch(31% 0.004 60), var(--foam) 70%) 0 0 / 10px 10px,
+		var(--foam);
+	box-shadow:
+		inset 0 8px 18px rgb(0 0 0 / 0.55),
+		inset 0 0 0 1px oklch(0% 0 0 / 0.6),
+		0 0 0 10px oklch(19% 0.004 60),
+		0 0 0 11px oklch(33% 0.004 60),
+		0 0 0 12px oklch(14% 0.004 60),
+		0 26px 44px -22px rgb(0 0 0 / 0.65);
+}
+
+/* Latches on the shell's top edge. */
+.latch {
+	position: absolute;
+	top: -1.05rem;
+	width: 3.2rem;
+	height: 1.05rem;
+	border-radius: 0.3rem 0.3rem 0.15rem 0.15rem;
+	background: linear-gradient(180deg, oklch(42% 0.004 60), oklch(24% 0.004 60));
+	box-shadow:
+		inset 0 1px 0 oklch(60% 0.004 60),
+		0 2px 3px rgb(0 0 0 / 0.5);
+}
+
+.latch::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 0.35rem;
+	width: 1.4rem;
+	height: 0.2rem;
+	translate: -50% 0;
+	border-radius: 999px;
+	background: oklch(15% 0.004 60);
+}
+
+.latch--l {
+	left: 18%;
+}
+
+.latch--r {
+	right: 18%;
 }
 
 .card {
+	position: relative;
 	display: grid;
 	align-content: start;
 	gap: 0.3rem;
-	background-image: linear-gradient(var(--lab-table-grid) 1px, transparent 1px), linear-gradient(90deg, var(--lab-table-grid) 1px, transparent 1px);
-	background-size: 0.75rem 0.75rem;
-	background-position: -1px -1px;
 	padding: 1rem 1.1rem;
-	border: 1px solid var(--gray-800);
-	border-radius: 0.6rem;
-	background: none;
-	color: inherit;
+	border: 0;
+	border-radius: 0.9rem;
+	background:
+		radial-gradient(circle at 1px 1px, oklch(100% 0 0 / 0.035) 0.6px, transparent 1px) 0 0 / 3px 3px,
+		var(--foam-cut);
+	box-shadow:
+		inset 0 10px 18px rgb(0 0 0 / 0.75),
+		inset 0 -1px 0 oklch(100% 0 0 / 0.05),
+		0 1px 0 oklch(100% 0 0 / 0.07),
+		0 -1px 0 oklch(0% 0 0 / 0.6);
+	color: var(--ink);
 	font: inherit;
 	text-align: left;
 	cursor: pointer;
 }
 
-.card:hover {
-	border-color: var(--gray-600);
+.empty-cut {
+	grid-column: 1 / -1;
+	display: grid;
+	place-items: center;
+	min-height: 9rem;
+	padding: 1.5rem;
+	border-radius: 0.9rem;
+	border: 1.5px dashed oklch(100% 0 0 / 0.18);
+	background: oklch(16% 0.004 60 / 0.6);
+	color: var(--dim);
+	text-align: center;
+	box-shadow: inset 0 10px 18px rgb(0 0 0 / 0.6);
 }
 
 .card:focus-visible {
-	outline: 2px solid var(--accent-regular);
-	outline-offset: 2px;
+	outline: 2px solid var(--lab-lit);
+	outline-offset: 3px;
 }
 
 .card-top {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	justify-content: space-between;
 	gap: 0.5rem;
-	margin-bottom: 0.25rem;
+	margin-bottom: 0.35rem;
 }
 
+/* Embossed label tape: raised white letters on coloured plastic. */
 .card-name {
-	font-family: var(--font-brand);
-	font-size: var(--text-lg);
-	font-weight: 560;
-	line-height: 1.15;
-	color: var(--gray-0);
+	--tape: oklch(20% 0.005 260);
+	min-width: 0;
+	padding: 0.28rem 0.7rem 0.24rem;
+	border-radius: 2px;
+	background:
+		linear-gradient(180deg, oklch(100% 0 0 / 0.16), transparent 45%, oklch(0% 0 0 / 0.18)),
+		var(--tape);
+	color: oklch(97% 0.004 80);
+	font-family: var(--font-mono);
+	font-size: 0.86rem;
+	font-weight: 700;
+	font-variant-caps: all-small-caps;
+	letter-spacing: 0.14em;
+	line-height: 1.25;
+	text-shadow:
+		0 1px 0 oklch(0% 0 0 / 0.55),
+		0 -1px 0 oklch(100% 0 0 / 0.25);
+	box-shadow:
+		0 2px 3px rgb(0 0 0 / 0.6),
+		inset 0 0 0 1px oklch(100% 0 0 / 0.08);
+	rotate: -1.2deg;
+	clip-path: polygon(0.3rem 0, calc(100% - 0.3rem) 0, 100% 50%, calc(100% - 0.3rem) 100%, 0.3rem 100%, 0 50%);
+}
+
+.card[data-kind='point-and-shoot'] .card-name {
+	--tape: oklch(48% 0.17 25);
+}
+
+.card[data-kind='rangefinder'] .card-name {
+	--tape: oklch(42% 0.13 255);
+}
+
+.card[data-kind='medium-format'] .card-name,
+.card[data-kind='tlr'] .card-name {
+	--tape: oklch(42% 0.1 155);
 }
 
 .spec {
 	font-family: var(--font-mono);
 	font-size: 0.75rem;
-	color: var(--gray-300);
+	color: var(--dim);
 }
 
 .card-foot {
@@ -280,14 +398,65 @@ function lensDeleted(id: string) {
 	flex-wrap: wrap;
 	justify-content: space-between;
 	align-items: center;
-	gap: 0.4rem;
-	margin-top: 0.6rem;
-	padding-top: 0.6rem;
-	border-top: 1px solid var(--gray-800);
+	gap: 0.5rem;
+	margin-top: 0.7rem;
+	padding-top: 0.7rem;
+	border-top: 1px dashed oklch(100% 0 0 / 0.12);
 }
 
+.card-foot .lab-meta {
+	color: var(--dim);
+}
+
+.card .lab-chip {
+	color: var(--dim);
+	border-color: oklch(100% 0 0 / 0.25);
+}
+
+.card .lab-chip--warn {
+	color: oklch(80% 0.13 70);
+	border-color: oklch(80% 0.13 70 / 0.5);
+}
+
+/* The camera, nested in the foam; lifted out a little when you reach for it. */
 .card :deep(.glyph) {
 	margin: 0.15rem 0 0.6rem;
+	transition:
+		translate 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+		filter 0.35s ease;
+}
+
+.card :deep(.glyph .body > *) {
+	stroke: oklch(90% 0.01 80);
+}
+
+.card :deep(.glyph .body .thin) {
+	stroke: oklch(66% 0.01 75);
+}
+
+.card :deep(.glyph .body .glass) {
+	stroke: oklch(70% 0.01 75);
+	fill: color-mix(in oklch, var(--lab-edge-ink) 30%, transparent);
+}
+
+.card :deep(.glyph .dim path) {
+	stroke: oklch(52% 0.008 70);
+}
+
+.card :deep(.glyph .dim text) {
+	fill: oklch(72% 0.01 75);
+	stroke: var(--foam-cut);
+}
+
+.card :deep(.glyph .mount) {
+	fill: var(--lab-edge-ink);
+}
+
+@media (hover: hover) {
+	.card:hover :deep(.glyph) {
+		translate: 0 -4px;
+		filter: drop-shadow(0 8px 6px rgb(0 0 0 / 0.7));
+	}
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -310,31 +479,73 @@ function lensDeleted(id: string) {
 
 .batt rect:first-child {
 	fill: none;
-	stroke: var(--gray-400);
+	stroke: oklch(70% 0.01 75);
 }
 
 .batt .nub {
-	fill: var(--gray-400);
+	fill: oklch(70% 0.01 75);
 }
 
 .batt .charge {
-	fill: var(--lab-ok);
+	fill: oklch(72% 0.14 150);
 }
 
 .batt.low .charge {
-	fill: var(--lab-warn);
+	fill: oklch(76% 0.14 65);
 }
 
+/* Loaded: a lit LED, and the film window showing the canister's colours. */
 .loaded {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.4rem;
-	font-size: var(--text-sm);
-	color: var(--gray-0);
+	gap: 0.5rem;
+	min-width: 0;
 }
 
-.loaded .lab-code {
-	font-size: 0.85rem;
+.window {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	min-width: 0;
+	padding: 0.22rem 0.55rem 0.22rem 0.45rem;
+	border-radius: 3px;
+	background:
+		linear-gradient(180deg, oklch(100% 0 0 / 0.28), transparent 40%),
+		var(--can, oklch(60% 0.1 60));
+	color: var(--can-ink, white);
+	font-size: var(--text-sm);
+	line-height: 1.2;
+	box-shadow:
+		0 0 0 2px oklch(8% 0.004 60),
+		0 0 0 3px oklch(40% 0.004 60);
+}
+
+.window .lab-code {
+	font-size: 0.82rem;
+	color: inherit;
+	rotate: 0deg;
+}
+
+.led {
+	flex: none;
+	width: 0.45rem;
+	height: 0.45rem;
+	border-radius: 50%;
+	background: oklch(64% 0.23 28);
+	box-shadow: 0 0 6px 1px oklch(64% 0.23 28 / 0.8);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.led {
+		animation: led 2.4s ease-in-out infinite;
+	}
+
+	@keyframes led {
+		50% {
+			opacity: 0.45;
+			box-shadow: 0 0 2px oklch(64% 0.23 28 / 0.4);
+		}
+	}
 }
 
 .others summary {
@@ -351,22 +562,81 @@ function lensDeleted(id: string) {
 	font-variant-caps: normal;
 }
 
+/* The lens compartment: the same foam, a row of round cutouts. */
 .mount {
 	display: grid;
-	gap: 0.25rem;
+	gap: 0.5rem;
+	padding: 1rem 1.2rem 0.6rem;
+	border-radius: 0.9rem;
+	background:
+		linear-gradient(90deg, oklch(0% 0 0 / 0.5) 1px, transparent 1px) 0 0 / 10px 10px,
+		linear-gradient(oklch(0% 0 0 / 0.5) 1px, transparent 1px) 0 0 / 10px 10px,
+		radial-gradient(circle at 45% 40%, oklch(31% 0.004 60), oklch(25% 0.004 60) 70%) 0 0 / 10px 10px,
+		oklch(25% 0.004 60);
+	color: oklch(93% 0.008 80);
+	box-shadow:
+		inset 0 8px 18px rgb(0 0 0 / 0.55),
+		0 0 0 6px oklch(19% 0.004 60),
+		0 0 0 7px oklch(33% 0.004 60),
+		0 18px 34px -22px rgb(0 0 0 / 0.6);
+	margin-inline: 0.45rem;
 }
 
 .mount .lab-rows > li {
 	flex-wrap: nowrap;
+	border-bottom-color: oklch(100% 0 0 / 0.1);
+}
+
+.mount .lab-rows > li:last-child {
+	border-bottom: 0;
+}
+
+.mount .lab-meta {
+	color: oklch(76% 0.01 75);
+}
+
+.mount .lab-link {
+	color: oklch(93% 0.008 80);
+	text-decoration-color: oklch(100% 0 0 / 0.35);
+}
+
+.mount :deep(.lens-glyph) {
+	padding: 0.3rem;
+	border-radius: 0.6rem;
+	background: oklch(16% 0.004 60);
+	box-shadow: inset 0 6px 12px rgb(0 0 0 / 0.75);
+}
+
+.mount :deep(.lens-glyph .barrel) {
+	fill: oklch(22% 0.004 60);
+	stroke: oklch(55% 0.008 70);
+}
+
+.mount :deep(.lens-glyph .eye) {
+	fill: oklch(90% 0.01 80);
+}
+
+.mount :deep(.lens-glyph .blades) {
+	fill: oklch(32% 0.004 60);
+	stroke: oklch(55% 0.008 70);
 }
 
 .mount-h {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: baseline;
+	align-items: center;
 	gap: 0.4rem 1rem;
-	font-family: var(--font-brand);
-	font-size: var(--text-md);
-	font-weight: 560;
+	font-family: var(--font-mono);
+	font-size: 0.86rem;
+	font-weight: 700;
+	font-variant-caps: all-small-caps;
+	letter-spacing: 0.14em;
+}
+
+.mount-h .lab-meta {
+	font-family: var(--font-body);
+	font-weight: 400;
+	font-variant-caps: normal;
+	letter-spacing: 0;
 }
 </style>
