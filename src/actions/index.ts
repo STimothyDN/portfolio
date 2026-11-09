@@ -10,7 +10,7 @@ import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import labels from '../data/film-labels.json';
 import { nextCode, STAGES, type RollStatus } from '../lib/lab/inventory';
-import { labConfig } from '../lib/lab/server/config';
+import { isOwner, labConfig } from '../lib/lab/server/config';
 import { getDb, type LabDb } from '../lib/lab/server/db/client';
 import { camera, filmStock, frame, lab, labSetting, lens, publish, roll, rollEvent, serviceLog } from '../lib/lab/server/db/schema';
 import {
@@ -343,6 +343,7 @@ export const server = {
 				const { d, userId } = await session(context);
 				await loadRoll(d, userId, rollId);
 				if (publicRollId) {
+					if (!isOwner(context.locals.user)) throw new ActionError({ code: 'FORBIDDEN', message: 'Only the owner’s rolls link to the film desk.' });
 					const desk = await deskRolls();
 					if (!desk.some((r) => r.id === publicRollId)) throw bad('That roll isn’t on the film desk.');
 					const [taken] = await d
@@ -504,7 +505,7 @@ export const server = {
 			input: z.object({ shareLoaded: z.boolean() }),
 			handler: async ({ shareLoaded }, context) => {
 				const { d, userId } = await session(context);
-				if ((context.locals.user as { role?: string } | null)?.role !== 'owner') {
+				if (!isOwner(context.locals.user)) {
 					throw new ActionError({ code: 'FORBIDDEN', message: 'Only the owner’s cameras show on the portfolio.' });
 				}
 				const updatedAt = new Date();
@@ -519,7 +520,7 @@ export const server = {
 		publishSite: defineAction({
 			handler: async (_input, context) => {
 				const { d, userId } = await session(context);
-				if ((context.locals.user as { role?: string } | null)?.role !== 'owner') {
+				if (!isOwner(context.locals.user)) {
 					throw new ActionError({ code: 'FORBIDDEN', message: 'Only the owner can publish the portfolio.' });
 				}
 				const config = labConfig();
@@ -749,6 +750,7 @@ export const server = {
 		syncCatalogue: defineAction({
 			handler: async (_input, context) => {
 				const { d, userId } = await session(context);
+				if (!isOwner(context.locals.user)) throw new ActionError({ code: 'FORBIDDEN', message: 'Only the owner’s logbook follows the film desk.' });
 				const plan = await planCatalogue(d, userId, { stocks: [], cameras: [], labs: [] });
 				if (plan.writes.length) await d.batch(plan.writes as [(typeof plan.writes)[number], ...(typeof plan.writes)[number][]]);
 				return { ...plan.counts, stocksList: await listStocks(d, userId) };
@@ -758,6 +760,7 @@ export const server = {
 		importFromDesk: defineAction({
 			handler: async (_input, context) => {
 				const { d, userId } = await session(context);
+				if (!isOwner(context.locals.user)) throw new ActionError({ code: 'FORBIDDEN', message: 'Only the owner can import the film desk.' });
 				const [linked, codes] = await Promise.all([
 					d.select({ id: roll.publicRollId }).from(roll).where(and(eq(roll.userId, userId), isNotNull(roll.publicRollId))),
 					d.select({ code: roll.code }).from(roll).where(eq(roll.userId, userId)),

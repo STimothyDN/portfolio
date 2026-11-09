@@ -3,7 +3,7 @@ import LabLayout from '../../../../components/lab/LabLayout.astro';
 import RollsList from '../../../../components/lab/RollsList.vue';
 import RollsTabs from '../../../../components/lab/RollsTabs.astro';
 import { todayInDurham } from '../../../../lib/lab/inventory';
-import { labConfig } from '../../../../lib/lab/server/config';
+import { isOwner, labConfig } from '../../../../lib/lab/server/config';
 import { getDb } from '../../../../lib/lab/server/db/client';
 import { deskRolls, frameDigest, listStocks, rollMilestones, rollViews, stepChoices } from '../../../../lib/lab/server/inventory';
 
@@ -18,7 +18,7 @@ const data =
 				const [rolls, stocks, choices, milestones, frames, desk] = await Promise.all([
 					rollViews(d, user.id),
 					listStocks(d, user.id),
-					stepChoices(d, user.id),
+					stepChoices(d, user.id, isOwner(user)),
 					rollMilestones(d, user.id),
 					frameDigest(d, user.id),
 					deskRolls(),

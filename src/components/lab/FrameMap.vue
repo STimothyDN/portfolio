@@ -76,26 +76,43 @@ const view = computed(() => {
 			tiles.push({ key: `${z}/${tx}/${ty}`, src: `https://tile.openstreetmap.org/${z}/${wx}/${ty}.png`, left: tx * TILE - left, top: ty * TILE - top });
 		}
 	}
-	// Frames within a few pixels of each other share one dot.
-	const cell = 22;
-	const groups = new Map<string, { xs: number[]; ys: number[]; ids: string[]; thin: boolean }>();
+	// Frames close together share one dot; dots that would touch merge, so none overlap.
+	const radius = (n: number) => Math.round(Math.min(18, 6 + Math.sqrt(n) * 3));
+	type Group = { x: number; y: number; ids: string[]; thin: boolean };
+	let groups: Group[] = [];
 	for (const p of pts) {
 		const x = px(p.lng, z) - left;
 		const y = py(p.lat, z) - top;
-		const key = `${Math.round(x / cell)}:${Math.round(y / cell)}`;
-		const g = groups.get(key) ?? { xs: [], ys: [], ids: [], thin: false };
-		g.xs.push(x);
-		g.ys.push(y);
-		g.ids.push(p.id);
-		g.thin ||= !!p.thin;
-		groups.set(key, g);
+		const near = groups.find((g) => Math.hypot(g.x - x, g.y - y) < radius(g.ids.length) + 10);
+		if (near) {
+			const n = near.ids.length;
+			near.x = (near.x * n + x) / (n + 1);
+			near.y = (near.y * n + y) / (n + 1);
+			near.ids.push(p.id);
+			near.thin ||= !!p.thin;
+		} else groups.push({ x, y, ids: [p.id], thin: !!p.thin });
 	}
-	const avg = (l: number[]) => l.reduce((s, v) => s + v, 0) / l.length;
-	const clusters = [...groups].map(([key, g]) => ({
-		key: `${z}:${key}`,
-		x: Math.round(avg(g.xs)),
-		y: Math.round(avg(g.ys)),
-		r: Math.round(Math.min(18, 6 + Math.sqrt(g.ids.length) * 3)),
+	for (let merged = true; merged; ) {
+		merged = false;
+		outer: for (let i = 0; i < groups.length; i++) {
+			for (let j = i + 1; j < groups.length; j++) {
+				const a = groups[i];
+				const b = groups[j];
+				if (Math.hypot(a.x - b.x, a.y - b.y) < radius(a.ids.length) + radius(b.ids.length) + 2) {
+					const n = a.ids.length + b.ids.length;
+					groups[i] = { x: (a.x * a.ids.length + b.x * b.ids.length) / n, y: (a.y * a.ids.length + b.y * b.ids.length) / n, ids: [...a.ids, ...b.ids], thin: a.thin || b.thin };
+					groups = groups.filter((_, k) => k !== j);
+					merged = true;
+					break outer;
+				}
+			}
+		}
+	}
+	const clusters = groups.map((g) => ({
+		key: `${z}:${g.ids[0]}:${g.ids.length}`,
+		x: Math.round(g.x),
+		y: Math.round(g.y),
+		r: radius(g.ids.length),
 		ids: g.ids,
 		thin: g.thin,
 	}));

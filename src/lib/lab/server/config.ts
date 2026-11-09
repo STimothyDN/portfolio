@@ -89,3 +89,10 @@ export function labConfig(): LabConfigResult {
 		},
 	});
 }
+
+/**
+ * The film desk is the owner's portfolio: importing it, linking scans to it
+ * and reading insight from it are theirs alone (everyone else's logbook is
+ * their own film).
+ */
+export const isOwner = (user: unknown) => (user as { role?: string } | null)?.role === 'owner';

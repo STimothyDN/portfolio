@@ -45,7 +45,7 @@
 						</ol>
 					</section>
 				</div>
-				<p v-else class="lab-empty">{{ rows.length ? 'No frame matches all of that.' : 'No frames logged yet. Shooting mode logs them as you go.' }}</p>
+				<p v-else class="lab-empty">{{ props.rows.length ? 'No frame matches all of that.' : 'No frames logged yet. Shooting mode logs them as you go.' }}</p>
 				<button v-if="visible.length > limit" type="button" class="lab-btn lab-btn--quiet more" @click="limit += 48">Show {{ Math.min(48, visible.length - limit) }} more</button>
 			</div>
 			<aside v-if="located.length" class="side">
@@ -62,22 +62,26 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { describe, isEmpty, matches, parseQuery } from '../../lib/lab/frame-search';
 import { formatExposure, frameTime } from '../../lib/lab/inventory';
 import { formatEv } from '../../lib/lab/light';
-import type { FrameRow } from '../../lib/lab/server/frames';
+import type { FrameRow, RollBrief } from '../../lib/lab/server/frames';
 import FrameMap from './FrameMap.vue';
 
-const props = defineProps<{ rows: FrameRow[]; initialQuery?: string }>();
+const props = defineProps<{ rows: FrameRow[]; rolls: Record<string, RollBrief>; initialQuery?: string }>();
+
+/** Each frame with its roll's details, joined once: what search and the sheet read. */
+type Row = FrameRow & RollBrief;
+const rows = computed<Row[]>(() => props.rows.map((r) => ({ ...r, ...props.rolls[r.rollId] })));
 
 const q = ref(props.initialQuery ?? '');
 const query = computed(() => parseQuery(q.value));
 const chips = computed(() => describe(query.value));
-const results = computed(() => (isEmpty(query.value) ? props.rows : props.rows.filter((r) => matches(r, query.value))));
+const results = computed(() => (isEmpty(query.value) ? rows.value : rows.value.filter((r) => matches(r, query.value))));
 const pickedIds = ref<string[] | null>(null);
 const visible = computed(() => (pickedIds.value ? results.value.filter((r) => pickedIds.value!.includes(r.id)) : results.value));
 const limit = ref(36);
 const shown = computed(() => visible.value.slice(0, limit.value));
 /** The shown frames, roll by roll (a contact sheet per roll), most recent roll first. */
 const groups = computed(() => {
-	const out: { rollId: string; code: string; title: string | null; stock: string; camera: string | null; rows: FrameRow[] }[] = [];
+	const out: { rollId: string; code: string; title: string | null; stock: string; camera: string | null; rows: Row[] }[] = [];
 	const at = new Map<string, number>();
 	for (const r of shown.value) {
 		let i = at.get(r.rollId);
@@ -105,13 +109,13 @@ const countText = computed(() => {
 const examples = computed(() => {
 	const out: string[] = [];
 	const count = <T,>(list: T[]) => [...list.reduce((m, v) => m.set(v, (m.get(v) ?? 0) + 1), new Map<T, number>())].sort((a, b) => b[1] - a[1]);
-	const wide = props.rows.map((r) => r.aperture).filter((a): a is number => a != null && a <= 2.8);
+	const wide = rows.value.map((r) => r.aperture).filter((a): a is number => a != null && a <= 2.8);
 	if (wide.length) out.push(`f/${count(wide)[0][0]}`);
-	const stock = count(props.rows.map((r) => r.stock.split(' ').find((w) => w.length > 3 && !/kodak|fuji|ilford|film/i.test(w)) ?? ''))[0];
+	const stock = count(rows.value.map((r) => r.stock.split(' ').find((w) => w.length > 3 && !/kodak|fuji|ilford|film/i.test(w)) ?? ''))[0];
 	if (stock?.[0]) out.push(stock[0].toLowerCase());
-	if (props.rows.some((r) => r.thin)) out.push('thin');
-	if (props.rows.some((r) => r.flash)) out.push('flash');
-	if (props.rows.some((r) => r.note)) out.push('noted');
+	if (rows.value.some((r) => r.thin)) out.push('thin');
+	if (rows.value.some((r) => r.flash)) out.push('flash');
+	if (rows.value.some((r) => r.note)) out.push('noted');
 	return out.slice(0, 5);
 });
 

@@ -3,8 +3,13 @@
 		<header class="tr-head">
 			<h2 id="tone-h" class="lab-h2">How the negatives come back</h2>
 			<p class="lab-meta">
-				From the tone of {{ desk.scans }} scans on the film desk{{ review.withScans ? `, and ${review.withScans} logged frames that line up with one` : '' }}.
-				A thin negative scans with grey, raised blacks; cameras and labs are compared on the same film so the film’s own look doesn’t count against them.
+				<template v-if="desk">
+					From the tone of {{ desk.scans }} scans on the film desk{{ review.withScans ? `, and ${review.withScans} logged frames that line up with one` : '' }}.
+					A thin negative scans with grey, raised blacks; cameras and labs are compared on the same film so the film’s own look doesn’t count against them.
+				</template>
+				<template v-else>
+					From the tone of the scans your logged frames line up with ({{ review.withScans }} so far). A thin negative scans with grey, raised blacks; each frame is compared with the rest of its own roll.
+				</template>
 			</p>
 		</header>
 
@@ -15,7 +20,7 @@
 				<p>{{ f.text }}</p>
 			</li>
 		</ul>
-		<p v-else class="lab-empty">Nothing stands out yet: your cameras, film and labs all come back about the same.</p>
+		<p v-else class="lab-empty">{{ desk || review.withScans >= 8 ? 'Nothing stands out yet: your negatives come back about the same whatever made them.' : 'Once a few logged frames have scans that line up with them, what stands out shows here.' }}</p>
 	</section>
 
 	<section v-if="part !== 'findings'" class="tone-review" aria-label="Scan tone in detail">
@@ -43,7 +48,7 @@
 		</figure>
 
 		<!-- Every scan's range, black to white, camera by camera -->
-		<div class="barcodes">
+		<div v-if="desk" class="barcodes">
 			<h3 class="lab-edge-print">Every scan, black point to white, by camera</h3>
 			<ul>
 				<li v-for="g in desk.cameras" :key="g.key" class="code-row">
@@ -60,7 +65,7 @@
 			<p class="lab-hint">Each line is one scan, from its black point (bottom) to its white point (top), in the order the rolls were developed. Short lines that start high are flat scans; the dashed line is where flat begins.</p>
 		</div>
 
-		<div class="tables">
+		<div v-if="desk" class="tables">
 			<div v-for="t in tables" :key="t.title" class="table-wrap">
 			<table>
 				<caption class="lab-edge-print">{{ t.title }}</caption>
@@ -100,15 +105,19 @@ import type { FramesPage } from '../../lib/lab/server/frames';
 const props = defineProps<{ review: FramesPage['review']; desk: FramesPage['desk']; part?: 'findings' | 'charts' }>();
 
 const KIND: Record<Finding['kind'], string> = { camera: 'Camera', stock: 'Film', lab: 'Lab', light: 'Light', lens: 'Lens', roll: 'Roll' };
-const findings = computed(() => [...props.review.findings, ...props.desk.findings]);
+const findings = computed(() => [...props.review.findings, ...(props.desk?.findings ?? [])]);
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const liftText = (g: ToneGroup) => (g.lift == null ? 'no shared film' : `${g.lift >= 0 ? '+' : '−'}${Math.abs(g.lift).toFixed(2)} vs same film`);
 
-const tables = computed(() => [
-	{ title: 'By film', col: 'Film', rows: props.desk.stocks, lift: false },
-	{ title: 'By lab', col: 'Lab', rows: props.desk.labs, lift: true },
-]);
+const tables = computed(() =>
+	props.desk
+		? [
+				{ title: 'By film', col: 'Film', rows: props.desk.stocks, lift: false },
+				{ title: 'By lab', col: 'Lab', rows: props.desk.labs, lift: true },
+			]
+		: []
+);
 
 // Scatter geometry: EV 3–17 across, black point 0–0.35 up.
 const SW = 960;
@@ -145,6 +154,24 @@ const scatterLabel = computed(() => {
 	gap: 0.75rem;
 	list-style: none;
 	padding: 0;
+}
+
+/* On a phone the findings swipe sideways (the next one peeks in), so the frames aren't a scroll away. */
+@media (max-width: 40em) {
+	.findings {
+		display: flex;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		scrollbar-width: none;
+		margin-inline: calc(var(--lab-gutter, 1.5rem) * -1);
+		padding-inline: var(--lab-gutter, 1.5rem);
+		scroll-padding-inline: var(--lab-gutter, 1.5rem);
+	}
+
+	.finding {
+		flex: 0 0 84%;
+		scroll-snap-align: start;
+	}
 }
 
 .finding {

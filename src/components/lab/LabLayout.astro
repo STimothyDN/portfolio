@@ -630,6 +630,37 @@ const initials = (user?.name ?? '')
 		cursor: pointer;
 	}
 
+	/*
+	 * Fingers, not cursors: on touch screens the small text-style controls
+	 * (links, roll codes, Edit buttons, switches, checkboxes) get a hit area
+	 * of about 44 px without changing how they look.
+	 */
+	@media (pointer: coarse) {
+		.lab-main .lab-link,
+		.lab-main a.lab-code,
+		.lab-main [role='switch'] {
+			position: relative;
+		}
+
+		.lab-main .lab-link::after,
+		.lab-main a.lab-code::after {
+			content: '';
+			position: absolute;
+			inset: -0.7rem -0.4rem;
+		}
+
+		.lab-main [role='switch']::before {
+			content: '';
+			position: absolute;
+			inset: -0.6rem -0.25rem;
+		}
+
+		.lab-main input[type='checkbox'] {
+			width: 1.35rem;
+			height: 1.35rem;
+		}
+	}
+
 	/* Fields */
 	.lab-form {
 		display: grid;

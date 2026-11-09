@@ -3,7 +3,7 @@ import FramesDesk from '../../../components/lab/FramesDesk.vue';
 import LabLayout from '../../../components/lab/LabLayout.astro';
 import RollsTabs from '../../../components/lab/RollsTabs.astro';
 import ToneReview from '../../../components/lab/ToneReview.vue';
-import { labConfig } from '../../../lib/lab/server/config';
+import { isOwner, labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
 import { framesPage } from '../../../lib/lab/server/frames';
 
@@ -11,7 +11,7 @@ export const prerender = false;
 
 const { user } = Astro.locals;
 const config = labConfig();
-const data = user && config.ok ? await framesPage(await getDb(config.config), user.id) : null;
+const data = user && config.ok ? await framesPage(await getDb(config.config), user.id, isOwner(user)) : null;
 const q = Astro.url.searchParams.get('q') ?? '';
 ---
 
@@ -28,7 +28,7 @@ const q = Astro.url.searchParams.get('q') ?? '';
 					<RollsTabs current="frames" />
 				</section>
 				<ToneReview review={data.review} desk={data.desk} part="findings" />
-				<FramesDesk client:load rows={data.rows} initialQuery={q} />
+				<FramesDesk client:load rows={data.rows} rolls={data.rolls} initialQuery={q} />
 				<ToneReview review={data.review} desk={data.desk} part="charts" />
 			</>
 		)

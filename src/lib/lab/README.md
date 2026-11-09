@@ -260,6 +260,10 @@ Vercel if you like.
 - **Recovery codes.** You get ten at setup and can replace them from Account. Each works
   once, together with your email. The database stores only keyed hashes of them, and
   sign-in attempts are rate-limited.
+- **The film desk is the owner's.** Importing it, linking scans to it, adding its new
+  labels to the logbook, the Frames page's desk-wide findings and the light table's Rewind
+  are the owner's alone (the actions refuse anyone else). An invited person's logbook is
+  their own film.
 - **You can't remove your last passkey.** Add another first. This is enforced on the
   server too.
 - **Preview deployments** run on `*.vercel.app`. Passkeys are bound to `timo3.dev`, so

@@ -114,6 +114,11 @@ export async function listFrames(d: LabDb, userId: string, rollIds: string[]): P
 		.orderBy(asc(frame.number), asc(frame.shotAt));
 }
 
+/** Every frame someone has logged, on any roll. */
+export async function allFrames(d: LabDb, userId: string): Promise<FrameView[]> {
+	return d.select(frameSelect).from(frame).where(eq(frame.userId, userId)).orderBy(asc(frame.number), asc(frame.shotAt));
+}
+
 export async function rollViews(d: LabDb, userId: string, ids?: string[]): Promise<RollView[]> {
 	if (ids && !ids.length) return [];
 	const rows = await d
@@ -128,19 +133,23 @@ export async function rollViews(d: LabDb, userId: string, ids?: string[]): Promi
 }
 
 export async function rollByCode(d: LabDb, userId: string, code: string) {
-	const [row] = await d
-		.select(rollSelect)
-		.from(roll)
-		.innerJoin(filmStock, eq(filmStock.id, roll.stockId))
-		.leftJoin(camera, eq(camera.id, roll.cameraId))
-		.leftJoin(lab, eq(lab.id, roll.labId))
-		.where(and(eq(roll.userId, userId), eq(roll.code, code.toUpperCase())));
+	const byCode = and(eq(roll.userId, userId), eq(roll.code, code.toUpperCase()));
+	// The roll and its history together: one round trip to the database, not two.
+	const [[row], events] = await Promise.all([
+		d
+			.select(rollSelect)
+			.from(roll)
+			.innerJoin(filmStock, eq(filmStock.id, roll.stockId))
+			.leftJoin(camera, eq(camera.id, roll.cameraId))
+			.leftJoin(lab, eq(lab.id, roll.labId))
+			.where(byCode),
+		d
+			.select({ id: rollEvent.id, status: rollEvent.status, on: rollEvent.on, note: rollEvent.note })
+			.from(rollEvent)
+			.where(and(eq(rollEvent.userId, userId), inArray(rollEvent.rollId, d.select({ id: roll.id }).from(roll).where(byCode))))
+			.orderBy(asc(rollEvent.on), asc(rollEvent.createdAt)),
+	]);
 	if (!row) return null;
-	const events = await d
-		.select({ id: rollEvent.id, status: rollEvent.status, on: rollEvent.on, note: rollEvent.note })
-		.from(rollEvent)
-		.where(and(eq(rollEvent.userId, userId), eq(rollEvent.rollId, row.roll.id)))
-		.orderBy(asc(rollEvent.on), asc(rollEvent.createdAt));
 	return { roll: toRollView(row), events: events as RollEventView[] };
 }
 
@@ -239,13 +248,15 @@ export interface LabStats {
 }
 
 export async function labStats(d: LabDb, userId: string): Promise<Record<string, LabStats>> {
-	const rows = await d
-		.select({ rollId: rollEvent.rollId, status: rollEvent.status, on: rollEvent.on, labId: roll.labId })
-		.from(rollEvent)
-		.innerJoin(roll, eq(roll.id, rollEvent.rollId))
-		.where(and(eq(rollEvent.userId, userId), inArray(rollEvent.status, ['lab', 'scanned'])))
-		.orderBy(asc(rollEvent.on), asc(rollEvent.createdAt));
-	const counts = await d.select({ labId: roll.labId }).from(roll).where(eq(roll.userId, userId));
+	const [rows, counts] = await Promise.all([
+		d
+			.select({ rollId: rollEvent.rollId, status: rollEvent.status, on: rollEvent.on, labId: roll.labId })
+			.from(rollEvent)
+			.innerJoin(roll, eq(roll.id, rollEvent.rollId))
+			.where(and(eq(rollEvent.userId, userId), inArray(rollEvent.status, ['lab', 'scanned'])))
+			.orderBy(asc(rollEvent.on), asc(rollEvent.createdAt)),
+		d.select({ labId: roll.labId }).from(roll).where(eq(roll.userId, userId)),
+	]);
 
 	const stats: Record<string, LabStats> = {};
 	const turn: Record<string, number[]> = {};
@@ -336,12 +347,13 @@ export async function deskRollStrip(id: string): Promise<{
 	};
 }
 
-export async function stepChoices(d: LabDb, userId: string): Promise<StepChoices> {
+/** Choices for the stage-change forms. Desk rolls to link are offered to the owner only. */
+export async function stepChoices(d: LabDb, userId: string, owner: boolean): Promise<StepChoices> {
 	const [cams, labs, linked, desk] = await Promise.all([
 		d.select({ id: camera.id, name: camera.name, format: camera.format, status: camera.status }).from(camera).where(eq(camera.userId, userId)).orderBy(asc(camera.name)),
 		d.select({ id: lab.id, name: lab.name, costCents: lab.costCents }).from(lab).where(eq(lab.userId, userId)).orderBy(asc(lab.name)),
-		d.select({ id: roll.publicRollId }).from(roll).where(eq(roll.userId, userId)),
-		deskRolls(),
+		owner ? d.select({ id: roll.publicRollId }).from(roll).where(eq(roll.userId, userId)) : Promise.resolve([]),
+		owner ? deskRolls() : Promise.resolve([]),
 	]);
 	const taken = new Set(linked.map((l) => l.id).filter(Boolean));
 	return {

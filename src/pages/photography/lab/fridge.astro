@@ -3,7 +3,7 @@ import FridgeShelves from '../../../components/lab/FridgeShelves.vue';
 import LabLayout from '../../../components/lab/LabLayout.astro';
 import labels from '../../../data/film-labels.json';
 import { todayInDurham } from '../../../lib/lab/inventory';
-import { labConfig } from '../../../lib/lab/server/config';
+import { isOwner, labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
 import { labelGaps, listCameras, listLabs, listStocks, rollMilestones, rollViews, stepChoices } from '../../../lib/lab/server/inventory';
 import { restockForecast } from '../../../lib/lab/pace';
@@ -19,7 +19,7 @@ const data =
 				const [rolls, stocks, choices, cameras, labs, milestones] = await Promise.all([
 					rollViews(d, user.id),
 					listStocks(d, user.id),
-					stepChoices(d, user.id),
+					stepChoices(d, user.id, isOwner(user)),
 					listCameras(d, user.id),
 					listLabs(d, user.id),
 					rollMilestones(d, user.id),
@@ -27,7 +27,8 @@ const data =
 				const totals: Record<string, number> = {};
 				for (const r of rolls) totals[r.stock.id] = (totals[r.stock.id] ?? 0) + 1;
 				const storage = rolls.filter((r) => r.status === 'storage');
-				const gaps = labelGaps(labels, { stocks, cameras, labs });
+				// Only the owner's logbook follows the film desk's labels.
+				const gaps = isOwner(user) ? labelGaps(labels, { stocks, cameras, labs }) : { stocks: [], cameras: [], labs: [] };
 				// How fast each stock leaves the fridge, from when rolls went into cameras.
 				const forecast = restockForecast(
 					rolls,

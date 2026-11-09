@@ -1,7 +1,7 @@
 <template>
 	<div class="light-table">
 		<!-- A status line in edge print: where everything is, at a glance -->
-		<p class="ticker lab-edge-print" aria-label="Where your film is">
+		<p v-if="ticker.some((t) => t.n)" class="ticker lab-edge-print" aria-label="Where your film is">
 			<span v-for="t in ticker" :key="t.label" class="tick" :class="{ zero: !t.n }">▸ {{ t.n }} {{ t.label }}</span>
 		</p>
 
@@ -13,7 +13,7 @@
 				<button v-if="storage.length" type="button" class="lab-btn lab-btn--quiet push" @click="openLoad()">Load a roll</button>
 			</header>
 			<!-- The owner can show what's loaded on the public film desk (from the next publish). -->
-			<div v-if="share !== null" class="desk-share">
+			<div v-if="share !== null && (loaded.length || share)" class="desk-share">
 				<button id="share-loaded" type="button" class="switch" role="switch" :aria-checked="share" :disabled="sharing" aria-labelledby="share-loaded-l" @click="toggleShare"></button>
 				<span id="share-loaded-l" class="lab-meta">Show what’s loaded on the film desk<template v-if="share && newestLoaded?.camera">: “In the {{ newestLoaded.camera.name }}: {{ newestLoaded.stock.name }}, {{ newestLoaded.frameCount }} of {{ newestLoaded.exposures }}”</template></span>
 				<PublishButton v-if="shareChanged" quiet />
@@ -41,8 +41,8 @@
 					<div class="lcard-foot">
 						<span class="lab-meta">
 							<b class="count">{{ r.frameCount }}</b> / {{ r.exposures }} logged · loaded {{ formatDays(daysBetween(r.statusOn, today)) }}{{ daysBetween(r.statusOn, today) > 0 ? ' ago' : '' }}
-							<template v-if="paceOf(r)"><br /><span class="pace">{{ paceOf(r)!.rate }} · {{ paceOf(r)!.finish }}</span></template>
-							<template v-if="paceOf(r)?.nudge"><br /><span class="nudge">{{ paceOf(r)!.nudge }}</span></template>
+							<template v-if="paces.get(r.id)"><br /><span class="pace">{{ paces.get(r.id)!.rate }} · {{ paces.get(r.id)!.finish }}</span></template>
+							<template v-if="paces.get(r.id)?.nudge"><br /><span class="nudge">{{ paces.get(r.id)!.nudge }}</span></template>
 						</span>
 						<span class="lab-actions">
 							<a class="lab-btn lab-btn--quiet" :href="`/photography/lab/shoot/?roll=${r.code}`">Log frames</a>
@@ -202,7 +202,6 @@ const props = defineProps<{
 	shareLoaded?: boolean | null;
 }>();
 
-const paceOf = (r: RollView) => rollPace(r, props.today);
 
 const share = ref<boolean | null>(props.shareLoaded ?? null);
 const shareChanged = ref(false);
@@ -242,6 +241,8 @@ const byStage = computed(() => {
 	return map;
 });
 const loaded = computed(() => byStage.value.camera);
+/** Each loaded roll's pace, worked out once per change rather than per mention. */
+const paces = computed(() => new Map(loaded.value.map((r) => [r.id, rollPace(r, props.today)])));
 /** The film desk lists the most recently loaded camera first. */
 const newestLoaded = computed(() => [...loaded.value].sort((a, b) => b.statusOn.localeCompare(a.statusOn))[0] ?? null);
 const storage = computed(() => byStage.value.storage);

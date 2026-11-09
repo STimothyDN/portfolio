@@ -15,8 +15,9 @@
 
 		<div v-if="open" id="light-drawer" class="drawer">
 			<div class="tabs" role="group" aria-label="Light tools">
-				<button v-for="t in tabs" :key="t.key" type="button" class="tab" :aria-pressed="tab === t.key" @click="tab = t.key">
-					{{ t.label }}<span v-if="t.key === 'long' && isLong && tab !== 'long'" class="tab-dot" aria-label="(needed now)"></span>
+				<button v-for="t in tabs" :key="t.key" type="button" class="tab" :data-tab="t.key" :aria-label="t.label" :aria-pressed="tab === t.key" @click="tab = t.key">
+					<span class="t-long" aria-hidden="true">{{ t.label }}</span><span class="t-short" aria-hidden="true">{{ t.short }}</span>
+					<span v-if="t.key === 'long' && isLong && tab !== 'long'" class="tab-dot"></span>
 				</button>
 			</div>
 
@@ -222,7 +223,7 @@ async function refreshSky() {
 	sky.value = await skyAt(here.value.lat, here.value.lng);
 	skyTried.value = true;
 }
-watch(here, refreshSky);
+watch(() => `${here.value.lat},${here.value.lng}`, refreshSky);
 
 /* ---------- the meter ---------- */
 
@@ -297,6 +298,8 @@ function beep(freq: number, ms: number) {
 function startTimer(seconds: number | null) {
 	try {
 		audio ??= new AudioContext();
+		// Phones start audio suspended until a tap; this is one.
+		if (audio.state === 'suspended') void audio.resume();
 	} catch {
 		audio = undefined;
 	}
@@ -354,12 +357,12 @@ const tab = ref<Tab>('meter');
 const tabs = computed(() =>
 	(
 		[
-			{ key: 'meter', label: 'Meter' },
-			props.manual ? { key: 'long', label: 'Long exposure' } : null,
-			focus.value ? { key: 'focus', label: 'Focus' } : null,
-			{ key: 'sun', label: 'Sun' },
-		] as ({ key: Tab; label: string } | null)[]
-	).filter((t): t is { key: Tab; label: string } => !!t)
+			{ key: 'meter', label: 'Meter', short: 'Meter' },
+			props.manual ? { key: 'long', label: 'Long exposure', short: 'Long exp.' } : null,
+			focus.value ? { key: 'focus', label: 'Focus', short: 'Focus' } : null,
+			{ key: 'sun', label: 'Sun', short: 'Sun' },
+		] as ({ key: Tab; label: string; short: string } | null)[]
+	).filter((t): t is { key: Tab; label: string; short: string } => !!t)
 );
 // A tab that no longer applies (another camera) falls back to the meter.
 watch(tabs, (list) => {
@@ -635,6 +638,25 @@ h3 {
 	font-size: var(--text-sm);
 	white-space: nowrap;
 	cursor: pointer;
+}
+
+.t-short {
+	display: none;
+}
+
+/* A phone held narrow: shorter names, so all four tabs fit. */
+@media (max-width: 25em) {
+	.tab {
+		padding-inline: 0.55rem;
+	}
+
+	.t-long {
+		display: none;
+	}
+
+	.t-short {
+		display: inline;
+	}
 }
 
 .tab[aria-pressed='true'] {

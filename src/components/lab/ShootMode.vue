@@ -56,7 +56,7 @@
 				:focal="focalForLight"
 				:aperture="aperture"
 				:shutter="shutter"
-				:coords="locOn && fix ? { lat: fix.lat, lng: fix.lng } : null"
+				:coords="lightCoords"
 				@set="setFromLight"
 			/>
 
@@ -274,6 +274,8 @@ const focalForLight = computed(() => {
 	const m = camera.value?.fixedLens?.match(/(\d+(?:\.\d+)?)\s*mm/i);
 	return m ? Number(m[1]) : null;
 });
+/** Where the sun is worked out from: stable between renders, so the drawer doesn't redo it on every dial turn. */
+const lightCoords = computed(() => (locOn.value && fix.value ? { lat: fix.value.lat, lng: fix.value.lng } : null));
 function setFromLight(a: number, s: string) {
 	manual.value = true;
 	aperture.value = a;

@@ -27,11 +27,15 @@ export interface Pace {
 }
 
 /** A loaded roll's pace, from frames logged since it went in. Null until there's enough to go on. */
-export function rollPace(r: Pick<RollView, 'frameCount' | 'exposures' | 'statusOn'>, today: string): Pace | null {
+export function rollPace(r: Pick<RollView, 'frameCount' | 'exposures' | 'statusOn' | 'rewoundAtFrame'>, today: string): Pace | null {
 	const days = daysBetween(r.statusOn, today);
-	if (r.frameCount < 3 || days < 1) return null;
-	const perDay = r.frameCount / days;
-	const left = r.exposures - r.frameCount;
+	// A roll rewound part-way and loaded again: only the frames since it went back in set the pace,
+	// and it picks up past the last frame plus a spare.
+	const before = r.rewoundAtFrame ?? 0;
+	const since = Math.max(0, r.frameCount - before);
+	if (since < 3 || days < 1) return null;
+	const perDay = since / days;
+	const left = r.exposures - (before ? before + 1 : 0) - since;
 	const rate = perDay >= 0.95 ? `about ${Math.round(perDay)} ${Math.round(perDay) === 1 ? 'frame' : 'frames'} a day` : perDay * 7 >= 0.95 ? `about ${Math.round(perDay * 7)} a week` : 'a few a month';
 	const finishIn = left / perDay;
 	const finish = left <= 0 ? 'last frames: time to rewind' : finishIn > 365 ? 'over a year to go at this pace' : `done around ${formatDay(addDays(today, finishIn), finishIn > 300)}`;

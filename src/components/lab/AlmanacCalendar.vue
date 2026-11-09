@@ -1,5 +1,5 @@
 <template>
-	<div class="cal" role="group" aria-label="Rolls by month">
+	<div ref="calEl" class="cal" role="group" aria-label="Rolls by month">
 		<div class="cols">
 			<div v-for="(col, ci) in columns" :key="col.month" class="col" :class="{ now: col.month === thisMonth, picked: active?.kind === 'month' && active.value === col.month }">
 				<div class="stack">
@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import { monthLabel, monthsBetween, rollMonth, type Facet, type Milestones } from '../../lib/lab/almanac';
 import { STATUS_LABEL, type RollView } from '../../lib/lab/inventory';
@@ -88,11 +88,19 @@ const columns = computed(() => {
 
 const describe = (c: Cell) => `${c.code} · ${c.title} · ${STATUS_LABEL[c.status].toLowerCase()}`;
 
+// On a narrow screen the year runs off to the left: start on the latest months.
+const calEl = ref<HTMLElement | null>(null);
+onMounted(() => {
+	if (calEl.value) calEl.value.scrollLeft = calEl.value.scrollWidth;
+});
+
+const rollById = computed(() => new Map(props.rolls.map((r) => [r.id, r])));
+
 /** With a stock (or other) filter on, the rolls outside it fade back. */
 function dimmed(c: Cell) {
 	const f = props.active;
 	if (!f || f.kind === 'month') return false;
-	const r = props.rolls.find((x) => x.id === c.id);
+	const r = rollById.value.get(c.id);
 	if (!r) return false;
 	if (f.kind === 'stock') return r.stock.id !== f.value;
 	if (f.kind === 'camera') return r.camera?.id !== f.value;

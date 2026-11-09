@@ -3,7 +3,7 @@ import LabLayout from '../../../../components/lab/LabLayout.astro';
 import RollDetail from '../../../../components/lab/RollDetail.vue';
 import RollFrames from '../../../../components/lab/RollFrames.vue';
 import { todayInDurham } from '../../../../lib/lab/inventory';
-import { labConfig } from '../../../../lib/lab/server/config';
+import { isOwner, labConfig } from '../../../../lib/lab/server/config';
 import { getDb } from '../../../../lib/lab/server/db/client';
 import {
 	deskRollPreview,
@@ -32,8 +32,8 @@ const data =
 				const d = await getDb(config.config);
 				const found = await rollByCode(d, user.id, code);
 				if (!found) return null;
-				const [choices, stocks, cameras, all, preview, frames, lenses, strip] = await Promise.all([
-					stepChoices(d, user.id),
+				const [choices, stocks, cameras, all, preview, frames, lenses, strip, [last]] = await Promise.all([
+					stepChoices(d, user.id, isOwner(user)),
 					listStocks(d, user.id),
 					listCameras(d, user.id),
 					rollViews(d, user.id),
@@ -41,8 +41,8 @@ const data =
 					listFrames(d, user.id, [found.roll.id]),
 					listLenses(d, user.id),
 					found.roll.publicRollId ? deskRollStrip(found.roll.publicRollId) : Promise.resolve(null),
+					d.select({ at: publish.at }).from(publish).where(eq(publish.userId, user.id)).orderBy(desc(publish.at)).limit(1),
 				]);
-				const [last] = await d.select({ at: publish.at }).from(publish).where(eq(publish.userId, user.id)).orderBy(desc(publish.at)).limit(1);
 				// Lenses that fit the roll's camera (plus any its frames already name).
 				const mount = cameras.find((c) => c.id === found.roll.camera?.id)?.mount?.trim().toLowerCase();
 				const used = new Set(frames.map((f) => f.lensId));
