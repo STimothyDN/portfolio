@@ -10,7 +10,9 @@ export default defineConfig({
   // Every public page is still prerendered. The adapter only adds functions
   // for the routes that opt out (`export const prerender = false`): the
   // private Film Lab under /photography/lab and its auth API.
-  adapter: vercel(),
+  adapter: vercel({
+    webAnalytics: { enabled: true },
+  }),
   // Old photography links (/photography/film, /photography/<shoot>) redirect
   // from prerendered pages: src/pages/photography/[legacy].astro.
   // Film Lab secrets. All optional so the public site still builds without
