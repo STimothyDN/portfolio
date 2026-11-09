@@ -1,7 +1,29 @@
 # Film Lab
 
-The private film logbook at **`/photography/lab`**. Phase 1 is the foundation: passkey
-sign-in, invites, recovery codes, and an empty light table. Inventory comes next.
+The private film logbook at **`/photography/lab`**: passkey sign-in (phase 1) and the
+inventory (phase 2): cameras, lenses, film stocks, labs, and every roll from the fridge to
+the negative binder. Per-frame logging on the phone comes next.
+
+## The pages
+
+| Page | What it's for |
+| --- | --- |
+| **Light table** (`/photography/lab/`) | What's loaded in each camera, and "the line": six columns, one per stage. Drag a roll to its next stage on a laptop, or tap its → button. Every move records a date and has an Undo. |
+| **Rolls** | Every roll, filterable by stage and searchable. Each roll's page has its timeline (dates are editable), its details, and its scans on the public desk. |
+| **Fridge** | Unshot film, as canisters on shelves grouped by where they're kept ("Fridge door"). Oldest expiry first, with the usual rule of thumb for expired film. Below it, the film stock catalogue (ISO, process, format). |
+| **Gear** | Cameras (mount or fixed lens, battery, service log) and lenses grouped by mount, with which cameras each fits. |
+| **Labs** | Shot rolls waiting to be sent: tick a batch, pick the lab, mark them sent, and print a slip with each roll's process and push/pull. Lab cards show typical turnaround once rolls go from "sent" to "scans in". |
+
+The six stages: **In storage → In camera → Shot → At the lab → Scans in → Negatives home**
+(plus **Lost or ruined**). Rolls get codes like `R-023`, short enough to write on the
+canister.
+
+**Bringing in the film desk.** On an empty logbook the light table offers to import the
+public film desk: every camera, stock and lab in `film-labels.json` becomes gear, and every
+desk roll becomes a roll filed under "Negatives home", linked to its scans (in develop
+order, R-001 onward). Running it again only adds what's new. For a roll you logged before
+uploading its scans, link them from the roll's page (or in the "Scans arrived" step) instead
+of importing, which would make a duplicate.
 
 The rest of the site is unchanged and still fully prerendered. Only the lab's pages and
 `/api/auth/*` run as a Vercel function (through `@astrojs/vercel`), so visitors never touch
@@ -16,6 +38,11 @@ npm run dev
 
 Open `http://localhost:4321/photography/lab/setup/`, enter the setup code `film-lab-dev`,
 your name and email, and save a passkey. Passkeys work on `localhost` in Chrome and Safari.
+
+`npm run dev` never touches production, even with the production Turso and auth values in
+`.env`: it always uses the local SQLite file, `localhost`, and the `film-lab-dev` setup code.
+To browse the real database locally, start it with `FILM_LAB_DEV_DATABASE=remote npm run dev`.
+Your timo3.dev passkeys won't sign in on localhost, though.
 To start over, delete `.data/film-lab.db*` and run `npm run db:migrate` again (restart
 `npm run dev` afterwards).
 
@@ -30,7 +57,7 @@ You need a free [Turso](https://turso.tech) account. These are one-time steps.
    database in the region closest to your Vercel functions (Vercel Hobby runs them in
    Washington, D.C., `iad1`, so pick AWS `us-east-1`). Copy its URL (`libsql://…`) and make
    a database token.
-2. **Migrate it.** Put the URL and token in `.env.production` (already gitignored):
+2. **Migrate it.** Put the URL and token in `.env.production` or `.env` (both gitignored):
 
    ```bash
    TURSO_DATABASE_URL=libsql://…
@@ -98,10 +125,19 @@ Vercel if you like.
 | `src/pages/photography/lab/`          | lab pages                                                    |
 | `src/components/lab/`                 | layout and the Vue islands                                   |
 | `src/lib/lab/auth-client.ts`          | browser-side auth helpers                                    |
+| `src/actions/index.ts`                | every logbook write (Astro Actions)                          |
+| `src/lib/lab/server/inventory.ts`     | logbook reads, desk import helpers, lab turnaround           |
+| `src/lib/lab/inventory.ts`            | shared types, stages, dates, money, push/pull, expiry        |
 
 ## Changing the schema
 
 Edit `schema.ts`, run `npm run db:generate`, read the new SQL in `drizzle/`, then run
-`npm run db:migrate` (local) and `npm run db:migrate:prod` (Turso). Migrate production
-before deploying code that needs the new columns. `npm run db:studio` opens a browser
-for the local database.
+`npm run db:migrate` (local) and `npm run db:migrate:prod` (Turso; it reads
+`.env.production`, or `.env`). **Migrate production before deploying code that needs the
+new tables**, or the lab pages fail until you do. `npm run db:studio` opens a browser for
+the local database.
+
+Writes go through Astro Actions in `src/actions/index.ts` (`actions.lab.*`). Each checks
+the session and that every id it touches belongs to the signed-in user. Reads for pages
+live in `src/lib/lab/server/inventory.ts`; shared types and formatting in
+`src/lib/lab/inventory.ts`.

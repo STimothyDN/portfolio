@@ -5,10 +5,15 @@
  * adapter maps by them), columns are snake_case. `invite` and `recovery_code`
  * are the lab's own auth extras (src/lib/lab/server/plugin.ts).
  *
+ * Everything from "Inventory" down is the logbook itself. Every row carries a
+ * user_id: each person's gear and film is their own. Calendar dates (bought,
+ * loaded, sent…) are plain 'YYYY-MM-DD' text, so no timezone ever shifts them;
+ * film expiry is 'YYYY-MM', as printed on the box.
+ *
  * After changing this file: `npm run db:generate`, review the SQL in
  * drizzle/, then `npm run db:migrate`.
  */
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 const createdAt = () =>
 	integer('created_at', { mode: 'timestamp_ms' })
@@ -145,6 +150,193 @@ export const recoveryCode = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(t) => [index('recovery_code_user_id_idx').on(t.userId)]
+);
+
+/* ---------- Inventory ---------- */
+
+const owner = () =>
+	text('user_id')
+		.notNull()
+		.references(() => user.id, { onDelete: 'cascade' });
+
+/** A kind of film (Kodak Portra 400). A roll is one canister of it. */
+export const filmStock = sqliteTable(
+	'film_stock',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		/** film-labels.json key (portra400): ties the stock to the public film desk. */
+		token: text('token'),
+		brand: text('brand').notNull(),
+		name: text('name').notNull(),
+		iso: integer('iso'),
+		/** C-41, E-6, B&W, ECN-2 */
+		process: text('process').notNull().default('C-41'),
+		/** 35mm, 120, 110… */
+		format: text('format').notNull().default('35mm'),
+		exposures: integer('exposures').notNull().default(36),
+		/** Not owned yet: a stock to try. */
+		wishlist: integer('wishlist', { mode: 'boolean' }).notNull().default(false),
+		notes: text('notes'),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(t) => [index('film_stock_user_idx').on(t.userId), uniqueIndex('film_stock_user_token_idx').on(t.userId, t.token)]
+);
+
+export const camera = sqliteTable(
+	'camera',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		token: text('token'),
+		brand: text('brand').notNull(),
+		name: text('name').notNull(),
+		/** slr, rangefinder, point-and-shoot, tlr, medium-format, other */
+		kind: text('kind').notNull().default('point-and-shoot'),
+		format: text('format').notNull().default('35mm'),
+		/** Lens mount; null for a fixed lens. */
+		mount: text('mount'),
+		fixedLens: text('fixed_lens'),
+		battery: text('battery'),
+		batteryChangedOn: text('battery_changed_on'),
+		serial: text('serial'),
+		acquiredOn: text('acquired_on'),
+		priceCents: integer('price_cents'),
+		acquiredFrom: text('acquired_from'),
+		/** active, shelf, repair, gone, wishlist */
+		status: text('status').notNull().default('active'),
+		notes: text('notes'),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(t) => [index('camera_user_idx').on(t.userId), uniqueIndex('camera_user_token_idx').on(t.userId, t.token)]
+);
+
+export const lens = sqliteTable(
+	'lens',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		brand: text('brand').notNull(),
+		name: text('name').notNull(),
+		mount: text('mount').notNull(),
+		focalMin: integer('focal_min'),
+		/** Set for zooms. */
+		focalMax: integer('focal_max'),
+		maxAperture: real('max_aperture'),
+		serial: text('serial'),
+		acquiredOn: text('acquired_on'),
+		priceCents: integer('price_cents'),
+		acquiredFrom: text('acquired_from'),
+		status: text('status').notNull().default('active'),
+		notes: text('notes'),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(t) => [index('lens_user_idx').on(t.userId)]
+);
+
+/** Batteries, light seals, CLAs, repairs. */
+export const serviceLog = sqliteTable(
+	'service_log',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		cameraId: text('camera_id').references(() => camera.id, { onDelete: 'cascade' }),
+		lensId: text('lens_id').references(() => lens.id, { onDelete: 'cascade' }),
+		on: text('on').notNull(),
+		/** battery, seals, cla, repair, clean, other */
+		kind: text('kind').notNull(),
+		costCents: integer('cost_cents'),
+		note: text('note'),
+		createdAt: createdAt(),
+	},
+	(t) => [index('service_log_camera_idx').on(t.cameraId), index('service_log_lens_idx').on(t.lensId)]
+);
+
+/** Where film gets developed and scanned. */
+export const lab = sqliteTable(
+	'lab',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		token: text('token'),
+		name: text('name').notNull(),
+		location: text('location'),
+		url: text('url'),
+		/** Usual dev + scan price per roll. */
+		costCents: integer('cost_cents'),
+		notes: text('notes'),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(t) => [index('lab_user_idx').on(t.userId), uniqueIndex('lab_user_token_idx').on(t.userId, t.token)]
+);
+
+/**
+ * One physical roll. `status` is where it is now; roll_event keeps every move
+ * with its date. storage → camera → shot → lab → scanned → negatives (or lost).
+ */
+export const roll = sqliteTable(
+	'roll',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		/** R-047: short enough to write on the canister. */
+		code: text('code').notNull(),
+		stockId: text('stock_id')
+			.notNull()
+			.references(() => filmStock.id),
+		exposures: integer('exposures').notNull().default(36),
+		title: text('title'),
+		status: text('status').notNull().default('storage'),
+		/** Date of the latest move (mirrors the newest roll_event). */
+		statusOn: text('status_on').notNull(),
+		// In storage
+		expires: text('expires'),
+		purchasedOn: text('purchased_on'),
+		priceCents: integer('price_cents'),
+		purchasedFrom: text('purchased_from'),
+		storageSpot: text('storage_spot'),
+		// In camera
+		cameraId: text('camera_id').references(() => camera.id, { onDelete: 'set null' }),
+		/** Exposure index it was shot at; differs from the box speed when pushed or pulled. */
+		shotAtIso: integer('shot_at_iso'),
+		// At the lab
+		labId: text('lab_id').references(() => lab.id, { onDelete: 'set null' }),
+		labOrder: text('lab_order'),
+		devCostCents: integer('dev_cost_cents'),
+		devNotes: text('dev_notes'),
+		// Home
+		negativesAt: text('negatives_at'),
+		/** The roll's id on the public film desk (src/content/film/<id>.json). */
+		publicRollId: text('public_roll_id'),
+		notes: text('notes'),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(t) => [
+		index('roll_user_status_idx').on(t.userId, t.status),
+		uniqueIndex('roll_user_code_idx').on(t.userId, t.code),
+		uniqueIndex('roll_user_public_idx').on(t.userId, t.publicRollId),
+	]
+);
+
+export const rollEvent = sqliteTable(
+	'roll_event',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		rollId: text('roll_id')
+			.notNull()
+			.references(() => roll.id, { onDelete: 'cascade' }),
+		status: text('status').notNull(),
+		on: text('on').notNull(),
+		note: text('note'),
+		createdAt: createdAt(),
+	},
+	(t) => [index('roll_event_roll_idx').on(t.rollId)]
 );
 
 /** The tables Better Auth's adapter needs, keyed by its model names. */

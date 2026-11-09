@@ -1,0 +1,63 @@
+---
+import LabLayout from '../../../components/lab/LabLayout.astro';
+import LabsDesk from '../../../components/lab/LabsDesk.vue';
+import { todayInDurham } from '../../../lib/lab/inventory';
+import { labConfig } from '../../../lib/lab/server/config';
+import { getDb } from '../../../lib/lab/server/db/client';
+import { labStats, listLabs, rollViews } from '../../../lib/lab/server/inventory';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const data =
+	user && config.ok
+		? await (async () => {
+				const d = await getDb(config.config);
+				const [rolls, labs, stats] = await Promise.all([rollViews(d, user.id), listLabs(d, user.id), labStats(d, user.id)]);
+				const byDate = (a: { statusOn: string }, b: { statusOn: string }) => a.statusOn.localeCompare(b.statusOn);
+				return {
+					shot: rolls.filter((r) => r.status === 'shot').sort(byDate),
+					atLab: rolls.filter((r) => r.status === 'lab').sort(byDate),
+					labs,
+					stats,
+				};
+			})()
+		: null;
+---
+
+<LabLayout title="Labs" current="labs">
+	{
+		data && (
+			<>
+				<section class="lab-head">
+					<div>
+						<span class="lab-edge">Development</span>
+						<h1 class="lab-title">Labs</h1>
+					</div>
+				</section>
+				<LabsDesk client:load shot={data.shot} atLab={data.atLab} labs={data.labs} stats={data.stats} today={todayInDurham()} />
+			</>
+		)
+	}
+</LabLayout>
+
+<style is:global>
+	/* Printing from the Labs page prints only the lab slip. */
+	@media print {
+		html[data-section='photography'] body * {
+			visibility: hidden;
+		}
+
+		html[data-section='photography'] .slip,
+		html[data-section='photography'] .slip * {
+			visibility: visible;
+		}
+
+		html[data-section='photography'] .slip {
+			position: absolute;
+			inset: 0 0 auto;
+			padding: 1.5cm;
+		}
+	}
+</style>

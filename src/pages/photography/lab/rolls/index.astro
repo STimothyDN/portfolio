@@ -1,0 +1,61 @@
+---
+import LabLayout from '../../../../components/lab/LabLayout.astro';
+import RollsList from '../../../../components/lab/RollsList.vue';
+import { todayInDurham } from '../../../../lib/lab/inventory';
+import { labConfig } from '../../../../lib/lab/server/config';
+import { getDb } from '../../../../lib/lab/server/db/client';
+import { listStocks, rollViews, stepChoices } from '../../../../lib/lab/server/inventory';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const data =
+	user && config.ok
+		? await (async () => {
+				const d = await getDb(config.config);
+				const [rolls, stocks, choices] = await Promise.all([
+					rollViews(d, user.id),
+					listStocks(d, user.id),
+					stepChoices(d, user.id),
+				]);
+				const unique = (vals: (string | null)[]) => [...new Set(vals.filter((v): v is string => !!v))].sort();
+				return {
+					rolls,
+					stocks,
+					spots: unique(rolls.map((r) => r.storageSpot)),
+					shops: unique(rolls.map((r) => r.purchasedFrom)),
+					importable: choices.deskRolls.length,
+				};
+			})()
+		: null;
+const status = Astro.url.searchParams.get('status');
+---
+
+<LabLayout title="Rolls" current="rolls">
+	{
+		data && (
+			<>
+				<section class="lab-head">
+					<div>
+						<span class="lab-edge">Rolls</span>
+						<h1 class="lab-title">Every roll</h1>
+					</div>
+					<p class="lab-meta">
+						{data.rolls.length} in the logbook · {data.rolls.filter((r) => r.publicRollId).length} on the film desk
+					</p>
+				</section>
+				<RollsList
+					client:load
+					rolls={data.rolls}
+					stocks={data.stocks}
+					spots={data.spots}
+					shops={data.shops}
+					today={todayInDurham()}
+					importable={data.rolls.length ? data.importable : 0}
+					initialStatus={status}
+				/>
+			</>
+		)
+	}
+</LabLayout>

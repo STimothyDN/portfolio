@@ -53,9 +53,14 @@ export function labConfig(): LabConfigResult {
 	if (production && !previewHost && !BETTER_AUTH_URL) missing.push('BETTER_AUTH_URL');
 	if (missing.length) return (cached = { ok: false, missing });
 
-	const baseURL = previewHost
-		? `https://${previewHost}`
-		: (BETTER_AUTH_URL ?? `http://localhost:${DEV_PORTS[0]}`).replace(/\/$/, '');
+	// `npm run dev` never touches production, even with production values in
+	// .env: it uses the local SQLite file, localhost and the dev setup code.
+	// FILM_LAB_DEV_DATABASE=remote opts in to TURSO_DATABASE_URL (read-only
+	// browsing of real data, say), though timo3.dev passkeys still won't sign
+	// in on localhost.
+	const devRemote = !production && process.env.FILM_LAB_DEV_DATABASE === 'remote';
+	const devURL = BETTER_AUTH_URL?.startsWith('http://localhost') ? BETTER_AUTH_URL : `http://localhost:${DEV_PORTS[0]}`;
+	const baseURL = (previewHost ? `https://${previewHost}` : production ? BETTER_AUTH_URL! : devURL).replace(/\/$/, '');
 	const base = new URL(baseURL);
 	const origins = new Set([base.origin]);
 	if (base.hostname === 'localhost') {
@@ -67,15 +72,15 @@ export function labConfig(): LabConfigResult {
 	return (cached = {
 		ok: true,
 		config: {
-			dbUrl: TURSO_DATABASE_URL ?? LOCAL_DB,
-			dbAuthToken: TURSO_AUTH_TOKEN,
+			dbUrl: production || devRemote ? (TURSO_DATABASE_URL ?? LOCAL_DB) : LOCAL_DB,
+			dbAuthToken: production || devRemote ? TURSO_AUTH_TOKEN : undefined,
 			// Dev only: a fixed secret so local sessions survive restarts.
 			secret: BETTER_AUTH_SECRET ?? 'film-lab-local-development-secret-not-for-production',
 			baseURL,
 			rpID: base.hostname,
 			origins: [...origins],
 			// Local development has a fixed setup code (its database is a local file).
-			setupToken: FILM_LAB_SETUP_TOKEN ?? (production ? undefined : DEV_SETUP_TOKEN),
+			setupToken: production ? FILM_LAB_SETUP_TOKEN : DEV_SETUP_TOKEN,
 			production,
 		},
 	});

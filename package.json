@@ -16,7 +16,7 @@
     "sync-work": "node --env-file-if-exists=.env scripts/sync-work.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "mkdir -p .data && drizzle-kit migrate",
-    "db:migrate:prod": "DRIZZLE_ENV=.env.production drizzle-kit migrate",
+    "db:migrate:prod": "DRIZZLE_ENV=prod drizzle-kit migrate",
     "db:studio": "mkdir -p .data && drizzle-kit studio"
   },
   "dependencies": {

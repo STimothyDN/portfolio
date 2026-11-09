@@ -1,0 +1,79 @@
+---
+import LabLayout from '../../../../components/lab/LabLayout.astro';
+import RollDetail from '../../../../components/lab/RollDetail.vue';
+import { todayInDurham } from '../../../../lib/lab/inventory';
+import { labConfig } from '../../../../lib/lab/server/config';
+import { getDb } from '../../../../lib/lab/server/db/client';
+import { deskRollPreview, listCameras, listStocks, rollByCode, rollViews, stepChoices } from '../../../../lib/lab/server/inventory';
+import { bunnyUrl } from '../../../../utils/bunny';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const code = (Astro.params.code ?? '').toUpperCase();
+
+const data =
+	user && config.ok
+		? await (async () => {
+				const d = await getDb(config.config);
+				const found = await rollByCode(d, user.id, code);
+				if (!found) return null;
+				const [choices, stocks, cameras, all, preview] = await Promise.all([
+					stepChoices(d, user.id),
+					listStocks(d, user.id),
+					listCameras(d, user.id),
+					rollViews(d, user.id),
+					found.roll.publicRollId ? deskRollPreview(found.roll.publicRollId) : Promise.resolve(null),
+				]);
+				return {
+					...found,
+					choices,
+					stocks,
+					cameras: cameras.map((c) => ({ id: c.id, name: c.name })),
+					binderHints: [...new Set(all.map((r) => r.negativesAt).filter((v): v is string => !!v))].slice(0, 12),
+					desk: preview && {
+						id: preview.id,
+						title: preview.title,
+						developed: preview.developed,
+						count: preview.count,
+						scans: preview.scans.map((s) => ({
+							src: bunnyUrl(s.path, { width: 360, format: 'webp', quality: 72 }),
+							frame: s.frame,
+							w: s.w,
+							h: s.h,
+						})),
+					},
+				};
+			})()
+		: null;
+if (user && config.ok && !data) Astro.response.status = 404;
+---
+
+<LabLayout title={data ? data.roll.code : 'Roll not found'} current="rolls">
+	{
+		data ? (
+			<RollDetail
+				client:load
+				roll={data.roll}
+				events={data.events}
+				choices={data.choices}
+				stocks={data.stocks}
+				allCameras={data.cameras}
+				desk={data.desk}
+				binderHints={data.binderHints}
+				today={todayInDurham()}
+			/>
+		) : (
+			user && (
+				<section class="lab-hello">
+					<span class="lab-edge">Rolls</span>
+					<h1 class="lab-title">No roll {code}</h1>
+					<p class="lab-lede">
+						It isn’t in your logbook. <a href="/photography/lab/rolls/">See every roll</a>.
+					</p>
+				</section>
+			)
+		)
+	}
+</LabLayout>

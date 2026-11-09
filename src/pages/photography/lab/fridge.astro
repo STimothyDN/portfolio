@@ -1,0 +1,54 @@
+---
+import FridgeShelves from '../../../components/lab/FridgeShelves.vue';
+import LabLayout from '../../../components/lab/LabLayout.astro';
+import { todayInDurham } from '../../../lib/lab/inventory';
+import { labConfig } from '../../../lib/lab/server/config';
+import { getDb } from '../../../lib/lab/server/db/client';
+import { listStocks, rollViews, stepChoices } from '../../../lib/lab/server/inventory';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const data =
+	user && config.ok
+		? await (async () => {
+				const d = await getDb(config.config);
+				const [rolls, stocks, choices] = await Promise.all([rollViews(d, user.id), listStocks(d, user.id), stepChoices(d, user.id)]);
+				const totals: Record<string, number> = {};
+				for (const r of rolls) totals[r.stock.id] = (totals[r.stock.id] ?? 0) + 1;
+				const storage = rolls.filter((r) => r.status === 'storage');
+				return {
+					storage,
+					stocks,
+					totals,
+					choices,
+					shops: [...new Set(rolls.map((r) => r.purchasedFrom).filter((v): v is string => !!v))].sort(),
+				};
+			})()
+		: null;
+---
+
+<LabLayout title="Fridge" current="fridge">
+	{
+		data && (
+			<>
+				<section class="lab-head">
+					<div>
+						<span class="lab-edge">Use oldest first</span>
+						<h1 class="lab-title">The fridge</h1>
+					</div>
+				</section>
+				<FridgeShelves
+					client:load
+					storage={data.storage}
+					stocks={data.stocks}
+					totals={data.totals}
+					choices={data.choices}
+					shops={data.shops}
+					today={todayInDurham()}
+				/>
+			</>
+		)
+	}
+</LabLayout>

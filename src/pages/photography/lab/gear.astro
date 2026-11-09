@@ -1,0 +1,56 @@
+---
+import GearShelf from '../../../components/lab/GearShelf.vue';
+import LabLayout from '../../../components/lab/LabLayout.astro';
+import { todayInDurham } from '../../../lib/lab/inventory';
+import { labConfig } from '../../../lib/lab/server/config';
+import { getDb } from '../../../lib/lab/server/db/client';
+import { listCameras, listLenses, listService, rollViews } from '../../../lib/lab/server/inventory';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const data =
+	user && config.ok
+		? await (async () => {
+				const d = await getDb(config.config);
+				const [cameras, lenses, service, rolls] = await Promise.all([
+					listCameras(d, user.id),
+					listLenses(d, user.id),
+					listService(d, user.id),
+					rollViews(d, user.id),
+				]);
+				const usage: Record<string, { total: number; loaded: { code: string; stock: string } | null }> = {};
+				for (const r of rolls) {
+					if (!r.camera) continue;
+					const u = (usage[r.camera.id] ??= { total: 0, loaded: null });
+					u.total++;
+					if (r.status === 'camera') u.loaded = { code: r.code, stock: r.stock.name };
+				}
+				return { cameras, lenses, service, usage };
+			})()
+		: null;
+---
+
+<LabLayout title="Gear" current="gear">
+	{
+		data && (
+			<>
+				<section class="lab-head">
+					<div>
+						<span class="lab-edge">The shelf</span>
+						<h1 class="lab-title">Gear</h1>
+					</div>
+				</section>
+				<GearShelf
+					client:load
+					cameras={data.cameras}
+					lenses={data.lenses}
+					service={data.service}
+					usage={data.usage}
+					today={todayInDurham()}
+				/>
+			</>
+		)
+	}
+</LabLayout>

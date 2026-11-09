@@ -17,9 +17,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 	const { pathname } = context.url;
 	const isLab = pathname === LAB || pathname.startsWith(`${LAB}/`);
-	if (!isLab && !pathname.startsWith('/api/auth/')) return next();
+	// Astro Actions (src/actions): the lab's writes. They check locals.user themselves.
+	const isAction = pathname.startsWith('/_actions/');
+	if (!isLab && !isAction && !pathname.startsWith('/api/auth/')) return next();
 
-	if (isLab) {
+	if (isLab || isAction) {
 		context.locals.user = null;
 		context.locals.labConfigured = false;
 		const auth = getAuth();
@@ -28,7 +30,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 			const session = await (await auth).api.getSession({ headers: context.request.headers });
 			context.locals.user = (session?.user as LabUser | undefined) ?? null;
 		}
+	}
 
+	if (isLab) {
 		const open = OPEN_PAGES.test(pathname);
 		if (context.locals.labConfigured && !context.locals.user && !open) {
 			const next = pathname === LAB || pathname === `${LAB}/` ? '' : `?next=${encodeURIComponent(pathname)}`;

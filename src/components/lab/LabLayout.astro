@@ -6,6 +6,7 @@
  * get a single centred column and no lab bar.
  */
 import '@fontsource-variable/geist-mono';
+import '@fontsource/permanent-marker/400.css';
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { labConfig } from '../../lib/lab/server/config';
@@ -13,13 +14,20 @@ import { labConfig } from '../../lib/lab/server/config';
 interface Props {
 	title: string;
 	door?: boolean;
-	current?: 'home' | 'account';
+	current?: 'home' | 'rolls' | 'fridge' | 'gear' | 'labs' | 'account';
 }
 
 const { title, door = false, current } = Astro.props;
 const { user, labConfigured } = Astro.locals;
 const config = labConfig();
 const missing = config.ok ? [] : config.missing;
+const tabs = [
+	['home', 'Light table', '/photography/lab/'],
+	['rolls', 'Rolls', '/photography/lab/rolls/'],
+	['fridge', 'Fridge', '/photography/lab/fridge/'],
+	['gear', 'Gear', '/photography/lab/gear/'],
+	['labs', 'Labs', '/photography/lab/labs/'],
+] as const;
 const initials = (user?.name ?? '')
 	.split(/\s+/)
 	.filter(Boolean)
@@ -51,9 +59,11 @@ const initials = (user?.name ?? '')
 							Film Lab
 						</a>
 						<nav class="lab-tabs" aria-label="Film Lab">
-							<a href="/photography/lab/" aria-current={current === 'home' ? 'page' : undefined}>
-								Light table
-							</a>
+							{tabs.map(([key, label, href]) => (
+								<a href={href} aria-current={current === key ? 'page' : undefined}>
+									{label}
+								</a>
+							))}
 						</nav>
 						<a
 							class="lab-me"
@@ -131,6 +141,13 @@ const initials = (user?.name ?? '')
 	.lab-tabs {
 		display: flex;
 		gap: 1.25rem;
+		min-width: 0;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.lab-tabs a {
+		white-space: nowrap;
 	}
 
 	.lab-tabs a,
@@ -180,9 +197,22 @@ const initials = (user?.name ?? '')
 		color: var(--accent-text-over);
 	}
 
-	@media (max-width: 30em) {
+	@media (max-width: 64em) {
 		.lab-me-label {
 			display: none;
+		}
+	}
+
+	@media (max-width: 40em) {
+		.lab-bar {
+			flex-wrap: wrap;
+			row-gap: 0.5rem;
+		}
+
+		.lab-tabs {
+			order: 3;
+			flex-basis: 100%;
+			gap: 1.1rem;
 		}
 	}
 
@@ -326,6 +356,7 @@ const initials = (user?.name ?? '')
 	.lab-field {
 		display: grid;
 		gap: 0.35rem;
+		min-width: 0;
 	}
 
 	.lab-field > span {
@@ -337,6 +368,7 @@ const initials = (user?.name ?? '')
 
 	.lab-input {
 		width: 100%;
+		min-width: 0;
 		min-height: 2.9rem;
 		padding: 0.55rem 0.85rem;
 		border: 1px solid var(--gray-700);
@@ -445,6 +477,63 @@ const initials = (user?.name ?? '')
 		min-width: 0;
 		display: grid;
 		gap: 0.15rem;
+	}
+
+	/* Roll codes, as written on the canister in marker. */
+	.lab-code {
+		display: inline-block;
+		font-family: 'Permanent Marker', 'Marker Felt', cursive;
+		font-size: 1rem;
+		line-height: 1;
+		letter-spacing: 0.02em;
+		color: var(--gray-0);
+		text-decoration: none;
+		rotate: -3deg;
+	}
+
+	a.lab-code:hover {
+		text-decoration: underline;
+		text-decoration-thickness: 1px;
+	}
+
+	.lab-select {
+		appearance: none;
+		padding-right: 2.2rem;
+		background-image:
+			linear-gradient(45deg, transparent 50%, var(--gray-300) 50%),
+			linear-gradient(135deg, var(--gray-300) 50%, transparent 50%);
+		background-position:
+			calc(100% - 1.1rem) 52%,
+			calc(100% - 0.75rem) 52%;
+		background-size: 0.35rem 0.35rem;
+		background-repeat: no-repeat;
+	}
+
+	.lab-row2 {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+		gap: 0.75rem;
+	}
+
+	.lab-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 1rem 1.5rem;
+	}
+
+	.lab-head > div {
+		display: grid;
+		gap: 0.6rem;
+	}
+
+	.lab-empty {
+		padding: 1.25rem;
+		border: 1px dashed var(--gray-700);
+		border-radius: 0.6rem;
+		color: var(--gray-300);
+		text-align: center;
 	}
 
 	.lab-actions {
