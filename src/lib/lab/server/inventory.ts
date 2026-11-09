@@ -2,12 +2,13 @@
  * Logbook reads for server-rendered lab pages and the actions. Every query is
  * scoped to one user.
  */
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { frameExposure, negativeProfileKey, type NegativeProfileKey } from '../../../components/film/negative';
 import { filmBrand, filmLabel, getFilmRolls, isMonochrome, rollFolder } from '../../../utils/film';
 import type {
 	CameraView,
+	Delivery,
 	DeskRollOption,
 	FrameView,
 	LabView,
@@ -63,13 +64,19 @@ function toRollView({ roll: r, stock, cameraId, cameraName, labId, labName, fram
 		camera: cameraId && cameraName ? { id: cameraId, name: cameraName } : null,
 		lab: labId && labName ? { id: labId, name: labName } : null,
 		shotAtIso: r.shotAtIso,
+		exposureComp: r.exposureComp,
 		expires: r.expires,
 		purchasedOn: r.purchasedOn,
 		priceCents: r.priceCents,
 		purchasedFrom: r.purchasedFrom,
 		storageSpot: r.storageSpot,
 		labOrder: r.labOrder,
+		labDelivery: r.labDelivery === 'mail' || r.labDelivery === 'dropoff' ? r.labDelivery : null,
+		trackingOut: r.trackingOut,
+		trackingBack: r.trackingBack,
 		devCostCents: r.devCostCents,
+		printsIncluded: r.printsIncluded,
+		printsCostCents: r.printsCostCents,
 		devNotes: r.devNotes,
 		negativesAt: r.negativesAt,
 		publicRollId: r.publicRollId,
@@ -112,6 +119,17 @@ export async function listFrames(d: LabDb, userId: string, rollIds: string[]): P
 		.from(frame)
 		.where(and(eq(frame.userId, userId), inArray(frame.rollId, rollIds)))
 		.orderBy(asc(frame.number), asc(frame.shotAt));
+}
+
+/** Where negatives have been filed before ("Binder 1, page 23"), for the next one's suggestions. */
+export async function binderHints(d: LabDb, userId: string): Promise<string[]> {
+	const rows = await d
+		.selectDistinct({ at: roll.negativesAt })
+		.from(roll)
+		.where(and(eq(roll.userId, userId), isNotNull(roll.negativesAt)))
+		.orderBy(desc(roll.negativesAt))
+		.limit(12);
+	return rows.map((r) => r.at!).filter(Boolean);
 }
 
 /** Every frame someone has logged, on any roll. */
@@ -349,16 +367,25 @@ export async function deskRollStrip(id: string): Promise<{
 
 /** Choices for the stage-change forms. Desk rolls to link are offered to the owner only. */
 export async function stepChoices(d: LabDb, userId: string, owner: boolean): Promise<StepChoices> {
-	const [cams, labs, linked, desk] = await Promise.all([
+	const [cams, labs, linked, desk, sends] = await Promise.all([
 		d.select({ id: camera.id, name: camera.name, format: camera.format, status: camera.status }).from(camera).where(eq(camera.userId, userId)).orderBy(asc(camera.name)),
 		d.select({ id: lab.id, name: lab.name, costCents: lab.costCents }).from(lab).where(eq(lab.userId, userId)).orderBy(asc(lab.name)),
 		owner ? d.select({ id: roll.publicRollId }).from(roll).where(eq(roll.userId, userId)) : Promise.resolve([]),
 		owner ? deskRolls() : Promise.resolve([]),
+		d
+			.select({ labId: roll.labId, delivery: roll.labDelivery })
+			.from(roll)
+			.where(and(eq(roll.userId, userId), isNotNull(roll.labDelivery)))
+			.orderBy(asc(roll.statusOn)),
 	]);
 	const taken = new Set(linked.map((l) => l.id).filter(Boolean));
+	// The latest send to each lab wins.
+	const lastDelivery = new Map<string | null, Delivery | null>(
+		sends.map((s) => [s.labId, s.delivery === 'mail' || s.delivery === 'dropoff' ? s.delivery : null])
+	);
 	return {
 		cameras: cams.filter((c) => c.status !== 'gone' && c.status !== 'wishlist'),
-		labs,
+		labs: labs.map((l) => ({ ...l, delivery: lastDelivery.get(l.id) ?? null })),
 		deskRolls: desk.filter((r) => !taken.has(r.id)),
 	};
 }

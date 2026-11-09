@@ -10,6 +10,7 @@ import {
 	BETTER_AUTH_URL,
 	FILM_LAB_SETUP_TOKEN,
 	TURSO_AUTH_TOKEN,
+	TRACKING_17TRACK_KEY,
 	TURSO_DATABASE_URL,
 	VERCEL_DEPLOY_HOOK_URL,
 } from 'astro:env/server';
@@ -33,6 +34,8 @@ export interface LabConfig {
 	setupToken: string | undefined;
 	/** Vercel deploy hook for "Publish to portfolio" (production only). */
 	deployHook: string | undefined;
+	/** 17TRACK key for live tracking status (production, or dev with FILM_LAB_DEV_TRACKING=1, so tests don't spend credits). */
+	trackingKey: string | undefined;
 	production: boolean;
 }
 
@@ -85,6 +88,7 @@ export function labConfig(): LabConfigResult {
 			// Local development has a fixed setup code (its database is a local file).
 			setupToken: production ? FILM_LAB_SETUP_TOKEN : DEV_SETUP_TOKEN,
 			deployHook: production && !previewHost ? VERCEL_DEPLOY_HOOK_URL : undefined,
+			trackingKey: production || process.env.FILM_LAB_DEV_TRACKING === '1' ? TRACKING_17TRACK_KEY : undefined,
 			production,
 		},
 	});

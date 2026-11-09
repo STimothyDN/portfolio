@@ -5,7 +5,7 @@
 			<slot />
 			<!-- Film Lab: only on devices that have signed in before (a plain
 			     cookie the lab sets), so the static desk doesn't advertise it. -->
-			<a v-if="labDevice" class="dock-btn dock-lab" href="/photography/lab/">
+			<a v-if="labDevice" class="dock-btn dock-lab" href="/photography/lab/" data-astro-reload>
 				<svg viewBox="0 0 256 256" aria-hidden="true">
 					<rect x="56" y="32" width="144" height="192" rx="12" />
 					<path d="M96 32v192M128 80h40M128 112h40" />

@@ -48,6 +48,7 @@
 			<!-- Light: a Sunny 16 meter from the sky, long exposures, zone focus, today's sun -->
 			<ShootLight
 				:iso="roll.shotAtIso ?? roll.stock.iso"
+				:comp="roll.exposureComp"
 				:stock="roll.stock"
 				:manual="camera?.kind !== 'point-and-shoot'"
 				:camera-kind="camera?.kind ?? null"
@@ -176,7 +177,7 @@ import {
 	formatExposure,
 	frameTime,
 	nextFrameNumber,
-	pushPull,
+	ratingLine,
 	roughCoord,
 	SHUTTERS,
 	widestFromText,
@@ -286,13 +287,7 @@ const apertureOptions = computed(() => [
 	...aperturesFor(widest.value).map((a) => ({ value: a, label: formatAperture(a)!.slice(2) })),
 ]);
 const shutterOptions = computed(() => [{ value: null, label: 'A' }, ...SHUTTERS.map((s) => ({ value: s, label: s }))]);
-const isoText = computed(() => {
-	const r = roll.value;
-	if (!r) return '';
-	const push = pushPull(r.stock.iso, r.shotAtIso);
-	const iso = r.shotAtIso ?? r.stock.iso;
-	return [iso ? `ISO ${iso}` : null, push].filter(Boolean).join(' · ');
-});
+const isoText = computed(() => (roll.value ? ratingLine(roll.value) : ''));
 
 function restoreSettings() {
 	const last = frames.value.at(-1);

@@ -68,9 +68,12 @@ const initials = (user?.name ?? '')
 					<slot />
 				</main>
 			) : shoot ? (
-				<main class="lab-shoot">
-					<slot />
-				</main>
+				<>
+					<div class="lab-progress" aria-hidden="true"></div>
+					<main class="lab-shoot">
+						<slot />
+					</main>
+				</>
 			) : (
 				<>
 					<header class="lab-bar lab-wrap">
@@ -108,6 +111,7 @@ const initials = (user?.name ?? '')
 							))}
 						</ol>
 					</nav>
+					<div class="lab-progress" aria-hidden="true"></div>
 					<main class="lab-main lab-wrap">
 						<slot />
 					</main>
@@ -123,6 +127,73 @@ const initials = (user?.name ?? '')
 	if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 		navigator.serviceWorker.register('/photography/lab/sw.js', { scope: '/photography/lab/' }).catch(() => {});
 	}
+
+	/*
+	 * Feeling fast. A finger landing on a lab link (or a pointer resting on one)
+	 * asks the service worker to start fetching that page, so by the time the
+	 * tap completes it's usually there. And every navigation shows at once that
+	 * it heard you: the link dims and a strip of film winds across the top.
+	 */
+	const isLabLink = (el: EventTarget | null): HTMLAnchorElement | null => {
+		const a = (el as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+		if (!a || a.target === '_blank' || a.hasAttribute('download')) return null;
+		const url = new URL(a.href, location.href);
+		if (url.origin !== location.origin || !url.pathname.startsWith('/photography/lab/')) return null;
+		if (url.pathname === location.pathname && url.search === location.search) return null;
+		return a;
+	};
+	const asked = new Map<string, number>();
+	function warm(a: HTMLAnchorElement) {
+		if (!navigator.serviceWorker?.controller) return; // nowhere to keep it
+		const url = new URL(a.href);
+		const key = url.pathname + url.search;
+		if (Date.now() - (asked.get(key) ?? 0) < 12000) return;
+		asked.set(key, Date.now());
+		fetch(key, { headers: { 'X-Lab-Prefetch': '1' }, credentials: 'same-origin' }).catch(() => {});
+	}
+	document.addEventListener(
+		'pointerdown',
+		(e) => {
+			const a = isLabLink(e.target);
+			if (a && e.button === 0) warm(a);
+		},
+		{ capture: true, passive: true }
+	);
+	let hover: ReturnType<typeof setTimeout> | undefined;
+	document.addEventListener(
+		'pointerover',
+		(e) => {
+			if (e.pointerType !== 'mouse') return;
+			const a = isLabLink(e.target);
+			clearTimeout(hover);
+			if (a) hover = setTimeout(() => warm(a), 90);
+		},
+		{ passive: true }
+	);
+	document.addEventListener('pointerout', () => clearTimeout(hover), { passive: true });
+
+	const root = document.documentElement;
+	let safety: ReturnType<typeof setTimeout> | undefined;
+	const busy = (on: boolean) => {
+		root.classList.toggle('lab-navigating', on);
+		clearTimeout(safety);
+		if (on) safety = setTimeout(() => busy(false), 12000);
+		else document.querySelectorAll('.lab-pending').forEach((el) => el.classList.remove('lab-pending'));
+	};
+	document.addEventListener('astro:before-preparation', (e) => {
+		const ev = e as Event & { to: URL; sourceElement?: Element };
+		if (!ev.to.pathname.startsWith('/photography/lab')) return;
+		ev.sourceElement?.classList.add('lab-pending');
+		busy(true);
+	});
+	// Full page loads (links the router leaves alone) get the same signal.
+	document.addEventListener('click', (e) => {
+		const a = isLabLink(e.target);
+		if (a && !e.defaultPrevented && !e.metaKey && !e.ctrlKey && !e.shiftKey && a.hasAttribute('data-astro-reload')) busy(true);
+	});
+	document.addEventListener('astro:after-swap', () => busy(false));
+	document.addEventListener('astro:page-load', () => busy(false));
+	window.addEventListener('pageshow', () => busy(false));
 </script>
 
 <style is:global>
@@ -658,6 +729,46 @@ const initials = (user?.name ?? '')
 		.lab-main input[type='checkbox'] {
 			width: 1.35rem;
 			height: 1.35rem;
+		}
+	}
+
+	/* A strip of film winding across the top while the next page comes. */
+	.lab-progress {
+		position: fixed;
+		inset: 0 0 auto;
+		z-index: 60;
+		height: 3px;
+		opacity: 0;
+		pointer-events: none;
+		background: repeating-linear-gradient(90deg, var(--lab-edge-ink) 0 14px, transparent 14px 22px);
+		background-size: 44px 100%;
+		transition: opacity 0.15s ease;
+	}
+
+	html.lab-navigating .lab-progress {
+		opacity: 1;
+		/* Only once it's taking a moment: quick pages shouldn't flash it. */
+		transition-delay: 0.12s;
+	}
+
+	html.lab-navigating .lab-progress {
+		animation: lab-wind 0.6s linear infinite;
+	}
+
+	@keyframes lab-wind {
+		to {
+			background-position: 44px 0;
+		}
+	}
+
+	.lab-pending {
+		opacity: 0.55;
+		transition: opacity 0.1s ease;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		html.lab-navigating .lab-progress {
+			animation: none;
 		}
 	}
 

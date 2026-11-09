@@ -11,7 +11,7 @@
 				<p class="lab-meta lab-mono summary">
 					<span v-for="(part, i) in summary" :key="i">{{ part }}</span>
 				</p>
-				<span class="lab-chip" :class="{ 'lab-chip--warn': roll.status === 'lost' }">{{ STATUS_LABEL[roll.status] }}</span>
+				<span class="lab-chip" :class="{ 'lab-chip--warn': roll.status === 'lost' }">{{ stageLabel(roll.status, roll.labDelivery) }}</span>
 			</div>
 		</header>
 
@@ -35,7 +35,7 @@
 						<li v-for="stage in STAGES" :key="stage" class="step" :class="stepState(stage)">
 							<span class="pip" aria-hidden="true">{{ stepState(stage) === 'done' ? '✓' : STAGES.indexOf(stage) + 1 }}</span>
 							<div class="step-body">
-								<span class="step-t">{{ STATUS_LABEL[stage] }}</span>
+								<span class="step-t">{{ stageLabel(stage, roll.labDelivery) }}</span>
 								<template v-for="ev in eventsFor(stage)" :key="ev.id">
 									<form v-if="editing === ev.id" class="ev-edit" @submit.prevent="saveEvent(ev.id)">
 										<input :id="`ev-on-${ev.id}`" v-model="evOn" class="lab-input" type="date" required aria-label="Date" />
@@ -49,8 +49,10 @@
 									</span>
 								</template>
 								<span v-if="stage === roll.status && stageDetail" class="step-d">{{ stageDetail }}</span>
+								<TrackingNumber v-if="stage === 'lab' && roll.trackingOut" class="step-track" :number="roll.trackingOut" :track="tracks[roll.trackingOut]" label="Outbound" />
+								<TrackingNumber v-if="stage === 'scanned' && roll.trackingBack" class="step-track" :number="roll.trackingBack" :track="tracks[roll.trackingBack]" label="Negatives coming back" />
 								<div v-if="stage === roll.status" class="lab-actions step-actions">
-									<button v-if="next" type="button" class="lab-btn" @click="openStep(next)">{{ STEP_VERB[next] }}</button>
+									<button v-if="next" type="button" class="lab-btn" @click="openStep(next)">{{ stepVerb(next, roll.labDelivery) }}</button>
 									<button type="button" class="lab-btn lab-btn--quiet" @click="openStep('lost')">Mark lost or ruined</button>
 									<button v-if="events.length > 1" type="button" class="lab-link small" :disabled="busy" @click="undo">Undo last step</button>
 								</div>
@@ -146,11 +148,17 @@
 								<option v-for="c in allCameras" :key="c.id" :value="c.id">{{ c.name }}</option>
 							</select>
 						</label>
-						<label class="lab-field">
-							<span>Rated at ISO</span>
-							<input id="d-iso" v-model="f.shotAtIso" class="lab-input" type="number" min="1" max="12800" />
-							<small v-if="push" class="lab-hint">{{ push }}</small>
-						</label>
+						<div class="lab-row2">
+							<label class="lab-field">
+								<span>Rated at ISO</span>
+								<input id="d-iso" v-model="f.shotAtIso" class="lab-input" type="number" min="1" max="12800" />
+								<small v-if="push" class="lab-hint">{{ push }}</small>
+							</label>
+							<label class="lab-field">
+								<span>Exposure comp (EV)</span>
+								<input id="d-comp" v-model="f.exposureComp" class="lab-input" type="number" min="-5" max="5" step="0.1" inputmode="decimal" placeholder="0" />
+							</label>
+						</div>
 					</fieldset>
 					<fieldset>
 						<legend>Lab</legend>
@@ -161,10 +169,36 @@
 								<option v-for="l in choices.labs" :key="l.id" :value="l.id">{{ l.name }}</option>
 							</select>
 						</label>
+						<label class="lab-field">
+							<span>Got there</span>
+							<select id="d-delivery" v-model="f.labDelivery" class="lab-input lab-select">
+								<option value="">Not recorded</option>
+								<option value="dropoff">Dropped off</option>
+								<option value="mail">Mailed in</option>
+							</select>
+						</label>
+						<template v-if="f.labDelivery === 'mail'">
+							<label class="lab-field">
+								<span>Tracking, outbound</span>
+								<input id="d-track-out" v-model="f.trackingOut" class="lab-input mono" type="text" maxlength="60" autocomplete="off" spellcheck="false" />
+							</label>
+							<label class="lab-field">
+								<span>Tracking, negatives coming back</span>
+								<input id="d-track-back" v-model="f.trackingBack" class="lab-input mono" type="text" maxlength="60" autocomplete="off" spellcheck="false" />
+							</label>
+						</template>
 						<div class="lab-row2">
 							<label class="lab-field"><span>Order</span><input id="d-order" v-model="f.labOrder" class="lab-input" type="text" maxlength="60" /></label>
-							<label class="lab-field"><span>Cost ($)</span><input id="d-cost" v-model="f.devCost" class="lab-input" type="number" min="0" step="0.01" /></label>
+							<label class="lab-field"><span>Dev + scans ($)</span><input id="d-cost" v-model="f.devCost" class="lab-input" type="number" min="0" step="0.01" /></label>
 						</div>
+						<label class="check">
+							<input id="d-prints" v-model="f.printsIncluded" type="checkbox" />
+							<span>Price includes prints</span>
+						</label>
+						<label v-if="!f.printsIncluded" class="lab-field">
+							<span>Prints ($) <small>(if you ordered them)</small></span>
+							<input id="d-prints-cost" v-model="f.printsCost" class="lab-input" type="number" min="0" step="0.01" />
+						</label>
 						<label class="lab-field"><span>Notes for the lab</span><input id="d-devnotes" v-model="f.devNotes" class="lab-input" type="text" maxlength="300" /></label>
 						<label class="lab-field"><span>Negatives filed in</span><input id="d-neg" v-model="f.negativesAt" class="lab-input" type="text" maxlength="80" placeholder="Binder 1, page 23" /></label>
 					</fieldset>
@@ -184,7 +218,7 @@
 			</aside>
 		</div>
 
-		<LabDialog :open="!!stepTo" :title="stepTo ? STEP_VERB[stepTo] : ''" @close="stepTo = null">
+		<LabDialog :open="!!stepTo" :title="stepTo ? stepVerb(stepTo, roll.labDelivery) : ''" @close="stepTo = null">
 			<StepForm v-if="stepTo" :key="stepTo" :roll="roll" :to="stepTo" :choices="choices" :today="today" :binder-hints="binderHints" @done="stepped" @cancel="stepTo = null" />
 		</LabDialog>
 	</div>
@@ -204,6 +238,7 @@ import {
 	STAGES,
 	STATUS_LABEL,
 	STEP_VERB,
+	stepVerb,
 	toCents,
 	type FrameView,
 	type RollEventView,
@@ -211,6 +246,8 @@ import {
 	type RollView,
 	type StepChoices,
 	type StockView,
+	ratingLine,
+	stageLabel,
 } from '../../lib/lab/inventory';
 import FilmCanister from '../film/FilmCanister.vue';
 import LabDialog from './LabDialog.vue';
@@ -218,6 +255,8 @@ import RollShare from './RollShare.vue';
 import RollStrip from './RollStrip.vue';
 import { alignScans } from '../../lib/lab/alignment';
 import StepForm from './StepForm.vue';
+import TrackingNumber from './TrackingNumber.vue';
+import { useTracks } from '../../lib/lab/use-tracks';
 import type { NegativeProfileKey } from '../film/negative';
 
 interface DeskPreview {
@@ -288,11 +327,15 @@ const linkId = ref('');
 
 const next = computed(() => nextStage(roll.value.status));
 const push = computed(() => pushPull(roll.value.stock.iso, num(f.shotAtIso)));
+// Live status for the roll's tracking numbers, asked for once the page is up.
+const { tracks } = useTracks(() => [roll.value.trackingOut, roll.value.trackingBack]);
+
 const summary = computed(() =>
 	[
 		roll.value.title ? roll.value.stock.name : null,
 		`${roll.value.exposures} exp`,
 		roll.value.stock.process,
+		roll.value.shotAtIso || roll.value.exposureComp ? ratingLine(roll.value) : null,
 		roll.value.camera?.name,
 		roll.value.lab?.name,
 	].filter(Boolean)
@@ -304,7 +347,7 @@ const stageDetail = computed(() => {
 	const days = n > 0 ? `for ${formatDays(n)}` : 'since today';
 	if (r.status === 'storage') return [r.storageSpot, r.expires ? `expires ${r.expires.slice(5)}/${r.expires.slice(2, 4)}` : null].filter(Boolean).join(' · ');
 	if (r.status === 'camera') return `In the ${r.camera?.name ?? 'camera'} ${days}`;
-	if (r.status === 'lab') return `At ${r.lab?.name ?? 'the lab'} ${days}${r.labOrder ? ` · order ${r.labOrder}` : ''}`;
+	if (r.status === 'lab') return `${r.labDelivery === 'mail' ? 'Mailed to' : 'At'} ${r.lab?.name ?? 'the lab'} ${days}${r.labOrder ? ` · order ${r.labOrder}` : ''}`;
 	if (r.status === 'negatives' && r.negativesAt) return `Filed in ${r.negativesAt}`;
 	return '';
 });
@@ -338,9 +381,15 @@ function formFrom(r: RollView) {
 		purchasedFrom: r.purchasedFrom ?? '',
 		cameraId: r.camera?.id ?? '',
 		shotAtIso: (r.shotAtIso ?? '') as string | number,
+		exposureComp: (r.exposureComp ?? '') as string | number,
 		labId: r.lab?.id ?? '',
 		labOrder: r.labOrder ?? '',
+		labDelivery: (r.labDelivery ?? '') as '' | 'dropoff' | 'mail',
+		trackingOut: r.trackingOut ?? '',
+		trackingBack: r.trackingBack ?? '',
 		devCost: dollars(r.devCostCents) as string | number,
+		printsIncluded: r.printsIncluded,
+		printsCost: dollars(r.printsCostCents) as string | number,
 		devNotes: r.devNotes ?? '',
 		negativesAt: r.negativesAt ?? '',
 		notes: r.notes ?? '',
@@ -420,9 +469,15 @@ async function saveDetails() {
 				purchasedFrom: f.purchasedFrom,
 				cameraId: f.cameraId || null,
 				shotAtIso: num(f.shotAtIso),
+				exposureComp: num(f.exposureComp),
 				labId: f.labId || null,
 				labOrder: f.labOrder,
+				labDelivery: f.labDelivery || null,
+				trackingOut: f.labDelivery === 'mail' ? f.trackingOut : null,
+				trackingBack: f.labDelivery === 'mail' ? f.trackingBack : null,
 				devCostCents: toCents(f.devCost),
+				printsIncluded: f.printsIncluded,
+				printsCostCents: f.printsIncluded ? null : toCents(f.printsCost),
 				devNotes: f.devNotes,
 				negativesAt: f.negativesAt,
 				notes: f.notes,
@@ -448,6 +503,29 @@ async function remove() {
 </script>
 
 <style scoped>
+.check {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.55rem;
+	font-size: var(--text-sm);
+	cursor: pointer;
+}
+
+.check input {
+	width: 1.1rem;
+	height: 1.1rem;
+	accent-color: var(--accent-regular);
+}
+
+.mono {
+	font-family: var(--font-mono);
+	letter-spacing: 0.04em;
+}
+
+.step-track {
+	margin-top: 0.2rem;
+}
+
 .roll-page {
 	display: grid;
 	gap: clamp(2rem, 5vw, 3rem);

@@ -107,6 +107,7 @@
 							:roll="r"
 							:today="today"
 							:usual-days="r.lab ? labStats[r.lab.id]?.medianDays ?? null : null"
+							:track="r.status === 'lab' && r.trackingOut ? tracks[r.trackingOut] : null"
 							@next="openStep(r, nextStage(r.status)!)"
 							@dragstart="dragRoll = r"
 						/>
@@ -116,7 +117,7 @@
 			</div>
 		</section>
 
-		<LabDialog :open="!!step" :title="step ? STEP_VERB[step.to] : ''" @close="step = null">
+		<LabDialog :open="!!step" :title="step ? stepVerb(step.to, step.roll.labDelivery) : ''" @close="step = null">
 			<StepForm
 				v-if="step"
 				:key="`${step.roll.id}-${step.to}`"
@@ -174,9 +175,11 @@ import {
 	formatExpiry,
 	nextStage,
 	pushPull,
+	ratingLine,
 	STAGES,
 	STATUS_LABEL,
 	STEP_VERB,
+	stepVerb,
 	type RollStatus,
 	type RollView,
 	type Stage,
@@ -184,6 +187,7 @@ import {
 } from '../../lib/lab/inventory';
 import type { LabStats } from '../../lib/lab/server/inventory';
 import { rollPace } from '../../lib/lab/pace';
+import { useTracks } from '../../lib/lab/use-tracks';
 import PublishButton from './PublishButton.vue';
 import FilmCanister from '../film/FilmCanister.vue';
 import LabDialog from './LabDialog.vue';
@@ -272,11 +276,9 @@ const storageByStock = computed(() => {
 });
 const loadRoll = computed(() => storage.value.find((r) => r.id === loadId.value) ?? null);
 
-const isoLine = (r: RollView) => {
-	const push = pushPull(r.stock.iso, r.shotAtIso);
-	const iso = r.shotAtIso ?? r.stock.iso;
-	return [iso ? `ISO ${iso}` : null, push].filter(Boolean).join(' · ');
-};
+const isoLine = (r: RollView) => ratingLine(r);
+// Mailed rolls at a lab: where the envelope is, asked for once the page is up.
+const { tracks } = useTracks(() => rolls.value.filter((r) => r.status === 'lab').map((r) => r.trackingOut));
 
 function openStep(roll: RollView, to: RollStatus) {
 	error.value = '';

@@ -28,6 +28,39 @@ export const STEP_VERB: Record<RollStatus, string> = {
 	lost: 'Mark lost or ruined',
 };
 
+/** How a roll gets to the lab. */
+export const DELIVERY = { dropoff: 'Dropped off', mail: 'Mailed in' } as const;
+export type Delivery = keyof typeof DELIVERY;
+
+/**
+ * A stage's name for this roll, by how it went to the lab: "Dropped off at
+ * the lab" or "Mailed to the lab"; "Negatives picked up" or "Negatives back".
+ */
+export function stageLabel(status: RollStatus, delivery: Delivery | null | undefined): string {
+	if (status === 'lab' && delivery) return delivery === 'mail' ? 'Mailed to the lab' : 'Dropped off at the lab';
+	if (status === 'negatives' && delivery) return delivery === 'mail' ? 'Negatives back' : 'Negatives picked up';
+	return STATUS_LABEL[status];
+}
+
+/** A step's button, by how the roll went to the lab: "Picked up negatives" or "Negatives back". */
+export function stepVerb(to: RollStatus, delivery: Delivery | null | undefined): string {
+	if (to === 'negatives' && delivery) return delivery === 'mail' ? 'Negatives back' : 'Picked up negatives';
+	return STEP_VERB[to];
+}
+
+/** "+1 EV", "−2.3 EV" (null for none). */
+export function formatComp(ev: number | null | undefined): string | null {
+	if (!ev) return null;
+	const v = Math.round(Math.abs(ev) * 10) / 10;
+	return `${ev > 0 ? '+' : '−'}${Number.isInteger(v) ? v : v.toFixed(1)} EV`;
+}
+
+/** What a roll was rated at: "ISO 800 · push +1 · +1 EV". */
+export function ratingLine(r: Pick<RollView, 'shotAtIso' | 'exposureComp'> & { stock: { iso: number | null } }): string {
+	const iso = r.shotAtIso ?? r.stock.iso;
+	return [iso ? `ISO ${iso}` : null, pushPull(r.stock.iso, r.shotAtIso), formatComp(r.exposureComp)].filter(Boolean).join(' · ');
+}
+
 export const nextStage = (status: RollStatus): Stage | null => {
 	if (status === 'lost') return null;
 	const i = STAGES.indexOf(status);
@@ -129,13 +162,21 @@ export interface RollView {
 	camera: { id: string; name: string } | null;
 	lab: { id: string; name: string } | null;
 	shotAtIso: number | null;
+	/** Exposure compensation for the whole roll, in stops. */
+	exposureComp: number | null;
 	expires: string | null;
 	purchasedOn: string | null;
 	priceCents: number | null;
 	purchasedFrom: string | null;
 	storageSpot: string | null;
 	labOrder: string | null;
+	/** How it reached the lab. */
+	labDelivery: Delivery | null;
+	trackingOut: string | null;
+	trackingBack: string | null;
 	devCostCents: number | null;
+	printsIncluded: boolean;
+	printsCostCents: number | null;
 	devNotes: string | null;
 	negativesAt: string | null;
 	publicRollId: string | null;
@@ -236,7 +277,8 @@ export interface RollEventView {
 /** Everything a step form may need to pick from. */
 export interface StepChoices {
 	cameras: Pick<CameraView, 'id' | 'name' | 'format' | 'status'>[];
-	labs: Pick<LabView, 'id' | 'name' | 'costCents'>[];
+	/** With how film last went to each one, so the next send starts the same way. */
+	labs: (Pick<LabView, 'id' | 'name' | 'costCents'> & { delivery: Delivery | null })[];
 	/** Desk rolls not yet linked to a logbook roll, best matches first per roll (computed client-side). */
 	deskRolls: DeskRollOption[];
 }

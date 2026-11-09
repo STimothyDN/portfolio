@@ -24,6 +24,7 @@ export default defineConfig({
       FILM_LAB_SETUP_TOKEN: envField.string({ context: 'server', access: 'secret', optional: true }),
       // Vercel deploy hook the lab's "Publish to portfolio" button calls.
       VERCEL_DEPLOY_HOOK_URL: envField.string({ context: 'server', access: 'secret', optional: true }),
+      TRACKING_17TRACK_KEY: envField.string({ context: 'server', access: 'secret', optional: true }),
     },
   },
   vite: {

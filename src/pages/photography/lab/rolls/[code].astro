@@ -6,6 +6,7 @@ import { todayInDurham } from '../../../../lib/lab/inventory';
 import { isOwner, labConfig } from '../../../../lib/lab/server/config';
 import { getDb } from '../../../../lib/lab/server/db/client';
 import {
+	binderHints,
 	deskRollPreview,
 	deskRollStrip,
 	listCameras,
@@ -13,7 +14,6 @@ import {
 	listLenses,
 	listStocks,
 	rollByCode,
-	rollViews,
 	stepChoices,
 } from '../../../../lib/lab/server/inventory';
 import { bunnyUrl } from '../../../../utils/bunny';
@@ -32,11 +32,11 @@ const data =
 				const d = await getDb(config.config);
 				const found = await rollByCode(d, user.id, code);
 				if (!found) return null;
-				const [choices, stocks, cameras, all, preview, frames, lenses, strip, [last]] = await Promise.all([
+				const [choices, stocks, cameras, hints, preview, frames, lenses, strip, [last]] = await Promise.all([
 					stepChoices(d, user.id, isOwner(user)),
 					listStocks(d, user.id),
 					listCameras(d, user.id),
-					rollViews(d, user.id),
+					binderHints(d, user.id),
 					found.roll.publicRollId ? deskRollPreview(found.roll.publicRollId) : Promise.resolve(null),
 					listFrames(d, user.id, [found.roll.id]),
 					listLenses(d, user.id),
@@ -68,7 +68,7 @@ const data =
 						})),
 					},
 					lenses: lenses.filter((l) => used.has(l.id) || (mount && l.mount.trim().toLowerCase() === mount)),
-					binderHints: [...new Set(all.map((r) => r.negativesAt).filter((v): v is string => !!v))].slice(0, 12),
+					binderHints: hints,
 					desk: preview && {
 						id: preview.id,
 						title: preview.title,

@@ -25,6 +25,7 @@ import {
 	rollViews,
 	sameName,
 } from '../lib/lab/server/inventory';
+import { ownNumbers, trackNumbers } from '../lib/lab/server/tracking';
 import { getFilmRolls, isMonochrome } from '../utils/film';
 
 /* ---------- plumbing ---------- */
@@ -69,6 +70,14 @@ const text = (max = 200) =>
 		.transform((v) => v || null)
 		.nullable();
 const cents = z.number().int().min(0).max(10_000_000).nullable();
+/** A tracking number as carriers print it, spaces and all; stored without them. */
+const tracking = z
+	.string()
+	.trim()
+	.max(60)
+	.transform((v) => v.replace(/[\s-]+/g, '').toUpperCase() || null)
+	.refine((v) => v == null || /^[A-Z0-9]{8,40}$/.test(v), 'That doesn’t look like a tracking number.')
+	.nullable();
 const id = z.string().min(1).max(64);
 
 /** Drops keys the caller didn't send, so partial edits leave other columns alone. */
@@ -87,9 +96,21 @@ const rollFields = {
 	storageSpot: text(60).optional(),
 	cameraId: id.nullable().optional(),
 	shotAtIso: z.number().int().min(1).max(12800).nullable().optional(),
+	exposureComp: z
+		.number()
+		.min(-5)
+		.max(5)
+		.transform((v) => Math.round(v * 10) / 10 || null)
+		.nullable()
+		.optional(),
 	labId: id.nullable().optional(),
 	labOrder: text(60).optional(),
+	labDelivery: z.enum(['dropoff', 'mail']).nullable().optional(),
+	trackingOut: tracking.optional(),
+	trackingBack: tracking.optional(),
 	devCostCents: cents.optional(),
+	printsIncluded: z.boolean().optional(),
+	printsCostCents: cents.optional(),
 	devNotes: text(300).optional(),
 	negativesAt: text(80).optional(),
 	notes: text(2000).optional(),
@@ -243,8 +264,12 @@ export const server = {
 				on: day,
 				labOrder: text(60),
 				devCostCents: cents,
+				labDelivery: z.enum(['dropoff', 'mail']).nullable().optional(),
+				trackingOut: tracking.optional(),
+				printsIncluded: z.boolean().optional(),
+				printsCostCents: cents.optional(),
 			}),
-			handler: async ({ rollIds, labId, on, labOrder, devCostCents }, context) => {
+			handler: async ({ rollIds, labId, on, labOrder, devCostCents, ...send }, context) => {
 				const { d, userId } = await session(context);
 				await mine(d, lab, userId, labId, 'lab');
 				const rolls = await d
@@ -257,7 +282,7 @@ export const server = {
 				await d.batch([
 					d
 						.update(roll)
-						.set({ status: 'lab', statusOn: on, labId, labOrder, ...(devCostCents != null ? { devCostCents } : {}) })
+						.set({ status: 'lab', statusOn: on, labId, labOrder, ...(devCostCents != null ? { devCostCents } : {}), ...defined(send) })
 						.where(and(eq(roll.userId, userId), inArray(roll.id, ids))),
 					d.insert(rollEvent).values(ids.map((rollId) => ({ id: uid(), userId, rollId, status: 'lab', on }))),
 				]);
@@ -500,6 +525,18 @@ export const server = {
 		 * Rebuild the public site so it picks up what the lab now shares, via
 		 * the Vercel deploy hook. Owner only, at most once a minute.
 		 */
+		/** The latest on tracking numbers from this person's rolls (cached; asks 17TRACK when it's set up and stale). */
+		trackShipments: defineAction({
+			input: z.object({ numbers: z.array(z.string().regex(/^[A-Z0-9]{8,40}$/)).min(1).max(20) }),
+			handler: async ({ numbers }, context) => {
+				const { d, userId } = await session(context);
+				const config = labConfig();
+				const key = config.ok ? config.config.trackingKey : undefined;
+				const mine = await ownNumbers(d, userId, [...new Set(numbers)]);
+				return { live: !!key, tracks: await trackNumbers(d, userId, mine, key) };
+			},
+		}),
+
 		/** Lab-wide settings. Showing what's loaded on the film desk is the owner's (their portfolio). */
 		updateSettings: defineAction({
 			input: z.object({ shareLoaded: z.boolean() }),

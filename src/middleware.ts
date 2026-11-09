@@ -21,16 +21,29 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	const isAction = pathname.startsWith('/_actions/');
 	if (!isLab && !isAction && !pathname.startsWith('/api/auth/')) return next();
 
+	const started = performance.now();
+	let authMs = 0;
 	if (isLab || isAction) {
 		context.locals.user = null;
 		context.locals.labConfigured = false;
 		const auth = getAuth();
 		if (auth) {
 			context.locals.labConfigured = true;
+			const t = performance.now();
 			const session = await (await auth).api.getSession({ headers: context.request.headers });
+			authMs = performance.now() - t;
 			context.locals.user = (session?.user as LabUser | undefined) ?? null;
 		}
 	}
+	// How long the server spent, for the browser's network panel (Server-Timing).
+	const timed = (response: Response) => {
+		try {
+			response.headers.set('Server-Timing', `auth;dur=${authMs.toFixed(1)}, total;dur=${(performance.now() - started).toFixed(1)}`);
+		} catch {
+			// Immutable headers (redirects): noindex() copies them, timing can go without.
+		}
+		return response;
+	};
 
 	if (isLab) {
 		const open = OPEN_PAGES.test(pathname);
@@ -51,7 +64,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		}
 	}
 
-	return noindex(await next());
+	return noindex(timed(await next()));
 });
 
 /** Private pages: never indexed, never cached by a shared cache. */

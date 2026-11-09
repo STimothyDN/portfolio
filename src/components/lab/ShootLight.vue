@@ -35,7 +35,7 @@
 			<div class="meter">
 				<p class="ev">
 					<b>EV {{ formatEv(ev100) }}</b>
-					<span>{{ rule ? `Sunny 16: ${rule} at 1/${iso}` : `at ISO 100` }} · ISO {{ iso }}{{ isoGuessed ? ' (guessed)' : '' }}</span>
+					<span>{{ rule ? `Sunny 16: ${rule} at 1/${iso}` : `at ISO 100` }} · ISO {{ iso }}{{ isoGuessed ? ' (guessed)' : '' }}{{ comp ? ` · settings include your ${formatComp(comp)}` : '' }}</span>
 				</p>
 				<ul v-if="manual && picks.picks.length" class="picks">
 					<li v-for="p in picks.picks" :key="p.label">
@@ -132,7 +132,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import { shutterSeconds } from '../../lib/lab/almanac';
-import { formatAperture } from '../../lib/lab/inventory';
+import { formatAperture, formatComp } from '../../lib/lab/inventory';
 import {
 	autoExposureNote,
 	circleOfConfusion,
@@ -159,6 +159,8 @@ import { skyAt, type SkyFetch } from '../../lib/lab/sky-weather';
 const props = defineProps<{
 	/** The speed the roll is rated at. */
 	iso: number | null;
+	/** Exposure compensation for the roll, in stops (+1 gives a stop more light). */
+	comp?: number | null;
 	stock: { name: string; brand: string | null; token: string | null; process: string; format: string };
 	/** False for cameras that set exposure themselves. */
 	manual: boolean;
@@ -229,7 +231,8 @@ watch(() => `${here.value.lat},${here.value.lng}`, refreshSky);
 
 const isoGuessed = computed(() => !props.iso);
 const iso = computed(() => props.iso ?? 400);
-const ev = computed(() => evAtIso(ev100.value, iso.value));
+// Compensation shifts what the meter aims for: +1 asks for a stop more light.
+const ev = computed(() => evAtIso(ev100.value, iso.value) - (props.comp ?? 0));
 const picks = computed(() => pickSettings(ev.value, props.apertures));
 const autoNote = computed(() => autoExposureNote(ev.value, iso.value, props.widest ?? 3.5));
 const summaryB = computed(() => {

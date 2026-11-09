@@ -13,7 +13,7 @@
  * After changing this file: `npm run db:generate`, review the SQL in
  * drizzle/, then `npm run db:migrate`.
  */
-import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 const createdAt = () =>
 	integer('created_at', { mode: 'timestamp_ms' })
@@ -303,10 +303,20 @@ export const roll = sqliteTable(
 		cameraId: text('camera_id').references(() => camera.id, { onDelete: 'set null' }),
 		/** Exposure index it was shot at; differs from the box speed when pushed or pulled. */
 		shotAtIso: integer('shot_at_iso'),
+		/** Exposure compensation dialled in for the whole roll, in stops (+1, −2.3). */
+		exposureComp: real('exposure_comp'),
 		// At the lab
 		labId: text('lab_id').references(() => lab.id, { onDelete: 'set null' }),
 		labOrder: text('lab_order'),
+		/** How it got to the lab: 'dropoff' or 'mail' (null for rolls logged before this was asked). */
+		labDelivery: text('lab_delivery'),
+		/** Mailed in: the outbound tracking number, and the one for the negatives coming back. */
+		trackingOut: text('tracking_out'),
+		trackingBack: text('tracking_back'),
 		devCostCents: integer('dev_cost_cents'),
+		/** The develop-and-scan price includes prints; otherwise printsCostCents is what prints cost (null for none). */
+		printsIncluded: integer('prints_included', { mode: 'boolean' }).notNull().default(false),
+		printsCostCents: integer('prints_cost_cents'),
 		devNotes: text('dev_notes'),
 		// Home
 		negativesAt: text('negatives_at'),
@@ -400,6 +410,29 @@ export const publish = sqliteTable(
 		note: text('note'),
 	},
 	(t) => [index('publish_user_idx').on(t.userId)]
+);
+
+/**
+ * The last word on a tracking number (from 17TRACK, when it's set up). Keyed by
+ * number, not roll: one envelope often carries a whole batch.
+ */
+export const shipment = sqliteTable(
+	'shipment',
+	{
+		userId: owner(),
+		number: text('number').notNull(),
+		/** 17TRACK's carrier code, once it has worked it out. */
+		carrier: integer('carrier'),
+		/** NotFound, InfoReceived, InTransit, OutForDelivery, AvailableForPickup, Delivered, DeliveryFailure, Exception, Expired. */
+		status: text('status'),
+		detail: text('detail'),
+		location: text('location'),
+		eventAt: integer('event_at', { mode: 'timestamp_ms' }),
+		/** Registered with 17TRACK (each number uses one of the account's tracking credits, once). */
+		registered: integer('registered', { mode: 'boolean' }).notNull().default(false),
+		checkedAt: integer('checked_at', { mode: 'timestamp_ms' }).notNull(),
+	},
+	(t) => [primaryKey({ columns: [t.userId, t.number] })]
 );
 
 /** Per-person lab settings: one row each, made the first time one is changed. */

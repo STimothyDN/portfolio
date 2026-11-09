@@ -130,7 +130,7 @@
 			<article class="plate wide cost">
 				<header>
 					<h3>What a frame costs</h3>
-					<p class="lab-edge-print">Film plus developing and scans, over the frames each roll gave</p>
+					<p class="lab-edge-print">Film plus developing, scans and any prints, over the frames each roll gave</p>
 				</header>
 				<div v-if="cost" class="cost-grid">
 					<div class="cost-side">
@@ -214,8 +214,10 @@ const cameraSpans = computed(() =>
 );
 const cameraDays = computed(() => median(cameraSpans.value));
 const cameraTimed = computed(() => cameraSpans.value.length);
-const spent = computed(() => props.rolls.reduce((n, r) => n + (r.priceCents ?? 0) + (r.devCostCents ?? 0), 0));
-const pricedRolls = computed(() => props.rolls.filter((r) => r.priceCents != null || r.devCostCents != null).length);
+/** What a roll cost at the lab: developing and scans, plus prints when they were extra. */
+const labCents = (r: RollView) => (r.devCostCents ?? 0) + (r.printsCostCents ?? 0);
+const spent = computed(() => props.rolls.reduce((n, r) => n + (r.priceCents ?? 0) + labCents(r), 0));
+const pricedRolls = computed(() => props.rolls.filter((r) => r.priceCents != null || r.devCostCents != null || r.printsCostCents != null).length);
 
 /* ---------- stocks ---------- */
 
@@ -280,17 +282,19 @@ const labMax = computed(() => Math.max(14, ...labRows.value.flatMap((l) => l.day
 /** Frames a finished roll gave: its scans on the desk, else its exposures. */
 const framesOf = (r: RollView) => (r.publicRollId ? props.deskCounts[r.publicRollId] : undefined) || r.exposures;
 const cost = computed(() => {
-	const done = props.rolls.filter((r) => ['shot', 'lab', 'scanned', 'negatives'].includes(r.status) && (r.priceCents != null || r.devCostCents != null));
+	const done = props.rolls.filter(
+		(r) => ['shot', 'lab', 'scanned', 'negatives'].includes(r.status) && (r.priceCents != null || r.devCostCents != null || r.printsCostCents != null)
+	);
 	if (!done.length) return null;
 	const film = done.reduce((n, r) => n + (r.priceCents ?? 0), 0);
-	const lab = done.reduce((n, r) => n + (r.devCostCents ?? 0), 0);
+	const lab = done.reduce((n, r) => n + labCents(r), 0);
 	const frames = done.reduce((n, r) => n + framesOf(r), 0);
 	const byStock = new Map<string, { id: string; name: string; cents: number; frames: number; color: string }>();
 	for (const r of done) {
 		const row =
 			byStock.get(r.stock.id) ??
 			{ id: r.stock.id, name: r.stock.name, cents: 0, frames: 0, color: canisterColors({ stock: r.stock.token ?? r.stock.id, stockLabel: r.stock.name, stockBrand: r.stock.brand }).can };
-		row.cents += (r.priceCents ?? 0) + (r.devCostCents ?? 0);
+		row.cents += (r.priceCents ?? 0) + labCents(r);
 		row.frames += framesOf(r);
 		byStock.set(r.stock.id, row);
 	}

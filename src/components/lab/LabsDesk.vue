@@ -34,9 +34,15 @@
 							<option v-for="l in labs" :key="l.id" :value="l.id">{{ l.name }}</option>
 						</select>
 					</label>
-					<label class="lab-field"><span>Date</span><input id="batch-on" v-model="on" class="lab-input" type="date" required :max="today" /></label>
+					<label class="lab-field">
+						<span>{{ sendDraft.delivery === 'mail' ? 'Shipped on' : 'Dropped off on' }}</span>
+						<input id="batch-on" v-model="on" class="lab-input" type="date" required :max="today" />
+					</label>
 					<label class="lab-field"><span>Order number</span><input id="batch-order" v-model="order" class="lab-input" type="text" maxlength="60" /></label>
-					<label class="lab-field"><span>Cost per roll ($)</span><input id="batch-cost" v-model="cost" class="lab-input" type="number" min="0" step="0.01" /></label>
+					<label class="lab-field"><span>Dev + scans per roll ($)</span><input id="batch-cost" v-model="cost" class="lab-input" type="number" min="0" step="0.01" /></label>
+					<div class="send-fields">
+						<LabSendFields v-model="sendDraft" />
+					</div>
 					<div class="lab-actions batch-actions">
 						<button type="submit" class="lab-btn" :disabled="busy || !picked.length || !labId">
 							Mark {{ picked.length }} {{ picked.length === 1 ? 'roll' : 'rolls' }} as sent
@@ -56,13 +62,35 @@
 					<a class="lab-code" :href="`/photography/lab/rolls/${r.code}/`">{{ r.code }}</a>
 					<span class="lab-grow">
 						<span>{{ r.stock.name }}</span>
-						<span class="lab-meta">{{ [r.lab?.name, r.labOrder ? `#${r.labOrder}` : null].filter(Boolean).join(' · ') }}</span>
+						<span class="lab-meta">{{ [r.lab?.name, r.labOrder ? `#${r.labOrder}` : null, r.labDelivery ? DELIVERY[r.labDelivery].toLowerCase() : null].filter(Boolean).join(' · ') }}</span>
+						<TrackingNumber v-if="r.trackingOut" :number="r.trackingOut" :track="tracks[r.trackingOut]" />
 					</span>
 					<span class="timer" :class="{ late: late(r) }" :title="usual(r) != null ? `Usually ${usual(r)} days` : 'No usual time yet'">
 						<i :style="{ width: `${Math.min(100, (daysBetween(r.statusOn, today) / Math.max(1, usual(r) ?? 14)) * 100)}%` }"></i>
 					</span>
 					<span class="lab-chip" :class="{ 'lab-chip--warn': late(r) }">
 						{{ formatDays(daysBetween(r.statusOn, today)) }}<template v-if="usual(r) != null"> · usually {{ usual(r) }}</template>
+					</span>
+				</li>
+			</ul>
+		</section>
+
+		<!-- Mailed rolls: scans are in, the negatives are in the post -->
+		<section v-if="comingBack.length" class="lab-section" aria-labelledby="back-h">
+			<header class="sec-head">
+				<div>
+					<h2 id="back-h" class="lab-h2">Negatives on the way back</h2>
+					<p class="lab-meta">Scans are in; the lab is mailing the negatives.</p>
+				</div>
+			</header>
+			<ul class="lab-rows">
+				<li v-for="r in comingBack" :key="r.id">
+					<a class="lab-code" :href="`/photography/lab/rolls/${r.code}/`">{{ r.code }}</a>
+					<span class="lab-grow">
+						<span>{{ r.stock.name }}</span>
+						<span class="lab-meta">{{ [r.lab?.name, `scans in ${formatDay(r.statusOn, false)}`].filter(Boolean).join(' · ') }}</span>
+						<TrackingNumber v-if="r.trackingBack" :number="r.trackingBack" :track="tracks[r.trackingBack]" />
+						<span v-else class="lab-meta">No return tracking number yet: add it on the roll’s page.</span>
 					</span>
 				</li>
 			</ul>
@@ -138,11 +166,26 @@ import { actions } from 'astro:actions';
 import { computed, reactive, ref, watch } from 'vue';
 
 import { dollars, run, upsert } from '../../lib/lab/client';
-import { daysBetween, formatDay, formatDays, formatMoney, pushPull, toCents, type LabView, type RollView } from '../../lib/lab/inventory';
+import { daysBetween, DELIVERY, formatDay, formatDays, formatMoney, pushPull, toCents, type Delivery, type LabView, type RollView } from '../../lib/lab/inventory';
+import { useTracks } from '../../lib/lab/use-tracks';
 import type { LabStats } from '../../lib/lab/server/inventory';
 import LabDialog from './LabDialog.vue';
+import LabSendFields, { type SendDraft } from './LabSendFields.vue';
+import TrackingNumber from './TrackingNumber.vue';
 
-const props = defineProps<{ shot: RollView[]; atLab: RollView[]; labs: LabView[]; stats: Record<string, LabStats>; today: string }>();
+const props = defineProps<{
+	shot: RollView[];
+	atLab: RollView[];
+	comingBack: RollView[];
+	labs: LabView[];
+	stats: Record<string, LabStats>;
+	lastDelivery: Record<string, Delivery>;
+	today: string;
+}>();
+const comingBack = ref<RollView[]>([...props.comingBack]);
+const sendDraft = ref<SendDraft>({ delivery: 'dropoff', tracking: '', printsIncluded: false, printsCost: '' });
+// Live status for mailed rolls, asked for once the page is up.
+const { tracks } = useTracks(() => [...atLab.value.map((r) => r.trackingOut), ...comingBack.value.map((r) => r.trackingBack)]);
 
 const shot = ref<RollView[]>([...props.shot]);
 const atLab = ref<RollView[]>([...props.atLab]);
@@ -170,6 +213,9 @@ const late = (r: RollView) => {
 function fillCost() {
 	const l = slipLab.value;
 	if (l?.costCents != null) cost.value = dollars(l.costCents);
+	// Send the way film last went to this lab.
+	const last = l ? props.lastDelivery[l.id] : undefined;
+	if (last) sendDraft.value.delivery = last;
 }
 
 watch(editLab, (id) => {
@@ -184,13 +230,24 @@ async function send() {
 	sendError.value = '';
 	try {
 		const sent = await run(
-			actions.lab.sendBatch({ rollIds: picked.value, labId: labId.value, on: on.value, labOrder: order.value, devCostCents: toCents(cost.value) })
+			actions.lab.sendBatch({
+				rollIds: picked.value,
+				labId: labId.value,
+				on: on.value,
+				labOrder: order.value,
+				devCostCents: toCents(cost.value),
+				labDelivery: sendDraft.value.delivery,
+				trackingOut: sendDraft.value.delivery === 'mail' ? sendDraft.value.tracking : null,
+				printsIncluded: sendDraft.value.printsIncluded,
+				printsCostCents: sendDraft.value.printsIncluded ? null : toCents(sendDraft.value.printsCost),
+			})
 		);
 		const ids = new Set(sent.map((r) => r.id));
 		shot.value = shot.value.filter((r) => !ids.has(r.id));
 		atLab.value = [...sent, ...atLab.value];
 		picked.value = shot.value.map((r) => r.id);
 		order.value = '';
+		sendDraft.value.tracking = '';
 	} catch (e) {
 		sendError.value = (e as Error).message;
 	} finally {
@@ -357,12 +414,14 @@ async function deleteLab() {
 	background: none;
 }
 
-.envelope .lab-field > span {
+.envelope .lab-field > span,
+.envelope :deep(.lab-field > span) {
 	color: var(--kraft-soft);
 }
 
 /* Fields as lines on a printed form. */
-.envelope .lab-input {
+.envelope .lab-input,
+.envelope :deep(.lab-input) {
 	min-height: 2.5rem;
 	padding-inline: 0.15rem;
 	border: 0;
@@ -442,8 +501,29 @@ async function deleteLab() {
 	background: var(--gray-900);
 }
 
-.batch-actions {
+.batch-actions,
+.send-fields {
 	grid-column: 1 / -1;
+}
+
+/* The envelope's own ink for the shared send fields. */
+.envelope .send-fields :deep(.seg) {
+	border-color: color-mix(in oklch, var(--kraft-soft) 50%, transparent);
+	background: color-mix(in oklch, white 30%, transparent);
+}
+
+.envelope .send-fields :deep(.seg-btn) {
+	color: var(--kraft-soft);
+}
+
+.envelope .send-fields :deep(.seg-btn[aria-checked='true']) {
+	background: var(--kraft-soft);
+	color: oklch(96% 0.02 80);
+}
+
+.envelope .send-fields :deep(.check),
+.envelope .send-fields :deep(small) {
+	color: var(--kraft-soft);
 }
 
 .cards {

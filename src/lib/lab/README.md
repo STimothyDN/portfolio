@@ -21,11 +21,34 @@ film desk).
 | **Gear** | Cameras (mount or fixed lens, battery, service log) and lenses grouped by mount, with which cameras each fits. |
 | **Shoot** (`/photography/lab/shoot/`) | The phone screen for logging frames while you shoot. See below. |
 | **Labels** (`/photography/lab/labels/`) | Printable QR stickers for canisters and camera backs. The phone's own camera opens them: shooting mode if the roll is loaded, otherwise its page (`/photography/lab/r/R-031`). |
-| **Labs** | Shot rolls waiting to be sent: tick a batch, pick the lab, mark them sent, and print a slip with each roll's process and push/pull. Lab cards show typical turnaround once rolls go from "sent" to "scans in". |
+| **Labs** | Shot rolls waiting to be sent: tick a batch, pick the lab, say whether it's **dropped off** or **mailed in** (with an optional tracking number for the envelope), the price per roll and whether it includes prints (or what prints cost), and print a slip with each roll's process and push/pull. Mailed rolls show where their envelope is; once scans are in, rolls whose negatives are in the post show under "Negatives on the way back". Lab cards show typical turnaround once rolls go from "sent" to "scans in". |
 
 The six stages: **In storage → In camera → Shot → At the lab → Scans in → Negatives home**
 (plus **Lost or ruined**). Rolls get codes like `R-023`, short enough to write on the
 canister.
+
+**At the lab, two ways.** A roll is either dropped off or mailed in, and the stages say
+so. Dropped off: the drop-off date, the day scans arrived, the day you picked up the
+negatives. Mailed in: the ship date and an optional outbound tracking number, the day
+scans arrived and an optional tracking number for the negatives coming back, and the day
+they arrived. A lab remembers how you last sent it film. Each roll also records its
+develop-and-scan price, whether that includes prints, and if not, what prints cost (the
+almanac counts prints in what a frame costs).
+
+**Rated speed and exposure compensation.** Loading a roll asks the speed it's rated at
+(push/pull, for the lab) and any exposure compensation you dial in on the camera (+1,
+−0.7: for you, not the lab). Both show wherever the roll's speed does, and shooting
+mode's meter builds the compensation into its suggestions.
+
+**Tracking.** Tracking numbers link to their carrier's page (USPS, UPS, FedEx, DHL, told
+apart by their shape; anything else opens 17TRACK's universal page). For live status,
+make a [17TRACK](https://api.17track.net) API account and add its key as
+`TRACKING_17TRACK_KEY` in Vercel (Production). New accounts come with 200 tracking
+numbers to use, once; each number you track uses one, the first time it's looked up.
+Statuses are kept in the `shipment` table and refreshed at most every two hours until
+delivered, after the page loads (pages never wait on 17TRACK). Only numbers on your own
+rolls are ever looked up. `npm run dev` ignores the key unless `FILM_LAB_DEV_TRACKING=1`
+is set, so tests don't spend numbers.
 
 ## Shooting mode
 
@@ -92,6 +115,22 @@ of importing, which would make a duplicate.
 **New names on the desk.** When `film-labels.json` gains a camera, stock or lab (say
 CineStill 800T), the Fridge page offers to add it to your logbook. A stock you already
 added by hand with the same name is matched to it rather than duplicated.
+
+**Speed.** Lab pages render on a Vercel function next to the Turso database (both US
+East), and three things keep navigation feeling instant:
+
+- The moment a finger lands on a lab link (or a pointer rests on one), the page asks the
+  service worker to start fetching it, and the tap that follows is answered from that
+  copy. Copies are used once and kept at most 15 seconds, and any write (an Astro Action)
+  throws them all away first, so a page is never older than your last change.
+- Every navigation shows at once that it was heard: the link dims, and if the page takes
+  a moment, a strip of film winds across the top.
+- Pages send a `Server-Timing` header (session check and total), visible in the
+  browser's network panel, for spotting a slow one.
+
+The first visit after a quiet spell waits for the function to start (a "cold start",
+about 0.6 s on top). Vercel's **Fluid Compute** (Project → Settings → Functions) keeps
+instances warm longer; it's on by default for new projects, worth checking for this one.
 
 The rest of the site is unchanged and still fully prerendered. Only the lab's pages and
 `/api/auth/*` run as a Vercel function (through `@astrojs/vercel`), so visitors never touch
@@ -301,6 +340,9 @@ Vercel if you like.
 | `src/lib/lab/pace.ts`                 | a loaded roll's pace; how fast each stock leaves the fridge  |
 | `src/lib/lab/server/frames.ts`        | the Frames page's data (frames, their scans, desk tone)      |
 | `src/lib/lab/server/rewind.ts`        | the light table's Rewind pick                                |
+| `src/lib/lab/tracking.ts`             | carrier from a tracking number's shape, links, status words  |
+| `src/lib/lab/server/tracking.ts`      | live status from 17TRACK, cached in `shipment`               |
+| `src/components/lab/LabSendFields.vue`| drop-off or mail, tracking, prints (send forms)              |
 | `public/photography/lab/`             | service worker, web app manifest, icons                      |
 
 ## Changing the schema

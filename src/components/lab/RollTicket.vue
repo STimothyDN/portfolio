@@ -14,8 +14,8 @@
 				v-if="canMove"
 				type="button"
 				class="next"
-				:aria-label="`${STEP_VERB[next!]}: ${roll.code}`"
-				:title="STEP_VERB[next!]"
+				:aria-label="`${stepVerb(next!, roll.labDelivery)}: ${roll.code}`"
+				:title="stepVerb(next!, roll.labDelivery)"
 				@click="emit('next', roll)"
 			>
 				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5" /></svg>
@@ -30,10 +30,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 
-import { daysBetween, formatDays, nextStage, pushPull, STEP_VERB, type RollView } from '../../lib/lab/inventory';
+import { daysBetween, formatComp, formatDays, nextStage, pushPull, STEP_VERB, stepVerb, type RollView } from '../../lib/lab/inventory';
+import { TRACK_STATUS, type TrackView } from '../../lib/lab/tracking';
 import { canisterColors } from '../film/canister';
 
-const props = defineProps<{ roll: RollView; today: string; usualDays?: number | null }>();
+const props = defineProps<{ roll: RollView; today: string; usualDays?: number | null; track?: TrackView | null }>();
 const emit = defineEmits<{ next: [roll: RollView]; dragstart: [roll: RollView] }>();
 
 const dragging = ref(false);
@@ -49,13 +50,13 @@ const where = computed(() => {
 	const push = pushPull(r.stock.iso, r.shotAtIso);
 	switch (r.status) {
 		case 'camera':
-			return [r.camera?.name, push ?? (r.shotAtIso ? `ISO ${r.shotAtIso}` : null)].filter(Boolean).join(' · ');
+			return [r.camera?.name, push ?? (r.shotAtIso ? `ISO ${r.shotAtIso}` : null), formatComp(r.exposureComp)].filter(Boolean).join(' · ');
 		case 'shot':
 			return [r.camera?.name, push ?? r.stock.process].filter(Boolean).join(' · ');
 		case 'lab':
-			return [r.lab?.name ?? 'Lab not recorded', r.labOrder ? `#${r.labOrder}` : null].filter(Boolean).join(' · ');
+			return [r.lab?.name ?? 'Lab not recorded', r.labDelivery === 'mail' ? 'mailed' : null, r.labOrder ? `#${r.labOrder}` : null].filter(Boolean).join(' · ');
 		case 'scanned':
-			return r.lab?.name ?? r.camera?.name ?? '';
+			return [r.lab?.name ?? r.camera?.name, r.labDelivery === 'mail' ? 'negatives in the mail' : null].filter(Boolean).join(' · ');
 		case 'negatives':
 			return r.negativesAt ?? r.camera?.name ?? '';
 		default:
@@ -68,6 +69,12 @@ const chip = computed((): { text: string; tone?: 'warn' | 'ok'; title?: string }
 	const r = props.roll;
 	if (r.status === 'camera') return { text: formatDays(days.value), title: `Loaded ${formatDays(days.value)} ago` };
 	if (r.status === 'lab') {
+		// Mailed and not there yet: where the envelope is says more than a day count.
+		const t = props.track?.status;
+		if (t && t !== 'Delivered') {
+			const s = TRACK_STATUS[t];
+			return { text: s?.label.toLowerCase() ?? t, tone: s?.tone === 'bad' || s?.tone === 'warn' ? 'warn' : undefined, title: props.track?.detail ?? undefined };
+		}
 		const late = props.usualDays != null && days.value > props.usualDays + 1;
 		return {
 			text: formatDays(days.value),

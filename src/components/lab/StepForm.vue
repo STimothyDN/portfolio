@@ -20,13 +20,20 @@
 				Partly shot (rewound after frame {{ roll.rewoundAtFrame }}). Once it’s loaded, wind on to frame {{ roll.rewoundAtFrame + 2 }} with the
 				lens cap on before shooting.
 			</p>
-			<label class="lab-field">
-				<span>Rated at ISO</span>
-				<input id="step-iso" v-model="iso" class="lab-input" type="number" min="1" max="12800" inputmode="numeric" />
-				<small class="lab-hint">
-					Box speed {{ roll.stock.iso ?? 'not set' }}<template v-if="push">. That’s a <b>{{ push }}</b>, so tell the lab.</template>
-				</small>
-			</label>
+			<div class="lab-row2">
+				<label class="lab-field">
+					<span>Rated at ISO</span>
+					<input id="step-iso" v-model="iso" class="lab-input" type="number" min="1" max="12800" inputmode="numeric" />
+				</label>
+				<label class="lab-field">
+					<span>Exposure comp (EV)</span>
+					<input id="step-comp" v-model="comp" class="lab-input" type="number" min="-5" max="5" step="0.1" inputmode="decimal" placeholder="0" />
+				</label>
+			</div>
+			<small class="lab-hint">
+				Box speed {{ roll.stock.iso ?? 'not set' }}<template v-if="push">. That’s a <b>{{ push }}</b>, so tell the lab.</template>
+				Exposure comp is what you dial in on the camera (+1, −0.7): it’s for you, not the lab.
+			</small>
 		</template>
 
 		<template v-else-if="to === 'shot'">
@@ -54,6 +61,7 @@
 					<input id="step-cost" v-model="cost" class="lab-input" type="number" min="0" step="0.01" inputmode="decimal" />
 				</label>
 			</div>
+			<LabSendFields v-model="send" />
 			<label class="lab-field">
 				<span>Notes for the lab</span>
 				<input id="step-dev-notes-lab" v-model="devNotes" class="lab-input" type="text" maxlength="300" :placeholder="push ?? 'Normal process'" />
@@ -68,6 +76,10 @@
 					<option v-for="r in deskOptions" :key="r.id" :value="r.id">{{ r.title }} · {{ r.stock }} · {{ formatDay(r.developed) }}</option>
 				</select>
 				<small class="lab-hint">Best matches first. You can link them later from the roll page.</small>
+			</label>
+			<label v-if="roll.labDelivery === 'mail'" class="lab-field">
+				<span>Tracking for the negatives coming back <small>(optional)</small></span>
+				<input id="step-track-back" v-model="trackingBack" class="lab-input" type="text" maxlength="60" autocomplete="off" autocapitalize="characters" spellcheck="false" />
 			</label>
 		</template>
 
@@ -89,13 +101,13 @@
 		</template>
 
 		<label class="lab-field">
-			<span>Date</span>
+			<span>{{ dateLabel }}</span>
 			<input id="step-date" v-model="on" class="lab-input" type="date" required :max="today" />
 		</label>
 
 		<p v-if="error" class="lab-error" role="alert">{{ error }}</p>
 		<div class="lab-actions">
-			<button type="submit" class="lab-btn" :disabled="busy">{{ STEP_VERB[to] }}</button>
+			<button type="submit" class="lab-btn" :disabled="busy">{{ stepVerb(to, roll.labDelivery) }}</button>
 			<button type="button" class="lab-btn lab-btn--quiet" @click="emit('cancel')">Cancel</button>
 		</div>
 	</form>
@@ -111,11 +123,13 @@ import {
 	formatDay,
 	pushPull,
 	STEP_VERB,
+	stepVerb,
 	toCents,
 	type RollStatus,
 	type RollView,
 	type StepChoices,
 } from '../../lib/lab/inventory';
+import LabSendFields, { type SendDraft } from './LabSendFields.vue';
 
 const props = defineProps<{
 	roll: RollView;
@@ -136,7 +150,26 @@ const devNotes = ref(props.roll.devNotes ?? '');
 const publicRollId = ref(props.roll.publicRollId ?? '');
 const negativesAt = ref(props.roll.negativesAt ?? '');
 const note = ref('');
+const comp = ref<string | number>(props.roll.exposureComp ?? '');
+const trackingBack = ref(props.roll.trackingBack ?? '');
+const lastDelivery = (labIdValue: string) => props.choices.labs.find((l) => l.id === labIdValue)?.delivery ?? null;
+const send = ref<SendDraft>({
+	delivery: props.roll.labDelivery ?? lastDelivery(props.roll.lab?.id ?? '') ?? 'dropoff',
+	tracking: props.roll.trackingOut ?? '',
+	printsIncluded: props.roll.printsIncluded,
+	printsCost: dollars(props.roll.printsCostCents),
+});
 const busy = ref(false);
+
+/** The date says what happened: dropped off or shipped, picked up or arrived. */
+const dateLabel = computed(() => {
+	const mail = props.to === 'lab' ? send.value.delivery === 'mail' : props.roll.labDelivery === 'mail';
+	if (props.to === 'lab') return mail ? 'Shipped on' : 'Dropped off on';
+	if (props.to === 'scanned') return 'Scans arrived on';
+	if (props.to === 'negatives') return props.roll.labDelivery ? (mail ? 'Negatives arrived on' : 'Picked up on') : 'Date';
+	if (props.to === 'camera') return 'Loaded on';
+	return 'Date';
+});
 const error = ref('');
 
 const push = computed(() => pushPull(props.roll.stock.iso, num(props.to === 'camera' ? iso.value : props.roll.shotAtIso)));
@@ -162,13 +195,15 @@ const deskOptions = computed(() => {
 function fillCost() {
 	const l = props.choices.labs.find((x) => x.id === labId.value);
 	if (l?.costCents != null && cost.value === '') cost.value = dollars(l.costCents);
+	// Send the way film last went to this lab.
+	if (l?.delivery) send.value.delivery = l.delivery;
 }
 
 async function save() {
 	busy.value = true;
 	error.value = '';
 	const fields: Record<string, unknown> = {};
-	if (props.to === 'camera') Object.assign(fields, { cameraId: cameraId.value, shotAtIso: num(iso.value) });
+	if (props.to === 'camera') Object.assign(fields, { cameraId: cameraId.value, shotAtIso: num(iso.value), exposureComp: num(comp.value) });
 	if (props.to === 'shot') fields.devNotes = devNotes.value || push.value || '';
 	if (props.to === 'lab')
 		Object.assign(fields, {
@@ -176,7 +211,12 @@ async function save() {
 			labOrder: labOrder.value,
 			devCostCents: toCents(cost.value),
 			devNotes: devNotes.value || push.value || '',
+			labDelivery: send.value.delivery,
+			trackingOut: send.value.delivery === 'mail' ? send.value.tracking : null,
+			printsIncluded: send.value.printsIncluded,
+			printsCostCents: send.value.printsIncluded ? null : toCents(send.value.printsCost),
 		});
+	if (props.to === 'scanned' && props.roll.labDelivery === 'mail') fields.trackingBack = trackingBack.value;
 	if (props.to === 'negatives') fields.negativesAt = negativesAt.value;
 	try {
 		let view = await run(

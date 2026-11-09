@@ -16,11 +16,17 @@ const data =
 				const d = await getDb(config.config);
 				const [rolls, labs, stats] = await Promise.all([rollViews(d, user.id), listLabs(d, user.id), labStats(d, user.id)]);
 				const byDate = (a: { statusOn: string }, b: { statusOn: string }) => a.statusOn.localeCompare(b.statusOn);
+				// How film last went to each lab (oldest first, so the latest wins).
+				const lastDelivery: Record<string, 'dropoff' | 'mail'> = {};
+				for (const r of [...rolls].sort(byDate)) if (r.lab && r.labDelivery) lastDelivery[r.lab.id] = r.labDelivery;
 				return {
 					shot: rolls.filter((r) => r.status === 'shot').sort(byDate),
 					atLab: rolls.filter((r) => r.status === 'lab').sort(byDate),
+					// Scans are in and the negatives are in the post.
+					comingBack: rolls.filter((r) => r.status === 'scanned' && r.labDelivery === 'mail').sort(byDate),
 					labs,
 					stats,
+					lastDelivery,
 				};
 			})()
 		: null;
@@ -36,7 +42,16 @@ const data =
 						<h1 class="lab-title">Labs</h1>
 					</div>
 				</section>
-				<LabsDesk client:load shot={data.shot} atLab={data.atLab} labs={data.labs} stats={data.stats} today={todayInDurham()} />
+				<LabsDesk
+					client:load
+					shot={data.shot}
+					atLab={data.atLab}
+					comingBack={data.comingBack}
+					labs={data.labs}
+					stats={data.stats}
+					lastDelivery={data.lastDelivery}
+					today={todayInDurham()}
+				/>
 			</>
 		)
 	}
