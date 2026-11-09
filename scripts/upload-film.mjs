@@ -67,6 +67,7 @@ const COMMON_LABELS = {
 		yashicat4: 'Yashica T4',
 		contaxt2: 'Contax T2',
 		leicam6: 'Leica M6',
+		minoltazoom160cdate: "Minolta Zoom 160c Date",
 	},
 	stocks: {
 		portra160: 'Kodak Portra 160',

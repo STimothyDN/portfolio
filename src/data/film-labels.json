@@ -1,15 +1,13 @@
 {
   "cameras": {
-    "canonae1": "Canon AE-1 Program",
-    "canont70": "Canon T-70",
     "minoltax700": "Minolta X-700",
     "nikononetouch": "Nikon One Touch",
     "olympusaf1": "Olympus AF-1",
     "olympusinfinityjr": "Olympus Infinity Jr",
     "olympusinfinitytwin": "Olympus Infinity Twin",
-    "olympusstylusepic": "Olympus Stylus Epic",
     "ricohaf40": "Ricoh AF-40",
-    "ricohxrm": "Ricoh XR-M"
+    "ricohxrm": "Ricoh XR-M",
+    "minoltazoom160cdate": "Minolta Zoom 160c Date"
   },
   "stocks": {
     "candido400": "Candido 400",
@@ -42,9 +40,7 @@
   "labs": {
     "bellows": "Bellows",
     "fotoshoppe": "Fotoshoppe",
-    "indiefilmlab": "Indie Film Lab",
     "seccarrboro": "Southeastern Camera Carrboro",
-    "thedarkroom": "The Darkroom"
   },
   "brands": {
     "ladygrey400": "Lomography",
