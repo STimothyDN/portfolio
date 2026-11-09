@@ -312,6 +312,8 @@ export const roll = sqliteTable(
 		negativesAt: text('negatives_at'),
 		/** The roll's id on the public film desk (src/content/film/<id>.json). */
 		publicRollId: text('public_roll_id'),
+		/** Rewound mid-roll after this frame; reloading winds past it. */
+		rewoundAtFrame: integer('rewound_at_frame'),
 		notes: text('notes'),
 		createdAt: createdAt(),
 		updatedAt: updatedAt(),
@@ -337,6 +339,43 @@ export const rollEvent = sqliteTable(
 		createdAt: createdAt(),
 	},
 	(t) => [index('roll_event_roll_idx').on(t.rollId)]
+);
+
+/**
+ * One exposure, logged from the phone while shooting (or added later). The
+ * phone makes `client_id` when the frame is logged, so a frame queued offline
+ * and synced twice is still one row. `tz_offset` (minutes east of UTC) keeps
+ * the wall-clock time it was taken, wherever that was.
+ */
+export const frame = sqliteTable(
+	'frame',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		rollId: text('roll_id')
+			.notNull()
+			.references(() => roll.id, { onDelete: 'cascade' }),
+		clientId: text('client_id').notNull(),
+		number: integer('number').notNull(),
+		shotAt: integer('shot_at').notNull(),
+		tzOffset: integer('tz_offset').notNull().default(0),
+		cameraId: text('camera_id').references(() => camera.id, { onDelete: 'set null' }),
+		lensId: text('lens_id').references(() => lens.id, { onDelete: 'set null' }),
+		focalLength: integer('focal_length'),
+		/** f-number; null when the camera chose (or it wasn't noted). */
+		aperture: real('aperture'),
+		/** '1/125', '1s', 'B'; null when the camera chose. */
+		shutter: text('shutter'),
+		flash: integer('flash', { mode: 'boolean' }).notNull().default(false),
+		/** Rough location: rounded to about 100 m on the phone. */
+		lat: real('lat'),
+		lng: real('lng'),
+		accuracy: integer('accuracy'),
+		note: text('note'),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(t) => [uniqueIndex('frame_user_client_idx').on(t.userId, t.clientId), index('frame_roll_idx').on(t.rollId)]
 );
 
 /** The tables Better Auth's adapter needs, keyed by its model names. */

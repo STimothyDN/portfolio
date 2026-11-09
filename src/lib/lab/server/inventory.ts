@@ -2,12 +2,13 @@
  * Logbook reads for server-rendered lab pages and the actions. Every query is
  * scoped to one user.
  */
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { filmBrand, filmLabel, getFilmRolls, rollFolder } from '../../../utils/film';
 import type {
 	CameraView,
 	DeskRollOption,
+	FrameView,
 	LabView,
 	LensView,
 	RollEventView,
@@ -17,7 +18,7 @@ import type {
 	StockView,
 } from '../inventory';
 import type { LabDb } from './db/client';
-import { camera, filmStock, lab, lens, roll, rollEvent, serviceLog } from './db/schema';
+import { camera, filmStock, frame, lab, lens, roll, rollEvent, serviceLog } from './db/schema';
 
 /* ---------- rolls ---------- */
 
@@ -36,6 +37,7 @@ const rollSelect = {
 	cameraName: camera.name,
 	labId: lab.id,
 	labName: lab.name,
+	frameCount: sql<number>`(select count(*) from ${frame} where ${frame.rollId} = ${roll.id})`,
 };
 
 type RollRow = {
@@ -45,9 +47,10 @@ type RollRow = {
 	cameraName: string | null;
 	labId: string | null;
 	labName: string | null;
+	frameCount: number;
 };
 
-function toRollView({ roll: r, stock, cameraId, cameraName, labId, labName }: RollRow): RollView {
+function toRollView({ roll: r, stock, cameraId, cameraName, labId, labName, frameCount }: RollRow): RollView {
 	return {
 		id: r.id,
 		code: r.code,
@@ -70,7 +73,39 @@ function toRollView({ roll: r, stock, cameraId, cameraName, labId, labName }: Ro
 		negativesAt: r.negativesAt,
 		publicRollId: r.publicRollId,
 		notes: r.notes,
+		rewoundAtFrame: r.rewoundAtFrame,
+		frameCount: Number(frameCount ?? 0),
 	};
+}
+
+/* ---------- frames ---------- */
+
+const frameSelect = {
+	id: frame.id,
+	clientId: frame.clientId,
+	rollId: frame.rollId,
+	number: frame.number,
+	shotAt: frame.shotAt,
+	tzOffset: frame.tzOffset,
+	cameraId: frame.cameraId,
+	lensId: frame.lensId,
+	focalLength: frame.focalLength,
+	aperture: frame.aperture,
+	shutter: frame.shutter,
+	flash: frame.flash,
+	lat: frame.lat,
+	lng: frame.lng,
+	accuracy: frame.accuracy,
+	note: frame.note,
+};
+
+export async function listFrames(d: LabDb, userId: string, rollIds: string[]): Promise<FrameView[]> {
+	if (!rollIds.length) return [];
+	return d
+		.select(frameSelect)
+		.from(frame)
+		.where(and(eq(frame.userId, userId), inArray(frame.rollId, rollIds)))
+		.orderBy(asc(frame.number), asc(frame.shotAt));
 }
 
 export async function rollViews(d: LabDb, userId: string, ids?: string[]): Promise<RollView[]> {
@@ -253,12 +288,43 @@ export async function stepChoices(d: LabDb, userId: string): Promise<StepChoices
 const STANDARD_ISO = [25, 50, 64, 80, 100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1000, 1600, 3200, 6400];
 const ISO_OVERRIDES: Record<string, number> = { lomocolor92: 400, lomocolor92sunkissed: 400 };
 
+/** What's worth knowing when you load one (shown on the stock, editable). */
+const STOCK_NOTES: Record<string, string> = {
+	cinestill800t:
+		'Tungsten-balanced (3200K): warm-to-neutral under tungsten, cool in daylight. No remjet, so bright highlights get a red halation glow. Processed C-41.',
+	cinestill400d: 'Daylight-balanced Vision3 without remjet; red halation around bright highlights. Processed C-41.',
+	cinestill50d: 'Daylight-balanced, very fine grain, no remjet. Processed C-41.',
+	candido800: 'Respooled motion-picture film, tungsten-leaning. Processed C-41.',
+};
+
 export function guessStock(token: string, isMono: (name: string) => boolean) {
 	const name = filmLabel('stocks', token);
 	const numbers = [...name.matchAll(/(\d{2,4})/g)].map((m) => Number(m[1])).filter((n) => STANDARD_ISO.includes(n));
 	const iso = ISO_OVERRIDES[token] ?? numbers.at(-1) ?? null;
 	const process = isMono(name) ? 'B&W' : /velvia|provia|ektachrome|e100|astia|chrome/i.test(name) ? 'E-6' : 'C-41';
-	return { token, name, brand: filmBrand('stocks', token), iso, process };
+	return { token, name, brand: filmBrand('stocks', token), iso, process, notes: STOCK_NOTES[token] ?? null };
+}
+
+/** Names compared loosely: "CineStill 800T" = "cinestill 800 t". */
+export const sameName = (a: string, b: string) => a.toLowerCase().replace(/[^a-z0-9]+/g, '') === b.toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+type Named = { token: string | null; name: string };
+
+/**
+ * film-labels.json entries the logbook doesn't have yet, per kind. A row you
+ * added by hand with the same name counts as having it (the sync adopts it).
+ */
+export function labelGaps(
+	labels: { stocks: Record<string, string>; cameras: Record<string, string>; labs: Record<string, string> },
+	have: { stocks: Named[]; cameras: Named[]; labs: Named[] }
+) {
+	const missing = (entries: Record<string, string>, rows: Named[]) =>
+		Object.entries(entries).filter(([token, name]) => !rows.some((r) => r.token === token || (!r.token && sameName(r.name, name))));
+	return {
+		stocks: missing(labels.stocks, have.stocks).map(([t]) => t),
+		cameras: missing(labels.cameras, have.cameras).map(([t]) => t),
+		labs: missing(labels.labs, have.labs).map(([t]) => t),
+	};
 }
 
 /**

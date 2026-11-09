@@ -1,0 +1,57 @@
+---
+import LabLayout from '../../../components/lab/LabLayout.astro';
+import ShootMode from '../../../components/lab/ShootMode.vue';
+import { todayInDurham } from '../../../lib/lab/inventory';
+import { labConfig } from '../../../lib/lab/server/config';
+import { getDb } from '../../../lib/lab/server/db/client';
+import { listCameras, listFrames, listLenses, rollViews } from '../../../lib/lab/server/inventory';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const data =
+	user && config.ok
+		? await (async () => {
+				const d = await getDb(config.config);
+				const [all, cameras, lenses] = await Promise.all([rollViews(d, user.id), listCameras(d, user.id), listLenses(d, user.id)]);
+				const loaded = all.filter((r) => r.status === 'camera');
+				return {
+					rolls: loaded,
+					cameras: Object.fromEntries(
+						cameras.map((c) => [c.id, { name: c.name, kind: c.kind, mount: c.mount, fixedLens: c.fixedLens }])
+					),
+					lenses: lenses.filter((l) => l.status !== 'gone' && l.status !== 'wishlist'),
+					frames: await listFrames(d, user.id, loaded.map((r) => r.id)),
+					spots: [...new Set(all.map((r) => r.storageSpot).filter((v): v is string => !!v))].sort(),
+				};
+			})()
+		: null;
+---
+
+<LabLayout title="Shoot" shoot current="shoot">
+	{
+		data && user && (
+			<ShootMode
+				client:load
+				userId={user.id}
+				rolls={data.rolls}
+				cameras={data.cameras}
+				lenses={data.lenses}
+				frames={data.frames}
+				initialCode={Astro.url.searchParams.get('roll')}
+				spots={data.spots}
+				today={todayInDurham()}
+			/>
+		)
+	}
+</LabLayout>
+
+<style is:global>
+	/* Safelight reaches the edges of the screen, not just the column. */
+	html[data-safelight],
+	html[data-safelight] body,
+	html[data-safelight] .backgrounds {
+		background: #000 !important;
+	}
+</style>

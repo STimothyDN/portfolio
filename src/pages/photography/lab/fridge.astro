@@ -1,10 +1,11 @@
 ---
 import FridgeShelves from '../../../components/lab/FridgeShelves.vue';
 import LabLayout from '../../../components/lab/LabLayout.astro';
+import labels from '../../../data/film-labels.json';
 import { todayInDurham } from '../../../lib/lab/inventory';
 import { labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
-import { listStocks, rollViews, stepChoices } from '../../../lib/lab/server/inventory';
+import { labelGaps, listCameras, listLabs, listStocks, rollViews, stepChoices } from '../../../lib/lab/server/inventory';
 
 export const prerender = false;
 
@@ -14,16 +15,29 @@ const data =
 	user && config.ok
 		? await (async () => {
 				const d = await getDb(config.config);
-				const [rolls, stocks, choices] = await Promise.all([rollViews(d, user.id), listStocks(d, user.id), stepChoices(d, user.id)]);
+				const [rolls, stocks, choices, cameras, labs] = await Promise.all([
+					rollViews(d, user.id),
+					listStocks(d, user.id),
+					stepChoices(d, user.id),
+					listCameras(d, user.id),
+					listLabs(d, user.id),
+				]);
 				const totals: Record<string, number> = {};
 				for (const r of rolls) totals[r.stock.id] = (totals[r.stock.id] ?? 0) + 1;
 				const storage = rolls.filter((r) => r.status === 'storage');
+				const gaps = labelGaps(labels, { stocks, cameras, labs });
 				return {
 					storage,
 					stocks,
 					totals,
 					choices,
 					shops: [...new Set(rolls.map((r) => r.purchasedFrom).filter((v): v is string => !!v))].sort(),
+					// Names on the film desk the logbook doesn't have yet (new labels, like CineStill 800T).
+					deskNames: [
+						...gaps.stocks.map((t) => (labels.stocks as Record<string, string>)[t]),
+						...gaps.cameras.map((t) => (labels.cameras as Record<string, string>)[t]),
+						...gaps.labs.map((t) => (labels.labs as Record<string, string>)[t]),
+					],
 				};
 			})()
 		: null;
@@ -46,6 +60,7 @@ const data =
 					totals={data.totals}
 					choices={data.choices}
 					shops={data.shops}
+					deskNames={data.deskNames}
 					today={todayInDurham()}
 				/>
 			</>

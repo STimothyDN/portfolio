@@ -1,0 +1,21 @@
+---
+/*
+ * Where a roll label's QR code points. A loaded roll opens shooting mode
+ * (you're holding the camera); anything else opens the roll's page.
+ */
+import { labConfig } from '../../../../lib/lab/server/config';
+import { getDb } from '../../../../lib/lab/server/db/client';
+import { rollByCode } from '../../../../lib/lab/server/inventory';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const code = (Astro.params.code ?? '').toUpperCase();
+const found = user && config.ok ? await rollByCode(await getDb(config.config), user.id, code) : null;
+
+return Astro.redirect(
+	found?.roll.status === 'camera' ? `/photography/lab/shoot/?roll=${found.roll.code}` : `/photography/lab/rolls/${code}/`,
+	302
+);
+---

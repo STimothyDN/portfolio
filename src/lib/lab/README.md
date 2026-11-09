@@ -1,8 +1,9 @@
 # Film Lab
 
-The private film logbook at **`/photography/lab`**: passkey sign-in (phase 1) and the
-inventory (phase 2): cameras, lenses, film stocks, labs, and every roll from the fridge to
-the negative binder. Per-frame logging on the phone comes next.
+The private film logbook at **`/photography/lab`**: passkey sign-in (phase 1), the
+inventory (phase 2: cameras, lenses, film stocks, labs, and every roll from the fridge to
+the negative binder), and shooting mode on the phone (phase 3: per-frame logging that works
+with no signal, QR roll labels, rewinding part-way).
 
 ## The pages
 
@@ -12,11 +13,48 @@ the negative binder. Per-frame logging on the phone comes next.
 | **Rolls** | Every roll, filterable by stage and searchable. Each roll's page has its timeline (dates are editable), its details, and its scans on the public desk. |
 | **Fridge** | Unshot film, as canisters on shelves grouped by where they're kept ("Fridge door"). Oldest expiry first, with the usual rule of thumb for expired film. Below it, the film stock catalogue (ISO, process, format). |
 | **Gear** | Cameras (mount or fixed lens, battery, service log) and lenses grouped by mount, with which cameras each fits. |
+| **Shoot** (`/photography/lab/shoot/`) | The phone screen for logging frames while you shoot. See below. |
+| **Labels** (`/photography/lab/labels/`) | Printable QR stickers for canisters and camera backs. The phone's own camera opens them: shooting mode if the roll is loaded, otherwise its page (`/photography/lab/r/R-031`). |
 | **Labs** | Shot rolls waiting to be sent: tick a batch, pick the lab, mark them sent, and print a slip with each roll's process and push/pull. Lab cards show typical turnaround once rolls go from "sent" to "scans in". |
 
 The six stages: **In storage → In camera → Shot → At the lab → Scans in → Negatives home**
 (plus **Lost or ruined**). Rolls get codes like `R-023`, short enough to write on the
 canister.
+
+## Shooting mode
+
+Open **Shoot** (or a roll's "Log frames") on your phone. It opens on the camera you loaded
+most recently; with more than one loaded, chips at the top switch between them.
+
+- **Counter:** the next frame, like the window on the camera's top plate. − / + fix it if
+  you skipped logging a frame.
+- **Dials:** aperture (from the lens's widest) and shutter speed. "A" means the camera
+  chose. Point-and-shoots start on "Exposure set by the camera". Settings carry over from
+  the roll's last frame, so most frames are one tap.
+- **Lens:** only lenses on the camera's mount are offered; with one, it's preselected.
+  Zooms ask for the focal length.
+- **Location:** rough, rounded on the phone to about 100 m before it's saved. Toggle it off
+  per session.
+- **Log frame:** saves to the phone first, then syncs. Undo is in the toast. Tap a logged
+  frame to fix its note or number, or delete it. The roll page has the full list (edit,
+  delete, or add frames after the fact, without a time).
+- **Roll finished / Rewound early:** a rewound roll goes back to the fridge marked "partly
+  shot". Loading it again reminds you to wind on past the last frame plus a spare, and
+  the counter starts there.
+- **Safelight** (bulb icon): red on black, so your eyes stay used to the dark.
+- The screen stays on while shooting mode is open (where the browser allows it).
+
+**No signal.** Everything you log goes into an outbox on the phone (IndexedDB) and syncs
+as soon as the server answers. The top corner says "Offline · 5 waiting" until then. The
+lab's pages are kept on the phone by a service worker (`public/photography/lab/sw.js`,
+scoped to `/photography/lab/` only), so shooting mode opens with no signal as long as it
+was opened once with one. Signing out clears those saved pages. If anything hasn't synced,
+it warns you first.
+
+**Install it.** In Safari: Share → Add to Home Screen. In Chrome: the install link at the
+bottom of shooting mode. It opens straight onto shooting mode, full screen, with its own
+icon. On iPhone, a home-screen app keeps its own sign-in, so sign in once inside it (your
+Bitwarden passkey works there too).
 
 **Bringing in the film desk.** On an empty logbook the light table offers to import the
 public film desk: every camera, stock and lab in `film-labels.json` becomes gear, and every
@@ -24,6 +62,10 @@ desk roll becomes a roll filed under "Negatives home", linked to its scans (in d
 order, R-001 onward). Running it again only adds what's new. For a roll you logged before
 uploading its scans, link them from the roll's page (or in the "Scans arrived" step) instead
 of importing, which would make a duplicate.
+
+**New names on the desk.** When `film-labels.json` gains a camera, stock or lab (say
+CineStill 800T), the Fridge page offers to add it to your logbook. A stock you already
+added by hand with the same name is matched to it rather than duplicated.
 
 The rest of the site is unchanged and still fully prerendered. Only the lab's pages and
 `/api/auth/*` run as a Vercel function (through `@astrojs/vercel`), so visitors never touch
@@ -128,6 +170,8 @@ Vercel if you like.
 | `src/actions/index.ts`                | every logbook write (Astro Actions)                          |
 | `src/lib/lab/server/inventory.ts`     | logbook reads, desk import helpers, lab turnaround           |
 | `src/lib/lab/inventory.ts`            | shared types, stages, dates, money, push/pull, expiry        |
+| `src/lib/lab/offline.ts`              | the phone's outbox (IndexedDB) and its sync                  |
+| `public/photography/lab/`             | service worker, web app manifest, icons                      |
 
 ## Changing the schema
 

@@ -21,7 +21,7 @@ export const STATUS_LABEL: Record<RollStatus, string> = {
 export const STEP_VERB: Record<RollStatus, string> = {
 	storage: 'Back to storage',
 	camera: 'Load into a camera',
-	shot: 'Roll finished',
+	shot: 'Mark roll finished',
 	lab: 'Sent to a lab',
 	scanned: 'Scans arrived',
 	negatives: 'Negatives home',
@@ -140,6 +140,82 @@ export interface RollView {
 	negativesAt: string | null;
 	publicRollId: string | null;
 	notes: string | null;
+	rewoundAtFrame: number | null;
+	/** Frames logged so far. */
+	frameCount: number;
+}
+
+export interface FrameView {
+	id: string;
+	clientId: string;
+	rollId: string;
+	number: number;
+	/** Epoch ms. */
+	shotAt: number;
+	/** Minutes east of UTC where it was taken. */
+	tzOffset: number;
+	cameraId: string | null;
+	lensId: string | null;
+	focalLength: number | null;
+	aperture: number | null;
+	shutter: string | null;
+	flash: boolean;
+	lat: number | null;
+	lng: number | null;
+	accuracy: number | null;
+	note: string | null;
+}
+
+/** What the phone sends: a frame by its client id, or its removal. */
+export type FrameInput = Omit<FrameView, 'id'> & { deleted?: boolean };
+
+/* ---------- exposure ---------- */
+
+/** Full stops plus the common widest apertures of real lenses. */
+export const APERTURES = [1, 1.2, 1.4, 1.7, 1.8, 2, 2.8, 3.5, 4, 4.5, 5.6, 8, 11, 16, 22, 32];
+export const SHUTTERS = ['B', '1s', '1/2', '1/4', '1/8', '1/15', '1/30', '1/60', '1/125', '1/250', '1/500', '1/1000', '1/2000', '1/4000'];
+
+/** The apertures a lens can set: from its widest (f/1.7) to f/22. */
+export function aperturesFor(widest: number | null | undefined): number[] {
+	const full = [1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22];
+	if (!widest) return full;
+	return [widest, ...full.filter((a) => a > widest + 0.05)];
+}
+
+/** "35mm f/2.8" → 2.8 */
+export function widestFromText(text: string | null | undefined): number | null {
+	const m = text?.match(/f\/?\s*(\d+(?:\.\d+)?)/i);
+	return m ? Number(m[1]) : null;
+}
+
+export const formatAperture = (a: number | null) => (a == null ? null : `f/${Number.isInteger(a) ? a : a.toFixed(1).replace(/\.0$/, '')}`);
+
+/** "f/8 · 1/125", "auto", with flash noted. */
+export function formatExposure(f: Pick<FrameView, 'aperture' | 'shutter' | 'flash'>): string {
+	const parts = [formatAperture(f.aperture), f.shutter].filter(Boolean) as string[];
+	const exp = parts.length ? parts.join(' · ') : 'auto';
+	return f.flash ? `${exp} · flash` : exp;
+}
+
+/** The wall-clock time a frame was taken, where it was taken ("2:41 pm"). Same on server and phone. */
+export function frameTime(f: Pick<FrameView, 'shotAt' | 'tzOffset'>, withDate = false): string {
+	// Frames added afterwards, without a time, are stored at 0.
+	if (!f.shotAt) return '—';
+	const d = new Date(f.shotAt + f.tzOffset * 60_000);
+	const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }).toLowerCase();
+	if (!withDate) return time;
+	return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}, ${time}`;
+}
+
+/** Round a coordinate to about 100 m: rough location, as asked. */
+export const roughCoord = (v: number) => Math.round(v * 1000) / 1000;
+
+/** The next frame to shoot: after the highest logged, or past the rewind point on a reloaded roll. */
+export function nextFrameNumber(frames: Pick<FrameView, 'number'>[], rewoundAtFrame: number | null): number {
+	const top = frames.reduce((m, f) => Math.max(m, f.number), 0);
+	// Reloading a rewound roll: wind on past the last frame plus one spare.
+	if (rewoundAtFrame && top <= rewoundAtFrame) return rewoundAtFrame + 2;
+	return top + 1;
 }
 
 export interface RollEventView {

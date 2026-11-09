@@ -12,16 +12,18 @@ import labels from '../data/film-labels.json';
 import { nextCode, STAGES, type RollStatus } from '../lib/lab/inventory';
 import { labConfig } from '../lib/lab/server/config';
 import { getDb, type LabDb } from '../lib/lab/server/db/client';
-import { camera, filmStock, lab, lens, roll, rollEvent, serviceLog } from '../lib/lab/server/db/schema';
+import { camera, filmStock, frame, lab, lens, roll, rollEvent, serviceLog } from '../lib/lab/server/db/schema';
 import {
 	deskRolls,
 	guessCamera,
 	guessStock,
 	listCameras,
+	listFrames,
 	listLabs,
 	listLenses,
 	listStocks,
 	rollViews,
+	sameName,
 } from '../lib/lab/server/inventory';
 import { getFilmRolls, isMonochrome } from '../utils/film';
 
@@ -108,6 +110,57 @@ async function loadRoll(d: LabDb, userId: string, rollId: string) {
 const oneView = async (d: LabDb, userId: string, rollId: string) => (await rollViews(d, userId, [rollId]))[0];
 
 const stageIndex = (s: string) => (s === 'lost' ? 99 : STAGES.indexOf(s as (typeof STAGES)[number]));
+
+/**
+ * What it takes to give the logbook every camera, stock and lab that
+ * film-labels.json names (plus `extra` tokens). Rows match by token, or by
+ * name when they were added by hand, in which case they adopt the token
+ * instead of getting a duplicate. Returns token → id maps and the writes.
+ */
+async function planCatalogue(d: LabDb, userId: string, extra: { stocks: string[]; cameras: string[]; labs: string[] }) {
+	const [stocks, cams, labsHave] = await Promise.all([
+		d.select({ id: filmStock.id, token: filmStock.token, name: filmStock.name }).from(filmStock).where(eq(filmStock.userId, userId)),
+		d.select({ id: camera.id, token: camera.token, name: camera.name }).from(camera).where(eq(camera.userId, userId)),
+		d.select({ id: lab.id, token: lab.token, name: lab.name }).from(lab).where(eq(lab.userId, userId)),
+	]);
+	const writes: unknown[] = [];
+	const counts = { stocks: 0, cameras: 0, labs: 0, adopted: 0 };
+
+	function plan<R>(
+		kind: 'stocks' | 'cameras' | 'labs',
+		rows: { id: string; token: string | null; name: string }[],
+		table: typeof filmStock | typeof camera | typeof lab,
+		make: (token: string) => R & { name: string }
+	) {
+		const ids = new Map<string, string>();
+		for (const r of rows) if (r.token) ids.set(r.token, r.id);
+		const tokens = new Set([...Object.keys(labels[kind]), ...extra[kind]]);
+		const fresh: (R & { id: string; userId: string })[] = [];
+		for (const token of tokens) {
+			if (ids.has(token)) continue;
+			const row = make(token);
+			const handMade = rows.find((r) => !r.token && sameName(r.name, row.name));
+			if (handMade) {
+				ids.set(token, handMade.id);
+				handMade.token = token;
+				writes.push(d.update(table).set({ token }).where(eq(table.id, handMade.id)));
+				counts.adopted++;
+			} else {
+				const id = uid();
+				ids.set(token, id);
+				fresh.push({ ...row, id, userId });
+				counts[kind]++;
+			}
+		}
+		if (fresh.length) writes.push(d.insert(table).values(fresh as never));
+		return ids;
+	}
+
+	const stockIds = plan('stocks', stocks, filmStock, (t) => guessStock(t, isMonochrome));
+	const cameraIds = plan('cameras', cams, camera, (t) => guessCamera(t));
+	const labIds = plan('labs', labsHave, lab, (t) => ({ token: t, name: (labels.labs as Record<string, string>)[t] ?? t }));
+	return { stockIds, cameraIds, labIds, writes: writes as Parameters<LabDb['batch']>[0][number][], counts };
+}
 
 export const server = {
 	lab: {
@@ -308,8 +361,91 @@ export const server = {
 			handler: async ({ rollId }, context) => {
 				const { d, userId } = await session(context);
 				await loadRoll(d, userId, rollId);
-				await d.batch([d.delete(rollEvent).where(eq(rollEvent.rollId, rollId)), d.delete(roll).where(eq(roll.id, rollId))]);
+				await d.batch([
+					d.delete(frame).where(eq(frame.rollId, rollId)),
+					d.delete(rollEvent).where(eq(rollEvent.rollId, rollId)),
+					d.delete(roll).where(eq(roll.id, rollId)),
+				]);
 				return { ok: true };
+			},
+		}),
+
+		/* ---------- frames ---------- */
+
+		/**
+		 * Save frames from the phone (new, edited or deleted), matched by the
+		 * client id the phone gave each one. Safe to send twice: the offline
+		 * queue retries until it hears back. Returns every frame on those rolls.
+		 */
+		syncFrames: defineAction({
+			input: z.object({
+				frames: z
+					.array(
+						z.object({
+							clientId: z.string().min(8).max(64),
+							rollId: id,
+							number: z.number().int().min(-1).max(200),
+							shotAt: z.number().int().min(0),
+							tzOffset: z.number().int().min(-840).max(840),
+							cameraId: id.nullable(),
+							lensId: id.nullable(),
+							focalLength: z.number().int().min(1).max(2000).nullable(),
+							aperture: z.number().min(0.7).max(128).nullable(),
+							shutter: z.string().trim().max(12).nullable(),
+							flash: z.boolean(),
+							lat: z.number().min(-90).max(90).nullable(),
+							lng: z.number().min(-180).max(180).nullable(),
+							accuracy: z.number().int().min(0).max(100_000).nullable(),
+							note: text(500),
+							deleted: z.boolean().optional(),
+						})
+					)
+					.min(1)
+					.max(200),
+			}),
+			handler: async ({ frames }, context) => {
+				const { d, userId } = await session(context);
+				const rollIds = [...new Set(frames.map((f) => f.rollId))];
+				const owned = await d
+					.select({ id: roll.id, cameraId: roll.cameraId })
+					.from(roll)
+					.where(and(eq(roll.userId, userId), inArray(roll.id, rollIds)));
+				if (owned.length !== rollIds.length) throw notFound('roll');
+				for (const lensId of new Set(frames.map((f) => f.lensId).filter(Boolean))) await mine(d, lens, userId, lensId, 'lens');
+				for (const cameraId of new Set(frames.map((f) => f.cameraId).filter(Boolean))) await mine(d, camera, userId, cameraId, 'camera');
+				const rollCamera = new Map(owned.map((r) => [r.id, r.cameraId]));
+
+				const writes = frames.map(({ deleted, ...f }) => {
+					if (deleted) return d.delete(frame).where(and(eq(frame.userId, userId), eq(frame.clientId, f.clientId)));
+					const row = { ...f, cameraId: f.cameraId ?? rollCamera.get(f.rollId) ?? null, updatedAt: new Date() };
+					return d
+						.insert(frame)
+						.values({ id: uid(), userId, ...row })
+						.onConflictDoUpdate({ target: [frame.userId, frame.clientId], set: row });
+				});
+				await d.batch(writes as [(typeof writes)[number], ...(typeof writes)[number][]]);
+				return listFrames(d, userId, rollIds);
+			},
+		}),
+
+		/**
+		 * Rewound part-way (an SLR roll pulled to swap film): back to storage,
+		 * remembering the last frame so reloading can wind past it.
+		 */
+		rewindRoll: defineAction({
+			input: z.object({ rollId: id, afterFrame: z.number().int().min(0).max(200), on: day, storageSpot: text(60) }),
+			handler: async ({ rollId, afterFrame, on, storageSpot }, context) => {
+				const { d, userId } = await session(context);
+				const r = await loadRoll(d, userId, rollId);
+				if (r.status !== 'camera') throw bad('Only a roll that’s in a camera can be rewound.');
+				await d.batch([
+					d
+						.update(roll)
+						.set({ status: 'storage', statusOn: on, rewoundAtFrame: afterFrame, ...(storageSpot ? { storageSpot } : {}) })
+						.where(eq(roll.id, rollId)),
+					d.insert(rollEvent).values({ id: uid(), userId, rollId, status: 'storage', on, note: `Rewound after frame ${afterFrame}` }),
+				]);
+				return oneView(d, userId, rollId);
 			},
 		}),
 
@@ -516,38 +652,31 @@ export const server = {
 		 * named in film-labels.json, then one roll per desk roll ("Negatives
 		 * home", linked to its scans). Safe to run again: it skips what exists.
 		 */
+		/** Add the cameras, stocks and labs named in film-labels.json that the logbook lacks. */
+		syncCatalogue: defineAction({
+			handler: async (_input, context) => {
+				const { d, userId } = await session(context);
+				const plan = await planCatalogue(d, userId, { stocks: [], cameras: [], labs: [] });
+				if (plan.writes.length) await d.batch(plan.writes as [(typeof plan.writes)[number], ...(typeof plan.writes)[number][]]);
+				return { ...plan.counts, stocksList: await listStocks(d, userId) };
+			},
+		}),
+
 		importFromDesk: defineAction({
 			handler: async (_input, context) => {
 				const { d, userId } = await session(context);
-				const [stocks, cams, labsHave, linked, codes] = await Promise.all([
-					d.select({ id: filmStock.id, token: filmStock.token }).from(filmStock).where(and(eq(filmStock.userId, userId), isNotNull(filmStock.token))),
-					d.select({ id: camera.id, token: camera.token }).from(camera).where(and(eq(camera.userId, userId), isNotNull(camera.token))),
-					d.select({ id: lab.id, token: lab.token }).from(lab).where(and(eq(lab.userId, userId), isNotNull(lab.token))),
+				const [linked, codes] = await Promise.all([
 					d.select({ id: roll.publicRollId }).from(roll).where(and(eq(roll.userId, userId), isNotNull(roll.publicRollId))),
 					d.select({ code: roll.code }).from(roll).where(eq(roll.userId, userId)),
 				]);
-				const stockIds = new Map(stocks.map((s) => [s.token!, s.id]));
-				const cameraIds = new Map(cams.map((c) => [c.token!, c.id]));
-				const labIds = new Map(labsHave.map((l) => [l.token!, l.id]));
-
 				const desk = (await getFilmRolls()).filter((r) => !linked.some((l) => l.id === r.id));
 				// Every token the labels name, plus any a desk roll uses without a label.
-				const tokens = (kind: 'cameras' | 'stocks' | 'labs', field: 'camera' | 'stock' | 'lab') => [
-					...new Set([...Object.keys(labels[kind]), ...desk.map((r) => r.data[field])]),
-				];
-
-				const newStocks = tokens('stocks', 'stock')
-					.filter((t) => !stockIds.has(t))
-					.map((t) => ({ id: uid(), userId, ...guessStock(t, isMonochrome) }));
-				const newCameras = tokens('cameras', 'camera')
-					.filter((t) => !cameraIds.has(t))
-					.map((t) => ({ id: uid(), userId, ...guessCamera(t) }));
-				const newLabs = tokens('labs', 'lab')
-					.filter((t) => !labIds.has(t))
-					.map((t) => ({ id: uid(), userId, token: t, name: (labels.labs as Record<string, string>)[t] ?? t }));
-				for (const s of newStocks) stockIds.set(s.token, s.id);
-				for (const c of newCameras) cameraIds.set(c.token, c.id);
-				for (const l of newLabs) labIds.set(l.token, l.id);
+				const plan = await planCatalogue(d, userId, {
+					stocks: desk.map((r) => r.data.stock),
+					cameras: desk.map((r) => r.data.camera),
+					labs: desk.map((r) => r.data.lab),
+				});
+				const { stockIds, cameraIds, labIds } = plan;
 
 				const ordered = [...desk].sort(
 					(a, b) => a.data.developed.valueOf() - b.data.developed.valueOf() || a.id.localeCompare(b.id)
@@ -574,13 +703,11 @@ export const server = {
 				]);
 
 				const writes = [
-					...(newStocks.length ? [d.insert(filmStock).values(newStocks)] : []),
-					...(newCameras.length ? [d.insert(camera).values(newCameras)] : []),
-					...(newLabs.length ? [d.insert(lab).values(newLabs)] : []),
+					...plan.writes,
 					...(rolls.length ? [d.insert(roll).values(rolls), d.insert(rollEvent).values(events)] : []),
 				];
 				if (writes.length) await d.batch(writes as [(typeof writes)[number], ...(typeof writes)[number][]]);
-				return { stocks: newStocks.length, cameras: newCameras.length, labs: newLabs.length, rolls: rolls.length };
+				return { stocks: plan.counts.stocks, cameras: plan.counts.cameras, labs: plan.counts.labs, rolls: rolls.length };
 			},
 		}),
 	},

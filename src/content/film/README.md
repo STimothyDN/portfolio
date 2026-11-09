@@ -93,6 +93,7 @@ Already named, ready for your next folders (use the token in the folder name):
 | `samesamebutdifferent400` | Same Same But Different! 400 (Mr. Negative) |
 | `secretsauce100` | Secret Sauce 100 (Mr. Negative) |
 | `candido800` | Candido 800 |
+| `cinestill800t` | CineStill 800T (black canister, tungsten negative look) |
 | `lomocolor92` | Color '92 (Lomography) |
 | `lomocolor92sunkissed` | Color '92 Sun-kissed (Lomography) |
 

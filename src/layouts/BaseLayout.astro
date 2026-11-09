@@ -38,6 +38,8 @@ interface Props {
 	mobileDock?: boolean;
 	/** Mount the command palette (⌘K) and its desktop nav trigger. */
 	palette?: boolean;
+	/** No site nav or footer (the Film Lab's shooting mode on a phone). */
+	bare?: boolean;
 }
 
 // Which "world" is this page in? The photography section gets the editorial
@@ -60,6 +62,7 @@ const {
 	daylight = mainSite,
 	mobileDock = mainSite,
 	palette = mainSite,
+	bare = false,
 } = Astro.props;
 const observatory = sky === 'observatory';
 ---
@@ -67,6 +70,7 @@ const observatory = sky === 'observatory';
 <html lang="en" data-section={section}>
 	<head>
 		<MainHead title={title} description={description} noindex={noindex} />
+		<slot name="head" />
 	</head>
 	<body
 		data-sky={observatory ? 'observatory' : undefined}
@@ -85,9 +89,9 @@ const observatory = sky === 'observatory';
 			<canvas class="sky-gl" transition:persist="sky-gl"></canvas>
 			<canvas class="twinkling-stars" transition:persist="sky"></canvas>
 			<div class:list={['content', { 'has-mobile-dock': mobileDock }]}>
-				<Nav floating={immersive} dockBrand={dockBrand} mobileDock={mobileDock} palette={palette} />
+				{!bare && <Nav floating={immersive} dockBrand={dockBrand} mobileDock={mobileDock} palette={palette} />}
 				<slot />
-				{!immersive && <Footer />}
+				{!immersive && !bare && <Footer />}
 			</div>
 			{mobileDock && <MobileDock />}
 			{palette && <CommandPalette />}

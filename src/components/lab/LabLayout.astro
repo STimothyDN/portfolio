@@ -14,15 +14,18 @@ import { labConfig } from '../../lib/lab/server/config';
 interface Props {
 	title: string;
 	door?: boolean;
-	current?: 'home' | 'rolls' | 'fridge' | 'gear' | 'labs' | 'account';
+	/** Shooting mode: no site nav, footer or lab bar; the page draws its own. */
+	shoot?: boolean;
+	current?: 'home' | 'shoot' | 'rolls' | 'fridge' | 'gear' | 'labs' | 'account';
 }
 
-const { title, door = false, current } = Astro.props;
+const { title, door = false, shoot = false, current } = Astro.props;
 const { user, labConfigured } = Astro.locals;
 const config = labConfig();
 const missing = config.ok ? [] : config.missing;
 const tabs = [
 	['home', 'Light table', '/photography/lab/'],
+	['shoot', 'Shoot', '/photography/lab/shoot/'],
 	['rolls', 'Rolls', '/photography/lab/rolls/'],
 	['fridge', 'Fridge', '/photography/lab/fridge/'],
 	['gear', 'Gear', '/photography/lab/gear/'],
@@ -36,7 +39,17 @@ const initials = (user?.name ?? '')
 	.join('');
 ---
 
-<BaseLayout title={`${title} · Film Lab`} description="A private film logbook." noindex>
+<BaseLayout title={`${title} · Film Lab`} description="A private film logbook." noindex bare={shoot}>
+	<Fragment slot="head">
+		{/* Installable as its own app (Add to Home Screen), opening on shooting mode. */}
+		<link rel="manifest" href="/photography/lab/manifest.webmanifest" />
+		<link rel="apple-touch-icon" href="/photography/lab/apple-touch-icon.png" />
+		<meta name="apple-mobile-web-app-title" content="Film Lab" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="theme-color" content="#000000" />
+	</Fragment>
 	<div class="lab" data-lab>
 		{
 			!labConfigured ? (
@@ -50,6 +63,10 @@ const initials = (user?.name ?? '')
 				</main>
 			) : door ? (
 				<main class="lab-door">
+					<slot />
+				</main>
+			) : shoot ? (
+				<main class="lab-shoot">
 					<slot />
 				</main>
 			) : (
@@ -84,6 +101,14 @@ const initials = (user?.name ?? '')
 		}
 	</div>
 </BaseLayout>
+
+<script>
+	// The service worker keeps lab pages (shooting mode above all) working with
+	// no signal. Scoped to /photography/lab/, so the public site never sees it.
+	if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+		navigator.serviceWorker.register('/photography/lab/sw.js', { scope: '/photography/lab/' }).catch(() => {});
+	}
+</script>
 
 <style is:global>
 	/* ---------- Film Lab: shared pieces (every class is lab- prefixed) ---------- */

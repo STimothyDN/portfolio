@@ -1,10 +1,20 @@
 ---
 import LabLayout from '../../../../components/lab/LabLayout.astro';
 import RollDetail from '../../../../components/lab/RollDetail.vue';
+import RollFrames from '../../../../components/lab/RollFrames.vue';
 import { todayInDurham } from '../../../../lib/lab/inventory';
 import { labConfig } from '../../../../lib/lab/server/config';
 import { getDb } from '../../../../lib/lab/server/db/client';
-import { deskRollPreview, listCameras, listStocks, rollByCode, rollViews, stepChoices } from '../../../../lib/lab/server/inventory';
+import {
+	deskRollPreview,
+	listCameras,
+	listFrames,
+	listLenses,
+	listStocks,
+	rollByCode,
+	rollViews,
+	stepChoices,
+} from '../../../../lib/lab/server/inventory';
 import { bunnyUrl } from '../../../../utils/bunny';
 
 export const prerender = false;
@@ -19,18 +29,25 @@ const data =
 				const d = await getDb(config.config);
 				const found = await rollByCode(d, user.id, code);
 				if (!found) return null;
-				const [choices, stocks, cameras, all, preview] = await Promise.all([
+				const [choices, stocks, cameras, all, preview, frames, lenses] = await Promise.all([
 					stepChoices(d, user.id),
 					listStocks(d, user.id),
 					listCameras(d, user.id),
 					rollViews(d, user.id),
 					found.roll.publicRollId ? deskRollPreview(found.roll.publicRollId) : Promise.resolve(null),
+					listFrames(d, user.id, [found.roll.id]),
+					listLenses(d, user.id),
 				]);
+				// Lenses that fit the roll's camera (plus any its frames already name).
+				const mount = cameras.find((c) => c.id === found.roll.camera?.id)?.mount?.trim().toLowerCase();
+				const used = new Set(frames.map((f) => f.lensId));
 				return {
 					...found,
 					choices,
 					stocks,
 					cameras: cameras.map((c) => ({ id: c.id, name: c.name })),
+					frames,
+					lenses: lenses.filter((l) => used.has(l.id) || (mount && l.mount.trim().toLowerCase() === mount)),
 					binderHints: [...new Set(all.map((r) => r.negativesAt).filter((v): v is string => !!v))].slice(0, 12),
 					desk: preview && {
 						id: preview.id,
@@ -53,6 +70,7 @@ if (user && config.ok && !data) Astro.response.status = 404;
 <LabLayout title={data ? data.roll.code : 'Roll not found'} current="rolls">
 	{
 		data ? (
+			<>
 			<RollDetail
 				client:load
 				roll={data.roll}
@@ -64,6 +82,18 @@ if (user && config.ok && !data) Astro.response.status = 404;
 				binderHints={data.binderHints}
 				today={todayInDurham()}
 			/>
+			<RollFrames
+				client:load
+				rollId={data.roll.id}
+				code={data.roll.code}
+				exposures={data.roll.exposures}
+				inCamera={data.roll.status === 'camera'}
+				cameraId={data.roll.camera?.id ?? null}
+				rewoundAtFrame={data.roll.rewoundAtFrame}
+				frames={data.frames}
+				lenses={data.lenses}
+			/>
+			</>
 		) : (
 			user && (
 				<section class="lab-hello">

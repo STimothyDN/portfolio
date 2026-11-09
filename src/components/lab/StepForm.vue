@@ -16,6 +16,10 @@
 					No cameras yet. <a class="lab-link" href="/photography/lab/gear/">Add one on the Gear page</a>.
 				</small>
 			</label>
+			<p v-if="roll.rewoundAtFrame" class="lab-notice">
+				Partly shot (rewound after frame {{ roll.rewoundAtFrame }}). Once it’s loaded, wind on to frame {{ roll.rewoundAtFrame + 2 }} with the
+				lens cap on before shooting.
+			</p>
 			<label class="lab-field">
 				<span>Rated at ISO</span>
 				<input id="step-iso" v-model="iso" class="lab-input" type="number" min="1" max="12800" inputmode="numeric" />

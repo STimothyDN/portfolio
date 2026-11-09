@@ -18,6 +18,7 @@
 					<span class="sr-only">Search rolls</span>
 					<input id="rolls-search" v-model="query" class="lab-input" type="search" placeholder="Search code, stock, camera, title" />
 				</label>
+				<a class="lab-btn lab-btn--quiet" href="/photography/lab/labels/">Print labels</a>
 				<button type="button" class="lab-btn" @click="adding = true">Add rolls</button>
 			</div>
 		</div>

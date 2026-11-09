@@ -18,12 +18,17 @@
 						</div>
 						<a class="lab-code" :href="`/photography/lab/rolls/${r.code}/`">{{ r.code }}</a>
 					</div>
-					<div class="frames" aria-hidden="true">
-						<i v-for="n in Math.min(r.exposures, 40)" :key="n"></i>
+					<div class="frames" :title="`${r.frameCount} of ${r.exposures} frames logged`">
+						<i v-for="n in Math.min(r.exposures, 40)" :key="n" :class="{ shot: n <= r.frameCount }"></i>
 					</div>
 					<div class="lcard-foot">
-						<span class="lab-meta">Loaded {{ formatDay(r.statusOn, false) }} · {{ formatDays(daysBetween(r.statusOn, today)) }}</span>
-						<button type="button" class="lab-btn lab-btn--quiet" @click="openStep(r, 'shot')">Roll finished</button>
+						<span class="lab-meta">
+							<b class="count">{{ r.frameCount }}</b> / {{ r.exposures }} logged · loaded {{ formatDays(daysBetween(r.statusOn, today)) }}{{ daysBetween(r.statusOn, today) > 0 ? ' ago' : '' }}
+						</span>
+						<span class="lab-actions">
+							<a class="lab-btn lab-btn--quiet" :href="`/photography/lab/shoot/?roll=${r.code}`">Log frames</a>
+							<button type="button" class="lab-btn lab-btn--quiet" @click="openStep(r, 'shot')">Roll finished</button>
+						</span>
 					</div>
 				</article>
 			</div>
@@ -350,7 +355,7 @@ function onDrop(e: DragEvent, stage: Stage) {
 	align-self: start;
 }
 
-/* The roll as a strip of unexposed frames (frame logging fills them in, phase 3). */
+/* The roll as a strip of frames; logged ones show as exposed negative. */
 .frames {
 	position: relative;
 	display: flex;
@@ -383,6 +388,15 @@ function onDrop(e: DragEvent, stage: Stage) {
 	height: 14px;
 	border-radius: 1px;
 	background: var(--lab-film-frame);
+}
+
+.frames i.shot {
+	background: oklch(63% 0.12 58);
+}
+
+.count {
+	color: var(--gray-0);
+	font-weight: 600;
 }
 
 .lcard-foot {

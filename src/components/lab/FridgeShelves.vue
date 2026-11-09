@@ -4,7 +4,10 @@
 			<p class="lab-meta">
 				{{ storage.length }} {{ storage.length === 1 ? 'roll' : 'rolls' }} across {{ stockCount }} {{ stockCount === 1 ? 'stock' : 'stocks' }}
 			</p>
-			<button type="button" class="lab-btn" @click="openAdd()">Add rolls</button>
+			<span class="lab-actions">
+				<a class="lab-btn lab-btn--quiet" href="/photography/lab/labels/">Print canister labels</a>
+				<button type="button" class="lab-btn" @click="openAdd()">Add rolls</button>
+			</span>
 		</div>
 
 		<p v-if="!storage.length" class="lab-empty">
@@ -27,6 +30,7 @@
 						<FilmCanister :stock="g.stock.token ?? g.stock.id" :stock-label="g.stock.name" :stock-brand="g.stock.brand" />
 					</span>
 					<span class="n">×{{ g.rolls.length }}</span>
+					<span v-if="g.rolls.some((r) => r.rewoundAtFrame)" class="x warn">partly shot</span>
 					<span class="x" :class="{ warn: g.note?.expired, soon: g.note?.soon }">{{ g.note?.text ?? 'no date' }}</span>
 				</button>
 			</div>
@@ -50,7 +54,10 @@
 						<li v-for="r in g.rolls" :key="r.id">
 							<a class="lab-code" :href="`/photography/lab/rolls/${r.code}/`">{{ r.code }}</a>
 							<div class="lab-grow">
-								<span class="lab-mono">{{ expiryNote(r.expires, today)?.text ?? 'no expiry date' }}</span>
+								<span class="lab-mono">
+									{{ expiryNote(r.expires, today)?.text ?? 'no expiry date' }}
+									<span v-if="r.rewoundAtFrame" class="lab-chip lab-chip--warn">partly shot · to frame {{ r.rewoundAtFrame }}</span>
+								</span>
 								<span class="lab-meta">{{ [r.priceCents != null ? formatMoney(r.priceCents) : null, r.purchasedFrom, r.purchasedOn ? formatDay(r.purchasedOn) : null].filter(Boolean).join(' · ') }}</span>
 							</div>
 							<button type="button" class="lab-btn lab-btn--quiet" @click="loadRoll = r">Load into a camera</button>
@@ -86,6 +93,15 @@
 				</div>
 				<button type="button" class="lab-btn lab-btn--quiet" @click="editing = 'new'">Add film stock</button>
 			</header>
+			<div v-if="deskNames.length" class="lab-notice desk-sync">
+				<p>
+					Named on the film desk but not in your logbook yet: <b>{{ deskNames.join(', ') }}</b>. Adding them keeps the logbook and
+					the desk using the same names (any you already added by hand are matched, not duplicated).
+				</p>
+				<button type="button" class="lab-btn lab-btn--quiet" :disabled="busy" @click="syncNames">
+					Add {{ deskNames.length === 1 ? deskNames[0] : `these ${deskNames.length}` }}
+				</button>
+			</div>
 			<div class="table-wrap">
 				<table>
 					<thead>
@@ -143,10 +159,12 @@ const props = defineProps<{
 	totals: Record<string, number>;
 	choices: StepChoices;
 	shops: string[];
+	deskNames: string[];
 	today: string;
 }>();
 
 const storage = ref<RollView[]>([...props.storage]);
+const deskNames = ref<string[]>([...props.deskNames]);
 const stockList = ref<StockView[]>([...props.stocks]);
 const totals = ref<Record<string, number>>({ ...props.totals });
 const open = ref<string | null>(null);
@@ -225,6 +243,20 @@ function stockDeleted(id: string) {
 function loaded(view: RollView) {
 	storage.value = storage.value.filter((r) => r.id !== view.id);
 	loadRoll.value = null;
+}
+
+async function syncNames() {
+	busy.value = true;
+	error.value = '';
+	try {
+		const r = await run(actions.lab.syncCatalogue());
+		stockList.value = r.stocksList;
+		deskNames.value = [];
+	} catch (e) {
+		error.value = (e as Error).message;
+	} finally {
+		busy.value = false;
+	}
 }
 
 async function moveGroup(ids: string[]) {
@@ -386,6 +418,18 @@ async function moveGroup(ids: string[]) {
 
 .table-wrap {
 	overflow-x: auto;
+}
+
+.desk-sync {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem 1.25rem;
+}
+
+.desk-sync p {
+	flex: 1 1 22rem;
 }
 
 table {

@@ -145,8 +145,15 @@
 			<header>
 				<h2 id="so-h" class="lab-h2">This device</h2>
 			</header>
+			<p v-if="unsynced" class="lab-notice" role="alert">
+				{{ unsynced }} {{ unsynced === 1 ? 'frame or move' : 'frames or moves' }} from shooting mode haven’t synced yet. Open
+				<a class="lab-link" href="/photography/lab/shoot/">shooting mode</a> while online to send them, or sign out anyway (they stay on this
+				phone and send next time you sign in).
+			</p>
 			<div class="lab-actions">
-				<button type="button" class="lab-btn lab-btn--ghost" :disabled="busy" @click="signOut">Sign out</button>
+				<button type="button" class="lab-btn lab-btn--ghost" :disabled="busy" @click="signOut">
+					{{ unsynced ? 'Sign out anyway' : 'Sign out' }}
+				</button>
 			</div>
 		</section>
 	</div>
@@ -156,6 +163,7 @@
 import { nextTick, ref } from 'vue';
 
 import { authClient, deviceLabel, friendlyError, labPost } from '../../lib/lab/auth-client';
+import { clearLabCaches, pendingCount } from '../../lib/lab/offline';
 import type { InviteSummary, PasskeySummary } from '../../lib/lab/server/plugin';
 import RecoveryCodes from './RecoveryCodes.vue';
 
@@ -282,9 +290,17 @@ const revoke = (id: string) =>
 		inviteList.value = (inviteList.value ?? []).map((inv) => (inv.id === id ? { ...inv, status: 'revoked' } : inv));
 	}, inviteError);
 
+const unsynced = ref(0);
+
 async function signOut() {
+	// Frames logged offline that haven't reached the server yet would stay on this phone.
+	if (!unsynced.value) {
+		unsynced.value = await pendingCount().catch(() => 0);
+		if (unsynced.value) return;
+	}
 	busy.value = true;
 	await authClient.signOut();
+	await clearLabCaches().catch(() => {});
 	location.assign('/photography/lab/sign-in/');
 }
 </script>
