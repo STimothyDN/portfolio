@@ -2,8 +2,10 @@
 
 The private film logbook at **`/photography/lab`**: passkey sign-in (phase 1), the
 inventory (phase 2: cameras, lenses, film stocks, labs, and every roll from the fridge to
-the negative binder), and shooting mode on the phone (phase 3: per-frame logging that works
-with no signal, QR roll labels, rewinding part-way).
+the negative binder), shooting mode on the phone (phase 3: per-frame logging that works
+with no signal, QR roll labels, rewinding part-way), and the way back to the portfolio
+(phase 4: logged settings in the public film desk's lightbox, a Publish button, and
+`upload-film --roll`).
 
 ## The pages
 
@@ -71,6 +73,57 @@ The rest of the site is unchanged and still fully prerendered. Only the lab's pa
 `/api/auth/*` run as a Vercel function (through `@astrojs/vercel`), so visitors never touch
 the database.
 
+## On the portfolio
+
+Every roll that's on the public film desk has an **On the portfolio** card on its page.
+It decides what the desk's lightbox shows for that roll's scans:
+
+- **Exposure:** aperture, shutter, lens (or focal length) and the speed the roll was
+  rated at (the box speed unless it was pushed or pulled).
+- **Frame notes** as captions, on scans that have no caption of their own.
+- **Place to show:** one place, in your words, for the whole roll ("Durham, NC"). A
+  frame's GPS position never leaves the lab.
+
+All three start off. The card previews the line as the lightbox will show it. Only the
+owner's rolls reach the portfolio.
+
+**Lining frames up with scans.** Scans rarely start at frame 1: labs scan frame 0 or 00,
+or skip a blank. The strip on the roll's page shows the logged settings under each scan.
+**Scan 1 is frame ‹ N ›** shifts the whole roll until they match, and the count beside it
+("5 of 5 logged frames line up") says how many logged frames land on a scan. For a
+one-off, like a blank skipped mid-roll, edit that frame in the Frames table and pin it to
+its scan. A pin wins over the shift.
+
+**Publishing.** The film desk is prerendered, so changes go live when the site rebuilds.
+Save the card, then press **Publish to portfolio**. It calls a Vercel deploy hook (see
+step 6 of *Going live*), and the desk shows the change a minute or two later. You can
+publish once a minute. In `npm run dev` there's nothing to publish: the desk reads the
+local logbook on every page load.
+
+`src/lib/lab/server/published.ts` does the reading while `/photography/` is built. On
+Vercel it reads production. A plain local `npm run build` skips it, so a build on your
+laptop never reaches production; `FILM_LAB_BUILD_DATA=1 npm run build` opts in (and
+reads whatever `TURSO_DATABASE_URL` points at). If the read fails or takes longer than
+8 seconds, the desk builds without it and the build log says why.
+
+### Uploading scans for a logbook roll
+
+```bash
+npm run upload-film -- ~/Downloads/scans --roll R-047 --dry-run
+npm run upload-film -- ~/Downloads/scans --roll R-047 [--developed 2026-11-08] [--title "Eno River in fog"]
+```
+
+With `--roll` the folder can have any name. The camera, stock and lab come from the
+logbook roll, and so does the title (or "R-047 · Kodak Gold 200" when the roll has none).
+The developed date is `--developed`, else the day the roll reached "Scans in", else
+today. After uploading, it links the roll to its new desk roll and moves it to **Scans
+in** if it wasn't there yet. A camera, stock or lab you added by hand gets a folder token
+made from its name, saved back to the logbook.
+
+It reads the logbook from `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in `.env`.
+`FILM_LAB_UPLOAD_DB=file:.data/film-lab.db` points it at the local database instead.
+`--dry-run` reads the scans but uploads, writes and links nothing.
+
 ## Running it locally
 
 ```bash
@@ -131,6 +184,12 @@ You need a free [Turso](https://turso.tech) account. These are one-time steps.
 After step 4 the setup code stops working. You can delete `FILM_LAB_SETUP_TOKEN` from
 Vercel if you like.
 
+6. **The Publish button.** In Vercel, open Project → Settings → Git → **Deploy Hooks** and
+   create a hook for the `main` branch (call it "Film Lab publish"). Add its URL as
+   `VERCEL_DEPLOY_HOOK_URL` (Production, marked sensitive), then redeploy. Until then,
+   Publish says it isn't set up. Anyone with the URL can trigger a rebuild, so keep it
+   out of the repo. Previews never publish.
+
 ## How sign-in works
 
 - **Passkeys only.** No passwords and no email sending. Better Auth stores sessions in
@@ -171,6 +230,9 @@ Vercel if you like.
 | `src/lib/lab/server/inventory.ts`     | logbook reads, desk import helpers, lab turnaround           |
 | `src/lib/lab/inventory.ts`            | shared types, stages, dates, money, push/pull, expiry        |
 | `src/lib/lab/offline.ts`              | the phone's outbox (IndexedDB) and its sync                  |
+| `src/lib/lab/alignment.ts`            | which frame each scan is, and what a frame shows publicly    |
+| `src/lib/lab/server/published.ts`     | the build-time read of what the film desk shows              |
+| `scripts/lib/logbook.mjs`             | the logbook lookups behind `upload-film --roll`              |
 | `public/photography/lab/`             | service worker, web app manifest, icons                      |
 
 ## Changing the schema

@@ -3,6 +3,7 @@ import { type CollectionEntry, getCollection } from 'astro:content';
 import labels from '../data/film-labels.json';
 import { frameExposure, negativeProfileKey } from '../components/film/negative';
 import type { FilmPhotoData, FilmRollData } from '../components/film/types';
+import type { PublishedExposures } from '../lib/lab/server/published';
 
 export type FilmRoll = CollectionEntry<'film'>;
 type LabelKind = 'cameras' | 'stocks' | 'labs';
@@ -69,7 +70,10 @@ const PREVIEW_FRAMES = 3;
 const exposureOf = (photo: FilmRoll['data']['photos'][number]) => (photo.tone ? frameExposure(photo.tone) : 0);
 
 /** Compact island props for the film desk: rolls plus every frame on them. */
-export function toFilmDeskData(rolls: FilmRoll[]): { rolls: FilmRollData[]; photos: FilmPhotoData[] } {
+export function toFilmDeskData(
+	rolls: FilmRoll[],
+	published?: PublishedExposures
+): { rolls: FilmRollData[]; photos: FilmPhotoData[] } {
 	const rollData = rolls.map((roll): FilmRollData => {
 		const { data } = roll;
 		// Strip previews: the roll's favorite frames in frame order. Among equally
@@ -109,8 +113,9 @@ export function toFilmDeskData(rolls: FilmRoll[]): { rolls: FilmRollData[]; phot
 		};
 	});
 
-	const photos = rolls.flatMap((roll, r) =>
-		roll.data.photos.map(
+	const photos = rolls.flatMap((roll, r) => {
+		const shared = published?.get(roll.id);
+		return roll.data.photos.map(
 			(photo, i): FilmPhotoData => ({
 				r,
 				f: photo.filename,
@@ -120,9 +125,10 @@ export function toFilmDeskData(rolls: FilmRoll[]): { rolls: FilmRollData[]; phot
 				n: i + 1,
 				x: exposureOf(photo),
 				...(photo.caption ? { c: photo.caption } : {}),
+				...(shared?.has(photo.filename) ? { e: shared.get(photo.filename) } : {}),
 			})
-		)
-	);
+		);
+	});
 
 	return { rolls: rollData, photos };
 }

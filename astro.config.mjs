@@ -22,6 +22,8 @@ export default defineConfig({
       BETTER_AUTH_SECRET: envField.string({ context: 'server', access: 'secret', optional: true }),
       BETTER_AUTH_URL: envField.string({ context: 'server', access: 'secret', optional: true }),
       FILM_LAB_SETUP_TOKEN: envField.string({ context: 'server', access: 'secret', optional: true }),
+      // Vercel deploy hook the lab's "Publish to portfolio" button calls.
+      VERCEL_DEPLOY_HOOK_URL: envField.string({ context: 'server', access: 'secret', optional: true }),
     },
   },
   vite: {

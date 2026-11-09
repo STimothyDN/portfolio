@@ -76,6 +76,10 @@ function toRollView({ roll: r, stock, cameraId, cameraName, labId, labName, fram
 		notes: r.notes,
 		rewoundAtFrame: r.rewoundAtFrame,
 		frameCount: Number(frameCount ?? 0),
+		shareExposure: r.shareExposure,
+		sharePlace: r.sharePlace,
+		shareNotes: r.shareNotes,
+		firstScanFrame: r.firstScanFrame,
 	};
 }
 
@@ -98,6 +102,7 @@ const frameSelect = {
 	lng: frame.lng,
 	accuracy: frame.accuracy,
 	note: frame.note,
+	scanFilename: frame.scanFilename,
 };
 
 export async function listFrames(d: LabDb, userId: string, rollIds: string[]): Promise<FrameView[]> {

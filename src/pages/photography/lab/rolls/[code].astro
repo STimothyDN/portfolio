@@ -17,6 +17,8 @@ import {
 	stepChoices,
 } from '../../../../lib/lab/server/inventory';
 import { bunnyUrl } from '../../../../utils/bunny';
+import { publish } from '../../../../lib/lab/server/db/schema';
+import { desc, eq } from 'drizzle-orm';
 
 export const prerender = false;
 
@@ -40,6 +42,7 @@ const data =
 					listLenses(d, user.id),
 					found.roll.publicRollId ? deskRollStrip(found.roll.publicRollId) : Promise.resolve(null),
 				]);
+				const [last] = await d.select({ at: publish.at }).from(publish).where(eq(publish.userId, user.id)).orderBy(desc(publish.at)).limit(1);
 				// Lenses that fit the roll's camera (plus any its frames already name).
 				const mount = cameras.find((c) => c.id === found.roll.camera?.id)?.mount?.trim().toLowerCase();
 				const used = new Set(frames.map((f) => f.lensId));
@@ -49,9 +52,13 @@ const data =
 					stocks,
 					cameras: cameras.map((c) => ({ id: c.id, name: c.name })),
 					frames,
+					lensNames: Object.fromEntries(lenses.map((l) => [l.id, l.name])),
+					lastPublished: last ? last.at.toISOString() : null,
+					scanFiles: strip ? strip.scans.map((s) => s.path.split('/').at(-1)!) : [],
 					strip: strip && {
 						profile: strip.profile,
 						scans: strip.scans.map((s) => ({
+							file: s.path.split('/').at(-1)!,
 							src: bunnyUrl(s.path, { width: 360, format: 'webp', quality: 70 }),
 							full: bunnyUrl(s.path, { width: 2400, quality: 85 }),
 							frame: s.frame,
@@ -95,7 +102,9 @@ if (user && config.ok && !data) Astro.response.status = 404;
 				binderHints={data.binderHints}
 				today={todayInDurham()}
 				strip={data.strip}
-				frames={data.frames.map((f) => ({ number: f.number, aperture: f.aperture, shutter: f.shutter, flash: f.flash }))}
+				frames={data.frames}
+				lensNames={data.lensNames}
+				lastPublished={data.lastPublished}
 			/>
 			<RollFrames
 				client:load
@@ -107,6 +116,8 @@ if (user && config.ok && !data) Astro.response.status = 404;
 				rewoundAtFrame={data.roll.rewoundAtFrame}
 				frames={data.frames}
 				lenses={data.lenses}
+				scanFiles={data.scanFiles}
+				firstScanFrame={data.roll.firstScanFrame}
 			/>
 			</>
 		) : (

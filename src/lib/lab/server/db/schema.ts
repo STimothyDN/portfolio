@@ -314,6 +314,15 @@ export const roll = sqliteTable(
 		publicRollId: text('public_roll_id'),
 		/** Rewound mid-roll after this frame; reloading winds past it. */
 		rewoundAtFrame: integer('rewound_at_frame'),
+		// On the public film desk (Phase 4). Nothing is shared until switched on.
+		/** Show each frame's aperture, shutter, lens and rated speed in the lightbox. */
+		shareExposure: integer('share_exposure', { mode: 'boolean' }).notNull().default(false),
+		/** The place to show for this roll ("Durham, NC"); null shows none. Exact spots never leave the lab. */
+		sharePlace: text('share_place'),
+		/** Show frame notes as lightbox captions. */
+		shareNotes: integer('share_notes', { mode: 'boolean' }).notNull().default(false),
+		/** The frame number of the lab's first scan (0 when the lab scanned a frame 0/00). */
+		firstScanFrame: integer('first_scan_frame').notNull().default(1),
 		notes: text('notes'),
 		createdAt: createdAt(),
 		updatedAt: updatedAt(),
@@ -372,10 +381,25 @@ export const frame = sqliteTable(
 		lng: real('lng'),
 		accuracy: integer('accuracy'),
 		note: text('note'),
+		/** Pinned to this scan (filename on the desk), overriding the roll's alignment. */
+		scanFilename: text('scan_filename'),
 		createdAt: createdAt(),
 		updatedAt: updatedAt(),
 	},
 	(t) => [uniqueIndex('frame_user_client_idx').on(t.userId, t.clientId), index('frame_roll_idx').on(t.rollId)]
+);
+
+/** Every press of "Publish to portfolio" (it triggers a Vercel deploy hook). */
+export const publish = sqliteTable(
+	'publish',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		at: integer('at', { mode: 'timestamp_ms' }).notNull(),
+		status: text('status').notNull(),
+		note: text('note'),
+	},
+	(t) => [index('publish_user_idx').on(t.userId)]
 );
 
 /** The tables Better Auth's adapter needs, keyed by its model names. */

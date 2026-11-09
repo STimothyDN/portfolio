@@ -1,4 +1,5 @@
 import type { NegativeProfileKey } from './negative';
+import type { PublicExposure } from '../../lib/lab/alignment';
 
 /** Facets the film desk can filter on. `roll` is driven by the roll strip. */
 export type FacetKey = 'roll' | 'camera' | 'stock' | 'lab' | 'year';
@@ -56,4 +57,6 @@ export interface FilmPhotoData {
 	n: number;
 	x: number;
 	c?: string;
+	/** What the Film Lab logbook shares for this frame (exposure, lens, place, note). */
+	e?: PublicExposure;
 }

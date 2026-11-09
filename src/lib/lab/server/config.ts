@@ -11,6 +11,7 @@ import {
 	FILM_LAB_SETUP_TOKEN,
 	TURSO_AUTH_TOKEN,
 	TURSO_DATABASE_URL,
+	VERCEL_DEPLOY_HOOK_URL,
 } from 'astro:env/server';
 
 /** Local development database: a SQLite file, gitignored. */
@@ -30,6 +31,8 @@ export interface LabConfig {
 	/** Every origin allowed to run passkey ceremonies and call the auth API. */
 	origins: string[];
 	setupToken: string | undefined;
+	/** Vercel deploy hook for "Publish to portfolio" (production only). */
+	deployHook: string | undefined;
 	production: boolean;
 }
 
@@ -81,6 +84,7 @@ export function labConfig(): LabConfigResult {
 			origins: [...origins],
 			// Local development has a fixed setup code (its database is a local file).
 			setupToken: production ? FILM_LAB_SETUP_TOKEN : DEV_SETUP_TOKEN,
+			deployHook: production && !previewHost ? VERCEL_DEPLOY_HOOK_URL : undefined,
 			production,
 		},
 	});

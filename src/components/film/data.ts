@@ -1,7 +1,11 @@
+import type { PublicExposure } from '../../lib/lab/alignment';
 import type { FilmPhotoData } from './types';
 
-/** One scan as shipped to the island: [roll index, filename, width, height, priority, frame no., exposure, caption?]. */
-type PackedPhoto = [number, string, number, number, number, number, number, string?];
+/**
+ * One scan as shipped to the island: [roll index, filename, width, height,
+ * priority, frame no., exposure, caption?, logbook details?].
+ */
+type PackedPhoto = [number, string, number, number, number, number, number, string?, PublicExposure?];
 
 /**
  * Island props are serialized with a type tag around every value and every
@@ -12,14 +16,15 @@ export function packFilmPhotos(photos: FilmPhotoData[]): string {
 	return JSON.stringify(
 		photos.map((p): PackedPhoto => {
 			const row: PackedPhoto = [p.r, p.f, p.w ?? 0, p.h ?? 0, p.p, p.n, p.x];
-			if (p.c) row.push(p.c);
+			if (p.c || p.e) row.push(p.c ?? '');
+			if (p.e) row.push(p.e);
 			return row;
 		})
 	);
 }
 
 export function unpackFilmPhotos(json: string): FilmPhotoData[] {
-	return (JSON.parse(json) as PackedPhoto[]).map(([r, f, w, h, p, n, x, c]) => ({
+	return (JSON.parse(json) as PackedPhoto[]).map(([r, f, w, h, p, n, x, c, e]) => ({
 		r,
 		f,
 		w: w || undefined,
@@ -28,5 +33,6 @@ export function unpackFilmPhotos(json: string): FilmPhotoData[] {
 		n,
 		x,
 		...(c ? { c } : {}),
+		...(e ? { e } : {}),
 	}));
 }

@@ -20,6 +20,7 @@
 						<th scope="col">Lens</th>
 						<th scope="col">Taken</th>
 						<th scope="col">Where</th>
+						<th v-if="scanFiles.length" scope="col">Scan</th>
 						<th scope="col">Note</th>
 						<th scope="col"><span class="sr-only">Actions</span></th>
 					</tr>
@@ -34,14 +35,24 @@
 							<td>
 								<a v-if="f.lat != null && f.lng != null" class="lab-link" :href="mapUrl(f)" target="_blank" rel="noopener">map</a>
 							</td>
+							<td v-if="scanFiles.length" class="mono">
+								{{ scanOf(f) ? `scan ${scanOf(f)}` : '—' }}<span v-if="f.scanFilename" class="pin"> · pinned</span>
+							</td>
 							<td class="note">{{ f.note }}</td>
 							<td class="acts">
 								<button type="button" class="lab-link" @click="startEdit(f)">Edit</button>
 							</td>
 						</tr>
 						<tr v-else class="edit-row">
-							<td colspan="7">
+							<td :colspan="scanFiles.length ? 8 : 7">
 								<FrameFields v-model="draft" :lenses="lenses" />
+								<label v-if="scanFiles.length" class="lab-field pin-field">
+									<span>Scan</span>
+									<select :id="`pin-${f.clientId}`" v-model="draftPin" class="lab-input lab-select">
+										<option :value="null">Line up automatically{{ autoScan(f) ? ` (scan ${autoScan(f)})` : '' }}</option>
+										<option v-for="(file, i) in scanFiles" :key="file" :value="file">Pin to scan {{ i + 1 }} · {{ file }}</option>
+									</select>
+								</label>
 								<div class="lab-actions">
 									<button type="button" class="lab-btn lab-btn--quiet" :disabled="busy" @click="save(f)">Save</button>
 									<button type="button" class="lab-btn lab-btn--quiet" @click="editing = null">Cancel</button>
@@ -51,7 +62,7 @@
 						</tr>
 					</template>
 					<tr v-if="adding" class="edit-row">
-						<td colspan="7">
+						<td :colspan="scanFiles.length ? 8 : 7">
 							<FrameFields v-model="draft" :lenses="lenses" />
 							<div class="lab-actions">
 								<button type="button" class="lab-btn lab-btn--quiet" :disabled="busy" @click="add">Add frame {{ draft.number }}</button>
@@ -68,7 +79,9 @@
 
 <script setup lang="ts">
 import { actions } from 'astro:actions';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+
+import { alignScans } from '../../lib/lab/alignment';
 
 import { run } from '../../lib/lab/client';
 import { formatExposure, frameTime, nextFrameNumber, type FrameInput, type FrameView, type LensView } from '../../lib/lab/inventory';
@@ -83,7 +96,39 @@ const props = defineProps<{
 	rewoundAtFrame: number | null;
 	frames: FrameView[];
 	lenses: LensView[];
+	scanFiles: string[];
+	firstScanFrame: number;
 }>();
+
+const firstScan = ref(props.firstScanFrame);
+const draftPin = ref<string | null>(null);
+
+/** Scan number (1-based) each frame lines up with, under the roll's alignment and pins. */
+const scanIndex = computed(() => {
+	const out = new Map<string, number>();
+	const aligned = alignScans(props.scanFiles, list.value, firstScan.value);
+	props.scanFiles.forEach((file, i) => {
+		const f = aligned.get(file);
+		if (f) out.set(f.clientId, i + 1);
+	});
+	return out;
+});
+const scanOf = (f: FrameView) => scanIndex.value.get(f.clientId) ?? null;
+/** Where it would land without a pin. */
+const autoScan = (f: FrameView) => {
+	const i = f.number - firstScan.value;
+	return i >= 0 && i < props.scanFiles.length ? i + 1 : null;
+};
+
+// The strip above (another island) moves the alignment; frames saved here move the strip.
+function onAlign(e: Event) {
+	const d = (e as CustomEvent<{ rollId: string; firstScanFrame: number }>).detail;
+	if (d.rollId === props.rollId) firstScan.value = d.firstScanFrame;
+}
+onMounted(() => window.addEventListener('lab:align', onAlign));
+onBeforeUnmount(() => window.removeEventListener('lab:align', onAlign));
+const announce = () =>
+	window.dispatchEvent(new CustomEvent('lab:frames', { detail: { rollId: props.rollId, frames: list.value } }));
 
 const list = ref<FrameView[]>([...props.frames]);
 const editing = ref<string | null>(null);
@@ -100,6 +145,7 @@ function startEdit(f: FrameView) {
 	adding.value = false;
 	editing.value = f.clientId;
 	draft.value = { number: f.number, aperture: f.aperture, shutter: f.shutter, lensId: f.lensId, flash: f.flash, note: f.note ?? '' };
+	draftPin.value = f.scanFilename;
 }
 
 function startAdd() {
@@ -121,6 +167,7 @@ async function send(frames: FrameInput[]) {
 	error.value = '';
 	try {
 		list.value = await run(actions.lab.syncFrames({ frames }));
+		announce();
 		return true;
 	} catch (e) {
 		error.value = (e as Error).message;
@@ -142,7 +189,20 @@ const applyDraft = (f: FrameInput): FrameInput => ({
 });
 
 async function save(f: FrameView) {
-	if (await send([applyDraft(fromView(f))])) editing.value = null;
+	if (!(await send([applyDraft(fromView(f))]))) return;
+	if (draftPin.value !== f.scanFilename) {
+		busy.value = true;
+		try {
+			list.value = await run(actions.lab.pinFrameScan({ frameId: f.id, scanFilename: draftPin.value }));
+			announce();
+		} catch (e) {
+			error.value = (e as Error).message;
+			return;
+		} finally {
+			busy.value = false;
+		}
+	}
+	editing.value = null;
 }
 
 async function remove(f: FrameView) {
@@ -229,6 +289,15 @@ th {
 	font-family: var(--font-mono);
 	font-size: 0.82rem;
 	white-space: nowrap;
+}
+
+.pin {
+	color: var(--lab-edge-text);
+}
+
+.pin-field {
+	margin-top: 0.75rem;
+	max-width: 32rem;
 }
 
 .note {

@@ -653,10 +653,18 @@ const toLightbox = (i: number) => {
 function buildLightboxRecord(i: number) {
 	const p = photos[i];
 	const roll = props.rolls[p.r];
+	// What the Film Lab logbook shares for this frame: settings in the lightbox's
+	// spec rows (the same ones a digital shoot's EXIF fills), the place, a note.
+	const e = p.e;
+	const hasExposure = !!(e && (e.a || e.s || e.l || e.fl || e.i));
 	return {
 		filename: p.f,
-		caption: p.c ?? '',
+		caption: p.c ?? e?.nt ?? '',
 		label: `${roll.title} — Frame ${p.n}`,
+		...(hasExposure
+			? { exif: { lens: e!.l, aperture: e!.a, shutterSpeed: e!.s, iso: e!.i, focalLength: e!.fl } }
+			: {}),
+		...(e?.pl ? { location: { name: e.pl } } : {}),
 		fullUrl: bunnyUrl(scanPath(i), { width: 2000, format: 'webp', quality: 90 }),
 		negative: `url(#${negativeFilterId(roll.negative, p.x)})`,
 		thumbUrl: thumbUrl(i),

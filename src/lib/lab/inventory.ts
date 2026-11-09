@@ -143,6 +143,12 @@ export interface RollView {
 	rewoundAtFrame: number | null;
 	/** Frames logged so far. */
 	frameCount: number;
+	/** Public film desk sharing (off until switched on). */
+	shareExposure: boolean;
+	sharePlace: string | null;
+	shareNotes: boolean;
+	/** Frame number of the lab's first scan. */
+	firstScanFrame: number;
 }
 
 export interface FrameView {
@@ -164,10 +170,12 @@ export interface FrameView {
 	lng: number | null;
 	accuracy: number | null;
 	note: string | null;
+	/** Pinned to this scan, overriding the roll's alignment. */
+	scanFilename: string | null;
 }
 
-/** What the phone sends: a frame by its client id, or its removal. */
-export type FrameInput = Omit<FrameView, 'id'> & { deleted?: boolean };
+/** What the phone sends: a frame by its client id, or its removal. (Scan pins are set separately.) */
+export type FrameInput = Omit<FrameView, 'id' | 'scanFilename'> & { deleted?: boolean };
 
 /* ---------- exposure ---------- */
 

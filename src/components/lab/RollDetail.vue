@@ -20,8 +20,10 @@
 			:stock-name="roll.stock.name"
 			:profile="strip?.profile ?? null"
 			:scans="strip?.scans ?? null"
-			:frames="frames"
+			:frames="framesList"
 			:exposures="roll.exposures"
+			:first-scan-frame="roll.firstScanFrame"
+			@shift="shiftScans"
 		/>
 
 		<div class="grid">
@@ -99,6 +101,14 @@
 
 			<!-- Details -->
 			<aside class="col-side">
+				<RollShare
+					v-if="roll.publicRollId && strip"
+					:key="roll.publicRollId"
+					:roll="roll"
+					:sample="shareSample"
+					:last-published="lastPublished"
+					@saved="roll = $event"
+				/>
 				<form class="lab-form details" @submit.prevent="saveDetails">
 					<h2 class="lab-h2">Details</h2>
 					<label class="lab-field">
@@ -182,7 +192,7 @@
 
 <script setup lang="ts">
 import { actions } from 'astro:actions';
-import { computed, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
 import { dollars, num, run } from '../../lib/lab/client';
 import {
@@ -195,6 +205,7 @@ import {
 	STATUS_LABEL,
 	STEP_VERB,
 	toCents,
+	type FrameView,
 	type RollEventView,
 	type RollStatus,
 	type RollView,
@@ -203,7 +214,9 @@ import {
 } from '../../lib/lab/inventory';
 import FilmCanister from '../film/FilmCanister.vue';
 import LabDialog from './LabDialog.vue';
+import RollShare from './RollShare.vue';
 import RollStrip from './RollStrip.vue';
+import { alignScans } from '../../lib/lab/alignment';
 import StepForm from './StepForm.vue';
 import type { NegativeProfileKey } from '../film/negative';
 
@@ -226,10 +239,39 @@ const props = defineProps<{
 	today: string;
 	strip: {
 		profile: NegativeProfileKey;
-		scans: { src: string; full: string; frame: number; w?: number; h?: number; exposure: number }[];
+		scans: { file: string; src: string; full: string; frame: number; w?: number; h?: number; exposure: number }[];
 	} | null;
-	frames: { number: number; aperture: number | null; shutter: string | null; flash: boolean }[];
+	frames: FrameView[];
+	lensNames: Record<string, string>;
+	lastPublished: string | null;
 }>();
+
+const framesList = ref<FrameView[]>([...props.frames]);
+
+/** The roll page's frames list (a separate island) saved a change: keep the strip in step. */
+function onFrames(e: Event) {
+	const d = (e as CustomEvent<{ rollId: string; frames: FrameView[] }>).detail;
+	if (d.rollId === props.roll.id) framesList.value = d.frames;
+}
+onMounted(() => window.addEventListener('lab:frames', onFrames));
+onBeforeUnmount(() => window.removeEventListener('lab:frames', onFrames));
+
+/** Shift which frame the lab's first scan is, and tell the frames list. */
+async function shiftScans(firstScanFrame: number) {
+	const view = await act(() => run(actions.lab.setFirstScanFrame({ rollId: roll.value.id, firstScanFrame })));
+	if (view) {
+		roll.value = view;
+		window.dispatchEvent(new CustomEvent('lab:align', { detail: { rollId: view.id, firstScanFrame: view.firstScanFrame } }));
+	}
+}
+
+/** The first frame that lines up with a scan, for the sharing preview. */
+const shareSample = computed(() => {
+	if (!props.strip) return null;
+	const aligned = alignScans(props.strip.scans.map((s) => s.file), framesList.value, roll.value.firstScanFrame);
+	const f = [...aligned.values()].find((x) => x.aperture != null || x.shutter != null) ?? [...aligned.values()][0];
+	return f ? { aperture: f.aperture, shutter: f.shutter, focalLength: f.focalLength, note: f.note, lensName: f.lensId ? (props.lensNames[f.lensId] ?? null) : null } : null;
+});
 
 const roll = ref<RollView>(props.roll);
 const events = ref<RollEventView[]>([...props.events]);
@@ -601,6 +643,12 @@ async function remove() {
 
 .link-form select {
 	max-width: 100%;
+}
+
+.col-side {
+	display: grid;
+	gap: 1.25rem;
+	align-content: start;
 }
 
 .details {

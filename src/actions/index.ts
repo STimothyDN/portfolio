@@ -12,7 +12,7 @@ import labels from '../data/film-labels.json';
 import { nextCode, STAGES, type RollStatus } from '../lib/lab/inventory';
 import { labConfig } from '../lib/lab/server/config';
 import { getDb, type LabDb } from '../lib/lab/server/db/client';
-import { camera, filmStock, frame, lab, lens, roll, rollEvent, serviceLog } from '../lib/lab/server/db/schema';
+import { camera, filmStock, frame, lab, lens, publish, roll, rollEvent, serviceLog } from '../lib/lab/server/db/schema';
 import {
 	deskRolls,
 	guessCamera,
@@ -446,6 +446,82 @@ export const server = {
 					d.insert(rollEvent).values({ id: uid(), userId, rollId, status: 'storage', on, note: `Rewound after frame ${afterFrame}` }),
 				]);
 				return oneView(d, userId, rollId);
+			},
+		}),
+
+		/* ---------- the public film desk (phase 4) ---------- */
+
+		/** What this roll shows in the public lightbox. */
+		updateSharing: defineAction({
+			input: z.object({ rollId: id, shareExposure: z.boolean(), sharePlace: text(80), shareNotes: z.boolean() }),
+			handler: async ({ rollId, ...set }, context) => {
+				const { d, userId } = await session(context);
+				await loadRoll(d, userId, rollId);
+				await d.update(roll).set(set).where(eq(roll.id, rollId));
+				return oneView(d, userId, rollId);
+			},
+		}),
+
+		/** Which frame the lab's first scan shows (0 when it scanned a frame 0 or 00). */
+		setFirstScanFrame: defineAction({
+			input: z.object({ rollId: id, firstScanFrame: z.number().int().min(-1).max(10) }),
+			handler: async ({ rollId, firstScanFrame }, context) => {
+				const { d, userId } = await session(context);
+				await loadRoll(d, userId, rollId);
+				await d.update(roll).set({ firstScanFrame }).where(eq(roll.id, rollId));
+				return oneView(d, userId, rollId);
+			},
+		}),
+
+		/** Pin a frame to a specific scan (or unpin it with null). */
+		pinFrameScan: defineAction({
+			input: z.object({ frameId: id, scanFilename: z.string().min(1).max(300).nullable() }),
+			handler: async ({ frameId, scanFilename }, context) => {
+				const { d, userId } = await session(context);
+				const [f] = await d
+					.select({ id: frame.id, rollId: frame.rollId })
+					.from(frame)
+					.where(and(eq(frame.id, frameId), eq(frame.userId, userId)));
+				if (!f) throw notFound('frame');
+				// One frame per scan: pinning here unpins whichever frame had it.
+				const writes = [
+					...(scanFilename
+						? [d.update(frame).set({ scanFilename: null }).where(and(eq(frame.rollId, f.rollId), eq(frame.scanFilename, scanFilename)))]
+						: []),
+					d.update(frame).set({ scanFilename }).where(eq(frame.id, frameId)),
+				];
+				await d.batch(writes as [(typeof writes)[number], ...(typeof writes)[number][]]);
+				return listFrames(d, userId, [f.rollId]);
+			},
+		}),
+
+		/**
+		 * Rebuild the public site so it picks up what the lab now shares, via
+		 * the Vercel deploy hook. Owner only, at most once a minute.
+		 */
+		publishSite: defineAction({
+			handler: async (_input, context) => {
+				const { d, userId } = await session(context);
+				if ((context.locals.user as { role?: string } | null)?.role !== 'owner') {
+					throw new ActionError({ code: 'FORBIDDEN', message: 'Only the owner can publish the portfolio.' });
+				}
+				const config = labConfig();
+				const hook = config.ok ? config.config.deployHook : undefined;
+				if (!hook) {
+					throw bad(
+						import.meta.env.PROD
+							? 'Publishing isn’t set up: add VERCEL_DEPLOY_HOOK_URL in Vercel and redeploy.'
+							: 'In local development the film desk reads the logbook live: just reload /photography/.'
+					);
+				}
+				const [last] = await d.select({ at: publish.at }).from(publish).where(eq(publish.userId, userId)).orderBy(desc(publish.at)).limit(1);
+				if (last && Date.now() - last.at.getTime() < 60_000) throw bad('Published less than a minute ago. The site is still rebuilding.');
+				const res = await fetch(hook, { method: 'POST' }).catch(() => null);
+				const ok = !!res?.ok;
+				const at = new Date();
+				await d.insert(publish).values({ id: uid(), userId, at, status: ok ? 'started' : 'failed', note: res ? `HTTP ${res.status}` : 'no response' });
+				if (!ok) throw new ActionError({ code: 'BAD_GATEWAY', message: 'Vercel didn’t accept the deploy hook. Check the URL in its settings.' });
+				return { at: at.toISOString() };
 			},
 		}),
 

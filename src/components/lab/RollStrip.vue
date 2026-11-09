@@ -2,6 +2,14 @@
 	<section class="strip-wrap" :class="[mode, { 'no-scans': !scans }]" :style="baseVars" aria-label="The roll as a strip of film">
 		<header class="strip-head">
 			<span class="lab-edge-print">{{ headline }}</span>
+			<!-- Line the logbook up with the lab's scans -->
+			<div v-if="scans && frames.length" class="align" role="group" aria-label="Line up frames with scans">
+				<span>Scan 1 is frame</span>
+				<button type="button" aria-label="Earlier frame" :disabled="firstScanFrame <= -1" @click="emit('shift', firstScanFrame - 1)">‹</button>
+				<b>{{ firstScanFrame === -1 ? '00' : firstScanFrame }}</b>
+				<button type="button" aria-label="Later frame" :disabled="firstScanFrame >= 10" @click="emit('shift', firstScanFrame + 1)">›</button>
+				<span class="matched">{{ matchedCount }} of {{ frames.length }} logged frames line up</span>
+			</div>
 			<div v-if="scans" class="mode" role="group" aria-label="Show the frames as">
 				<button type="button" :aria-pressed="mode === 'negative'" @click="mode = 'negative'">Negative</button>
 				<button type="button" :aria-pressed="mode === 'positive'" @click="mode = 'positive'">Positive</button>
@@ -28,8 +36,17 @@
 
 		<div ref="track" class="strip" tabindex="0" :aria-label="scans ? `${scans.length} scans; scroll sideways` : 'Frames on this roll'">
 			<template v-if="scans">
-				<a v-for="s in scans" :key="s.frame" class="frame" :href="s.full" target="_blank" rel="noopener" :style="{ '--ar': s.w && s.h ? `${s.w} / ${s.h}` : '3 / 2' }">
-					<span class="edge">{{ s.frame }} <span class="arrow">▸</span> {{ s.frame }}A</span>
+				<a
+					v-for="(s, i) in scans"
+					:key="s.frame"
+					class="frame"
+					:class="{ matched: aligned.has(s.file) }"
+					:href="s.full"
+					target="_blank"
+					rel="noopener"
+					:style="{ '--ar': s.w && s.h ? `${s.w} / ${s.h}` : '3 / 2' }"
+				>
+					<span class="edge">{{ edgeNo(s.file, i) }} <span class="arrow">▸</span> {{ edgeNo(s.file, i) }}A</span>
 					<span class="img">
 						<img :src="s.src" alt="" loading="lazy" decoding="async" :width="s.w" :height="s.h" />
 						<img
@@ -44,13 +61,14 @@
 							:style="{ filter: `url(#${negativeFilterId(profile, s.exposure)})` }"
 						/>
 					</span>
+					<span v-if="frames.length" class="exp"><template v-for="(part, i) in expParts(aligned.has(s.file) ? formatExposure(aligned.get(s.file)!) : '')" :key="i"><span v-if="i" class="sr-only"> · </span><span>{{ part }}</span></template></span>
 				</a>
 			</template>
 			<template v-else>
 				<div v-for="n in exposures" :key="n" class="frame" :class="{ shot: logged.has(n) }">
 					<span class="edge">{{ n }} <span class="arrow">▸</span> {{ n }}A</span>
 					<span class="img"><span class="latent-img"></span></span>
-					<span class="exp">{{ logged.get(n) ?? '' }}</span>
+					<span class="exp"><template v-for="(part, i) in expParts(logged.get(n) ?? '')" :key="i"><span v-if="i" class="sr-only"> · </span><span>{{ part }}</span></template></span>
 				</div>
 			</template>
 		</div>
@@ -60,10 +78,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 
+import { alignScans } from '../../lib/lab/alignment';
 import { formatExposure } from '../../lib/lab/inventory';
 import { negativeBaseVars, negativeFilter, negativeFilterId, type NegativeProfileKey } from '../film/negative';
 
 interface Scan {
+	file: string;
 	src: string;
 	full: string;
 	frame: number;
@@ -77,9 +97,19 @@ const props = defineProps<{
 	stockName: string;
 	profile: NegativeProfileKey | null;
 	scans: Scan[] | null;
-	frames: { number: number; aperture: number | null; shutter: string | null; flash: boolean }[];
+	frames: { number: number; aperture: number | null; shutter: string | null; flash: boolean; scanFilename?: string | null }[];
 	exposures: number;
+	firstScanFrame: number;
 }>();
+const emit = defineEmits<{ shift: [firstScanFrame: number] }>();
+
+const aligned = computed(() => (props.scans ? alignScans(props.scans.map((s) => s.file), props.frames, props.firstScanFrame) : new Map()));
+const matchedCount = computed(() => aligned.value.size);
+/** Edge numbers are frame numbers: the lab's first scan is frame `firstScanFrame` (00 prints as 00). */
+const edgeNo = (file: string, i: number) => {
+	const n = aligned.value.get(file)?.number ?? props.firstScanFrame + i;
+	return n === -1 ? '00' : String(n);
+};
 
 /* Scans open as negatives and print through to positives once (developing); then it's your call. */
 const mode = ref<'negative' | 'positive'>(props.scans ? 'negative' : 'positive');
@@ -92,6 +122,8 @@ const filters = computed(() => {
 });
 const baseVars = computed(() => (props.profile ? negativeBaseVars(props.profile) : {}));
 const logged = computed(() => new Map(props.frames.map((f) => [f.number, formatExposure(f)])));
+/** "f/8 · 1/125" → ["f/8", "1/125"], so a narrow frame can wrap between them. */
+const expParts = (line: string) => (line ? line.split(' · ') : []);
 const headline = computed(() =>
 	props.scans
 		? `${props.code} · ${props.stockName} · ${props.scans.length} scans`
@@ -131,6 +163,48 @@ onMounted(() => {
 	align-items: center;
 	justify-content: space-between;
 	gap: 0.5rem 1rem;
+}
+
+.align {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: var(--text-sm);
+	color: var(--gray-300);
+}
+
+.align button {
+	width: 1.9rem;
+	height: 1.9rem;
+	border: 1px solid var(--gray-700);
+	border-radius: 50%;
+	background: none;
+	color: var(--gray-0);
+	cursor: pointer;
+}
+
+.align button:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.align button:focus-visible {
+	outline: 2px solid var(--accent-regular);
+	outline-offset: 2px;
+}
+
+.align b {
+	min-width: 1.6rem;
+	font-family: var(--font-mono);
+	color: var(--gray-0);
+	text-align: center;
+}
+
+.matched {
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	color: var(--lab-edge-text);
 }
 
 .mode {
@@ -274,11 +348,23 @@ onMounted(() => {
 		linear-gradient(180deg, oklch(60% 0.12 55), oklch(50% 0.11 48));
 }
 
+/* Settings under the frame: as wide as the frame (never wider), wrapping
+   between aperture and shutter under narrow portrait scans. */
 .exp {
+	display: flex;
+	flex-wrap: wrap;
+	column-gap: 1ch;
+	width: 0;
+	min-width: 100%;
 	min-height: 1em;
 	font-family: var(--font-mono);
 	font-size: 0.6rem;
-	color: oklch(84% 0.02 80);
+	line-height: 1.35;
+	color: var(--ink);
+	transition: color 0.9s ease;
+}
+
+.exp > span {
 	white-space: nowrap;
 }
 

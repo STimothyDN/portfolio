@@ -23,8 +23,14 @@
  * Must be run with env vars loaded (`npm run upload-film`, which passes
  * --env-file=.env) — except with --dry-run, which uploads and writes nothing.
  *
+ * With --roll R-047 the folder can be named anything: the Film Lab logbook
+ * supplies the camera, film stock and lab, the develop date is the roll's
+ * "Scans in" date (or today), and afterwards the roll is linked to its scans
+ * and moved to "Scans in". Needs TURSO_DATABASE_URL in .env.
+ *
  * Usage:
  *   npm run upload-film -- <roll-folder | folder-of-rolls> [...more] [--title "Title"] [--force] [--dry-run]
+ *   npm run upload-film -- <any-folder> --roll R-047 [--title "Title"] [--developed 2026-11-08] [--dry-run]
  *
  * Examples:
  *   npm run upload-film -- ~/Pictures/Film/20261007_minoltax700_fuji400_fotoshoppe_downtowndurham --title "Downtown Durham"
@@ -38,6 +44,7 @@ import exifr from 'exifr';
 import { imageSize } from 'image-size';
 
 import { fileExists, naturalSort, uploadToBunny } from './lib/bunny-storage.mjs';
+import { linkUploadedRoll, openLogbook, rollForUpload } from './lib/logbook.mjs';
 import { rollJson } from './lib/roll-json.mjs';
 import { scanTone } from './lib/scan-tone.mjs';
 
@@ -120,6 +127,8 @@ function parseArgs(argv) {
 	let title;
 	let force = false;
 	let dryRun = false;
+	let rollCode;
+	let developed;
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
 		if (arg === '--force') force = true;
@@ -127,11 +136,20 @@ function parseArgs(argv) {
 		else if (arg === '--title') {
 			title = argv[++i];
 			if (!title || title.startsWith('--')) usageAndExit('--title requires a value.');
+		} else if (arg === '--roll') {
+			rollCode = argv[++i];
+			if (!rollCode || !/^R-?\d+$/i.test(rollCode)) usageAndExit('--roll takes a roll code, like R-047.');
+			rollCode = rollCode.toUpperCase().replace(/^R(\d)/, 'R-$1');
+		} else if (arg === '--developed') {
+			developed = argv[++i];
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(developed ?? '')) usageAndExit('--developed takes a date like 2026-11-08.');
 		} else if (arg.startsWith('--')) usageAndExit(`Unknown option "${arg}".`);
 		else paths.push(arg);
 	}
 	if (!paths.length) usageAndExit('Pass at least one folder.');
-	return { paths, title, force, dryRun };
+	if (rollCode && paths.length > 1) usageAndExit('--roll uploads one folder at a time.');
+	if (developed && !rollCode) usageAndExit('--developed only applies with --roll (otherwise the folder name has the date).');
+	return { paths, title, force, dryRun, rollCode, developed };
 }
 
 function requireEnv(name) {
@@ -324,9 +342,35 @@ async function processRoll(roll, { title, force, dryRun, storage, cdn }) {
 	return data;
 }
 
+/** --roll: the logbook names the roll instead of the folder. */
+async function rollFromLogbook(folderArg, code, { title, developed }) {
+	const folder = path.resolve(folderArg);
+	const info = await stat(folder).catch(() => null);
+	if (!info?.isDirectory()) usageAndExit(`${folderArg} is not a folder.`);
+	const db = openLogbook();
+	const entry = await rollForUpload(db, code);
+	const today = new Date().toLocaleDateString('en-CA');
+	const date = developed ?? entry.scannedOn ?? today;
+	const summary = cleanToken(title ?? entry.title ?? entry.code) || cleanToken(entry.code);
+	const parsed = parseRollName(`${date.replaceAll('-', '')}_${entry.cameraToken}_${entry.stockToken}_${entry.labToken}_${summary}`);
+	if (!parsed) usageAndExit(`Couldn't make a roll id from ${entry.code} (camera, stock or lab name has no letters?).`);
+	console.log(
+		`${entry.code}: ${entry.cameraName} · ${entry.stockName} · ${entry.labName} · developed ${date}${entry.publicRollId ? ` (already linked to ${entry.publicRollId})` : ''}`
+	);
+	return {
+		roll: { folder, ...parsed, summary: title ?? entry.title ?? entry.code },
+		title: title ?? entry.title ?? `${entry.code} · ${entry.stockName}`,
+		db,
+		entry,
+		labels: { cameras: [entry.cameraToken, entry.cameraName], stocks: [entry.stockToken, entry.stockName], labs: [entry.labToken, entry.labName] },
+		brand: entry.stockBrand,
+	};
+}
+
 async function main() {
-	const { paths, title, force, dryRun } = parseArgs(process.argv.slice(2));
-	const rolls = await findRolls(paths);
+	const { paths, title, force, dryRun, rollCode, developed } = parseArgs(process.argv.slice(2));
+	const fromLogbook = rollCode ? await rollFromLogbook(paths[0], rollCode, { title, developed }) : null;
+	const rolls = fromLogbook ? [fromLogbook.roll] : await findRolls(paths);
 	if (!rolls.length) usageAndExit('No roll folders to upload.');
 	if (title && rolls.length > 1) usageAndExit('--title only works when uploading a single roll.');
 
@@ -342,7 +386,7 @@ async function main() {
 	console.log(`${dryRun ? 'Checking' : 'Uploading'} ${rolls.length} roll(s)…\n`);
 	const written = [];
 	for (const roll of rolls) {
-		const data = await processRoll(roll, { title, force, dryRun, storage, cdn });
+		const data = await processRoll(roll, { title: fromLogbook?.title ?? title, force, dryRun, storage, cdn });
 		if (data) written.push(data);
 	}
 
@@ -357,8 +401,15 @@ async function main() {
 		]) {
 			labels[kind] ??= {};
 			if (labels[kind][key]) continue;
-			labels[kind][key] = COMMON_LABELS[kind][key] ?? humanizeToken(key);
+			// With --roll the logbook's own names win over guesses.
+			const logbookName = fromLogbook?.labels[kind]?.[0] === key ? fromLogbook.labels[kind][1] : null;
+			labels[kind][key] = logbookName ?? COMMON_LABELS[kind][key] ?? humanizeToken(key);
 			added.push(`${kind.slice(0, -1)} "${key}" → "${labels[kind][key]}"`);
+			// A stock whose name doesn't start with its brand needs the brand spelled out.
+			if (kind === 'stocks' && logbookName && fromLogbook.brand && !logbookName.toLowerCase().startsWith(fromLogbook.brand.toLowerCase())) {
+				labels.brands ??= {};
+				labels.brands[key] = fromLogbook.brand;
+			}
 		}
 	}
 	if (added.length && !dryRun) {
@@ -373,8 +424,19 @@ async function main() {
 		console.log(`${dryRun ? 'Would add' : 'Added'} display names to src/data/film-labels.json — check them:`);
 		for (const line of added) console.log(`  ${line}`);
 	}
+	if (fromLogbook && written.length) {
+		if (dryRun) console.log(`Would link ${fromLogbook.entry.code} to ${fromLogbook.roll.id} in the logbook.`);
+		else {
+			await linkUploadedRoll(fromLogbook.db, fromLogbook.entry, fromLogbook.roll.id, fromLogbook.roll.developed);
+			console.log(`Linked ${fromLogbook.entry.code} to ${fromLogbook.roll.id} in the logbook.`);
+		}
+	}
 	if (written.length) {
-		console.log('Next: review each roll\'s "title" (guessed from the folder summary), then commit and push.');
+		console.log(
+			fromLogbook
+				? 'Next: commit and push. Once the site rebuilds, the roll\'s page in the Film Lab can share its frames (On the portfolio → Publish).'
+				: 'Next: review each roll\'s "title" (guessed from the folder summary), then commit and push.'
+		);
 	}
 }
 
