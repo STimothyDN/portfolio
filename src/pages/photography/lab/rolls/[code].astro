@@ -14,10 +14,13 @@ import {
 	listLenses,
 	listStocks,
 	rollByCode,
+	scanMarks,
+	standing,
 	stepChoices,
 } from '../../../../lib/lab/server/inventory';
 import { bunnyUrl } from '../../../../utils/bunny';
 import { publish } from '../../../../lib/lab/server/db/schema';
+import { rollReport } from '../../../../lib/lab/server/report';
 import { desc, eq } from 'drizzle-orm';
 
 export const prerender = false;
@@ -32,7 +35,7 @@ const data =
 				const d = await getDb(config.config);
 				const found = await rollByCode(d, user.id, code);
 				if (!found) return null;
-				const [choices, stocks, cameras, hints, preview, frames, lenses, strip, [last]] = await Promise.all([
+				const [choices, stocks, cameras, hints, preview, frames, lenses, strip, [last], marksAll] = await Promise.all([
 					stepChoices(d, user.id, isOwner(user)),
 					listStocks(d, user.id),
 					listCameras(d, user.id),
@@ -42,7 +45,9 @@ const data =
 					listLenses(d, user.id),
 					found.roll.publicRollId ? deskRollStrip(found.roll.publicRollId) : Promise.resolve(null),
 					d.select({ at: publish.at }).from(publish).where(eq(publish.userId, user.id)).orderBy(desc(publish.at)).limit(1),
+					found.roll.publicRollId ? scanMarks(d, user.id, [found.roll.publicRollId]) : Promise.resolve({}),
 				]);
+				const marks: Record<string, number> = (found.roll.publicRollId && marksAll[found.roll.publicRollId]) || {};
 				// Lenses that fit the roll's camera (plus any its frames already name).
 				const mount = cameras.find((c) => c.id === found.roll.camera?.id)?.mount?.trim().toLowerCase();
 				const used = new Set(frames.map((f) => f.lensId));
@@ -65,8 +70,13 @@ const data =
 							w: s.w,
 							h: s.h,
 							exposure: s.exposure,
+							tone: s.tone,
+							keeper: standing(marks[s.path.split('/').at(-1)!], s.priority) >= 4,
+							mark: marks[s.path.split('/').at(-1)!] ?? null,
+							priority: s.priority,
 						})),
 					},
+					report: await rollReport(found.roll, found.events, marks),
 					lenses: lenses.filter((l) => used.has(l.id) || (mount && l.mount.trim().toLowerCase() === mount)),
 					binderHints: hints,
 					desk: preview && {
@@ -87,7 +97,7 @@ const data =
 if (user && config.ok && !data) Astro.response.status = 404;
 ---
 
-<LabLayout title={data ? data.roll.code : 'Roll not found'} current="rolls">
+<LabLayout title={data ? data.roll.code : 'Roll not found'} current="rolls" wide>
 	{
 		data ? (
 			<>
@@ -105,6 +115,7 @@ if (user && config.ok && !data) Astro.response.status = 404;
 				frames={data.frames}
 				lensNames={data.lensNames}
 				lastPublished={data.lastPublished}
+				report={data.report}
 			/>
 			<RollFrames
 				client:load

@@ -1,0 +1,270 @@
+---
+/**
+ * A close-up of one station on the bench (the fridge, the kit, the post).
+ * The station fills the mat; the rest of the bench shrinks to a mini-map at
+ * the side, each station still showing its count, so you always know where
+ * you are and get back in one tap. Opening a close-up from the bench grows
+ * the station into place (view transition names: room.css, `data-zone`).
+ */
+interface Props {
+	zone: 'fridge' | 'cameras' | 'post';
+	counts: Record<string, number>;
+	title: string;
+	lede?: string;
+}
+
+const { zone, counts, title, lede } = Astro.props;
+// The bench's loop, top row then bottom row (as laid out on the mat).
+const cells = [
+	{ key: 'fridge', label: 'Fridge', n: counts.storage ?? 0, href: '/photography/lab/fridge/' },
+	{ key: 'cameras', label: 'Cameras', n: counts.camera ?? 0, href: '/photography/lab/gear/' },
+	{ key: 'shot', label: 'Shot', n: counts.shot ?? 0, href: '/photography/lab/labs/' },
+	{ key: 'binder', label: 'Binder', n: counts.negatives ?? 0, href: '/photography/lab/rolls/' },
+	{ key: 'table', label: 'Light table', n: counts.scanned ?? 0, href: '/photography/lab/' },
+	{ key: 'post', label: 'At a lab', n: counts.lab ?? 0, href: '/photography/lab/labs/' },
+];
+---
+
+<div class="closeup">
+	<nav class="minimap" aria-label="The bench">
+		<a class="mm-back" href="/photography/lab/"><span aria-hidden="true">←</span> The bench</a>
+		<ol class="mm-grid">
+			{
+				cells.map((c) => (
+					<li>
+						<a
+							href={c.href}
+							class:list={['mm-cell', `mm-${c.key}`, { here: c.key === zone }]}
+							data-zone={c.key === zone ? undefined : c.key}
+							aria-current={c.key === zone ? 'page' : undefined}
+						>
+							<b>{c.n}</b>
+							<span>{c.label}</span>
+						</a>
+					</li>
+				))
+			}
+		</ol>
+	</nav>
+	<section class="panel" data-zone={zone} aria-labelledby="closeup-h">
+		<header class="panel-head">
+			<a class="back" href="/photography/lab/">The bench</a>
+			<span aria-hidden="true">/</span>
+			<h1 id="closeup-h" class="lab-title">{title}</h1>
+			{lede && <p class="lab-meta">{lede}</p>}
+		</header>
+		<slot />
+	</section>
+</div>
+
+<style>
+	.closeup {
+		display: grid;
+		gap: 1.25rem;
+	}
+
+	@media (min-width: 64em) {
+		.closeup {
+			grid-template-columns: 11.5rem minmax(0, 1fr);
+			align-items: start;
+			gap: 1.75rem;
+		}
+
+		.minimap {
+			position: sticky;
+			top: 1.5rem;
+		}
+	}
+
+	.minimap {
+		display: grid;
+		gap: 0.6rem;
+	}
+
+	.mm-back {
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--lab-edge-text);
+		text-decoration: none;
+	}
+
+	.mm-back:hover {
+		text-decoration: underline;
+	}
+
+	/* The bench in miniature: two rows of three, on the same cutting mat. */
+	.mm-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.35rem;
+		margin: 0;
+		padding: 0.5rem;
+		list-style: none;
+		border-radius: 0.6rem;
+		background:
+			linear-gradient(var(--lab-bench-grid) 1px, transparent 1px) 0 0 / 100% 0.75rem,
+			linear-gradient(90deg, var(--lab-bench-grid) 1px, transparent 1px) 0 0 / 0.75rem 100%,
+			var(--lab-bench);
+		box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--lab-bench-rule) 60%, transparent);
+	}
+
+	.mm-cell {
+		display: grid;
+		align-content: center;
+		justify-items: center;
+		gap: 0.05rem;
+		min-height: 3.1rem;
+		padding: 0.3rem 0.15rem;
+		border-radius: 0.35rem;
+		background: color-mix(in oklch, var(--lab-bench-deep) 85%, transparent);
+		color: var(--lab-bench-ink);
+		text-decoration: none;
+		text-align: center;
+	}
+
+	.mm-cell b {
+		font-family: var(--font-mono);
+		font-size: 0.95rem;
+		font-weight: 600;
+		line-height: 1;
+		color: var(--gray-0);
+	}
+
+	.mm-cell span {
+		font-family: var(--font-mono);
+		font-size: 0.56rem;
+		letter-spacing: 0.04em;
+		line-height: 1.1;
+	}
+
+	.mm-cell:hover {
+		background: var(--lab-card);
+	}
+
+	.mm-cell:focus-visible,
+	.mm-back:focus-visible,
+	.back:focus-visible {
+		outline: 2px solid var(--accent-regular);
+		outline-offset: 2px;
+	}
+
+	/* Each station in its own material, as on the bench. */
+	.mm-fridge {
+		background: linear-gradient(180deg, oklch(97% 0.014 230), oklch(91% 0.022 230));
+	}
+
+	.mm-post {
+		background: var(--lab-kraft);
+		color: var(--lab-kraft-ink);
+	}
+
+	.mm-post b {
+		color: inherit;
+	}
+
+	.mm-table {
+		background: var(--lab-table);
+		box-shadow: 0 0 0 2px oklch(80% 0.005 80);
+	}
+
+	.mm-cameras {
+		background: linear-gradient(180deg, oklch(28% 0.006 60), oklch(20% 0.006 60));
+		color: oklch(85% 0.01 80);
+	}
+
+	.mm-cameras b {
+		color: oklch(97% 0.01 80);
+	}
+
+	.mm-binder {
+		background: var(--lab-stage-negatives);
+		color: oklch(92% 0.01 270);
+	}
+
+	.mm-binder b {
+		color: oklch(99% 0 0);
+	}
+
+	:global(:root.theme-dark) .mm-fridge {
+		background: linear-gradient(180deg, oklch(32% 0.03 230), oklch(22% 0.025 230));
+		color: oklch(82% 0.03 230);
+	}
+
+	/* You are here: lit, as if held to the light. */
+	.mm-cell.here {
+		background: var(--lab-lit);
+		color: oklch(30% 0.01 60);
+		box-shadow:
+			0 0 0 2px var(--gray-0),
+			0 0 18px -4px var(--lab-lit-glow);
+	}
+
+	.mm-cell.here b {
+		color: oklch(20% 0.01 60);
+	}
+
+	/* The station itself, on the mat. */
+	.panel {
+		display: grid;
+		gap: clamp(1.5rem, 3vw, 2.5rem);
+		min-width: 0;
+		padding: clamp(1rem, 2.5vw, 2rem);
+		border-radius: 1rem;
+		background:
+			linear-gradient(var(--lab-bench-grid) 1px, transparent 1px) 0 0 / 100% 2.5rem,
+			linear-gradient(90deg, var(--lab-bench-grid) 1px, transparent 1px) 0 0 / 2.5rem 100%,
+			var(--lab-bench);
+		box-shadow:
+			inset 0 0 0 1px color-mix(in oklch, var(--lab-bench-rule) 60%, transparent),
+			0 30px 60px -40px oklch(20% 0.02 60 / 0.5);
+	}
+
+	.panel-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.3rem 0.6rem;
+	}
+
+	.panel-head > span {
+		color: var(--lab-bench-ink);
+	}
+
+	.back {
+		font-family: var(--font-brand);
+		font-style: italic;
+		font-size: var(--text-xl);
+		color: var(--lab-bench-ink);
+		text-decoration: none;
+	}
+
+	.back:hover {
+		text-decoration: underline;
+	}
+
+	.panel-head .lab-meta {
+		flex-basis: 100%;
+	}
+
+	@media (max-width: 63.99em) {
+		.mm-grid {
+			grid-template-columns: repeat(6, minmax(0, 1fr));
+		}
+
+		.mm-back {
+			display: none;
+		}
+	}
+
+	@media (max-width: 30em) {
+		.mm-cell span {
+			font-size: 0.5rem;
+		}
+
+		.panel {
+			margin-inline: -0.75rem;
+		}
+	}
+</style>

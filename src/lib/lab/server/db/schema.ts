@@ -445,5 +445,23 @@ export const labSetting = sqliteTable('lab_setting', {
 	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
+/**
+ * Grease-pencil marks on a roll's scans, made on its contact sheet in the lab:
+ * 1–5 (a keeper from 4), or -1 for a reject. Keyed by the scan on the public
+ * film desk (desk roll id + filename). The owner's marks set how close to the
+ * top of the desk's pile each print lands, from the next publish.
+ */
+export const scanMark = sqliteTable(
+	'scan_mark',
+	{
+		userId: owner(),
+		publicRollId: text('public_roll_id').notNull(),
+		filename: text('filename').notNull(),
+		mark: integer('mark').notNull(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+	},
+	(t) => [primaryKey({ columns: [t.userId, t.publicRollId, t.filename] })]
+);
+
 /** The tables Better Auth's adapter needs, keyed by its model names. */
 export const authSchema = { user, session, account, verification, passkey, rateLimit };

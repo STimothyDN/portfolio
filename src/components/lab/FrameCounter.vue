@@ -123,6 +123,8 @@ const marks = computed(() => {
 @media (prefers-reduced-motion: no-preference) {
 	.disc {
 		animation: wind 1.5s var(--d) cubic-bezier(0.3, 0.1, 0.15, 1) backwards;
+		/* Loading or finishing a roll on the bench winds it on (or back to S). */
+		transition: rotate 1.1s cubic-bezier(0.3, 0.1, 0.15, 1);
 	}
 
 	@keyframes wind {

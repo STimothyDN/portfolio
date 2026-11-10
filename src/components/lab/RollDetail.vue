@@ -5,15 +5,102 @@
 				<FilmCanister :stock="roll.stock.token ?? roll.stock.id" :stock-label="roll.stock.name" :stock-brand="roll.stock.brand" />
 			</div>
 			<div class="head-text">
-				<a class="lab-edge crumbs" href="/photography/lab/rolls/">← Rolls</a>
+				<a class="lab-edge crumbs" href="/photography/lab/rolls/">← The binder</a>
 				<span class="lab-code big-code">{{ roll.code }}</span>
 				<h1 class="lab-title">{{ roll.title || roll.stock.name }}</h1>
 				<p class="lab-meta lab-mono summary">
 					<span v-for="(part, i) in summary" :key="i">{{ part }}</span>
 				</p>
-				<span class="lab-chip stage-stamp" :class="{ 'lab-chip--warn': roll.status === 'lost' }">{{ stageLabel(roll.status, roll.labDelivery) }}</span>
+				<div class="head-actions">
+					<span class="lab-chip stage-stamp" :class="{ 'lab-chip--warn': roll.status === 'lost' }">{{ stageLabel(roll.status, roll.labDelivery) }}</span>
+					<button v-if="next" type="button" class="lab-btn" @click="openStep(next)">{{ stepVerb(next, roll.labDelivery) }}</button>
+					<button v-if="roll.status !== 'lost'" type="button" class="lab-btn lab-btn--quiet" @click="openStep('lost')">Mark lost or ruined</button>
+					<button v-if="events.length > 1" type="button" class="lab-link small" :disabled="busy" @click="undo">Undo last step</button>
+				</div>
 			</div>
 		</header>
+
+		<!-- The roll's own line: the six stations it goes through, dated (click a date to fix it). -->
+		<section class="lifeline-wrap" aria-labelledby="tl-h">
+			<h2 id="tl-h" class="sr-only">Where it’s been</h2>
+			<ol class="lifeline steps" :class="{ lost: roll.status === 'lost' }">
+				<li v-for="stage in STAGES" :key="stage" class="step" :class="[stepState(stage), `st-${stage}`]">
+					<span class="pip" aria-hidden="true">{{ stepState(stage) === 'done' ? '✓' : STAGES.indexOf(stage) + 1 }}</span>
+					<div class="step-body">
+						<span class="step-t">{{ stageLabel(stage, roll.labDelivery) }}</span>
+						<template v-for="ev in eventsFor(stage)" :key="ev.id">
+							<form v-if="editing === ev.id" class="ev-edit" @submit.prevent="saveEvent(ev.id)">
+								<input :id="`ev-on-${ev.id}`" v-model="evOn" class="lab-input" type="date" required aria-label="Date" />
+								<input :id="`ev-note-${ev.id}`" v-model="evNote" class="lab-input" type="text" maxlength="300" placeholder="Note" aria-label="Note" />
+								<span class="lab-actions">
+									<button type="submit" class="lab-btn lab-btn--quiet" :disabled="busy">Save</button>
+									<button type="button" class="lab-btn lab-btn--quiet" @click="editing = null">Cancel</button>
+								</span>
+							</form>
+							<button v-else type="button" class="step-d" :title="ev.note ?? 'Change the date'" @click="startEdit(ev)">
+								{{ formatDay(ev.on) }}<template v-if="ev.note"> · {{ ev.note }}</template>
+								<span class="edit" aria-hidden="true">edit</span>
+							</button>
+						</template>
+						<span v-if="stage === roll.status && stageDetail" class="step-x">{{ stageDetail }}</span>
+						<TrackingNumber v-if="stage === 'lab' && roll.trackingOut" class="step-track" :number="roll.trackingOut" :track="tracks[roll.trackingOut]" label="Outbound" />
+						<TrackingNumber v-if="stage === 'scanned' && roll.trackingBack" class="step-track" :number="roll.trackingBack" :track="tracks[roll.trackingBack]" label="Negatives coming back" />
+					</div>
+				</li>
+				<li v-if="roll.status === 'lost'" class="step now lost">
+					<span class="pip" aria-hidden="true">!</span>
+					<div class="step-body">
+						<span class="step-t">{{ STATUS_LABEL.lost }}</span>
+						<span v-for="ev in eventsFor('lost')" :key="ev.id" class="step-x">{{ formatDay(ev.on) }}<template v-if="ev.note"> · {{ ev.note }}</template></span>
+					</div>
+				</li>
+			</ol>
+		</section>
+
+		<!-- The report card: five numbers worth knowing about this roll. -->
+		<dl class="report" aria-label="This roll in numbers">
+			<div class="r-yield">
+				<dt>Yield</dt>
+				<dd>
+					<b>{{ report.yield.scans ?? report.yield.frames }}</b><small> of {{ report.yield.exposures }}</small>
+				</dd>
+				<dd class="sub">{{ report.yield.scans != null ? 'scans back' : report.yield.frames ? 'frames logged' : 'nothing logged yet' }}</dd>
+			</div>
+			<div class="r-keepers">
+				<dt>Keepers</dt>
+				<dd><b>{{ report.keepers ? report.keepers.n : '—' }}</b><small v-if="report.keepers?.of"> · {{ Math.round((report.keepers.n / report.keepers.of) * 100) }}%</small></dd>
+				<dd class="sub">{{ report.keepers ? 'rated four stars or more' : 'once its scans are in' }}</dd>
+			</div>
+			<div class="r-density">
+				<dt>Density</dt>
+				<dd>
+					<b>{{ report.density ? (report.density.roll / 100).toFixed(2) : '—' }}</b>
+					<small v-if="report.density?.lift != null" class="lift" :class="{ warn: report.density.lift >= 3, good: report.density.lift <= -2 }">
+						{{ report.density.lift > 0 ? '+' : report.density.lift < 0 ? '−' : '±' }}{{ (Math.abs(report.density.lift) / 100).toFixed(2) }} vs usual
+					</small>
+				</dd>
+				<dd class="sub">
+					<template v-if="!report.density">black point, once scans are in</template>
+					<template v-else-if="report.density.lift == null">black point; too few other rolls of this film to compare</template>
+					<template v-else>black point vs this film elsewhere: {{ report.density.lift >= 3 ? 'thinner' : report.density.lift <= -2 ? 'denser' : 'typical' }}</template>
+				</dd>
+			</div>
+			<div class="r-cost">
+				<dt>A frame cost</dt>
+				<dd><b>{{ report.cost?.perFrameCents != null ? formatMoney(report.cost.perFrameCents) : '—' }}</b></dd>
+				<dd class="sub">{{ report.cost ? `${formatMoney(report.cost.totalCents)} in all` : 'add the film and lab prices' }}</dd>
+			</div>
+			<div class="r-days">
+				<dt>Days</dt>
+				<dd>
+					<span v-if="Object.keys(report.days).length" class="days-bar" aria-hidden="true">
+						<i v-for="(d, k) in report.days" :key="k" :style="{ flexGrow: Math.max(0.4, d ?? 0), '--c': `var(--lab-stage-${DAY_STAGE[k]})` }">{{ d }}</i>
+					</span>
+					<b v-else>—</b>
+				</dd>
+				<dd class="sub">{{ Object.keys(report.days).length ? Object.keys(report.days).map((k) => DAY_LABEL[k as keyof typeof DAY_LABEL]).join(' · ') : 'from loading to filing' }}</dd>
+			</div>
+		</dl>
 
 		<RollStrip
 			:code="roll.code"
@@ -23,54 +110,13 @@
 			:frames="framesList"
 			:exposures="roll.exposures"
 			:first-scan-frame="roll.firstScanFrame"
+			:roll-id="roll.id"
 			@shift="shiftScans"
+			@marked="(n: number) => (report.keepers = report.keepers ? { ...report.keepers, n } : report.keepers)"
 		/>
 
 		<div class="grid">
 			<div class="col-main">
-				<!-- Timeline -->
-				<section class="lab-section" aria-labelledby="tl-h">
-					<header><h2 id="tl-h" class="lab-h2">Where it’s been</h2></header>
-					<ol class="steps">
-						<li v-for="stage in STAGES" :key="stage" class="step" :class="stepState(stage)">
-							<span class="pip" aria-hidden="true">{{ stepState(stage) === 'done' ? '✓' : STAGES.indexOf(stage) + 1 }}</span>
-							<div class="step-body">
-								<span class="step-t">{{ stageLabel(stage, roll.labDelivery) }}</span>
-								<template v-for="ev in eventsFor(stage)" :key="ev.id">
-									<form v-if="editing === ev.id" class="ev-edit" @submit.prevent="saveEvent(ev.id)">
-										<input :id="`ev-on-${ev.id}`" v-model="evOn" class="lab-input" type="date" required aria-label="Date" />
-										<input :id="`ev-note-${ev.id}`" v-model="evNote" class="lab-input" type="text" maxlength="300" placeholder="Note" aria-label="Note" />
-										<button type="submit" class="lab-btn lab-btn--quiet" :disabled="busy">Save</button>
-										<button type="button" class="lab-btn lab-btn--quiet" @click="editing = null">Cancel</button>
-									</form>
-									<span v-else class="step-d">
-										{{ formatDay(ev.on) }}<template v-if="ev.note"> · {{ ev.note }}</template>
-										<button type="button" class="lab-link edit" @click="startEdit(ev)">edit</button>
-									</span>
-								</template>
-								<span v-if="stage === roll.status && stageDetail" class="step-d">{{ stageDetail }}</span>
-								<TrackingNumber v-if="stage === 'lab' && roll.trackingOut" class="step-track" :number="roll.trackingOut" :track="tracks[roll.trackingOut]" label="Outbound" />
-								<TrackingNumber v-if="stage === 'scanned' && roll.trackingBack" class="step-track" :number="roll.trackingBack" :track="tracks[roll.trackingBack]" label="Negatives coming back" />
-								<div v-if="stage === roll.status" class="lab-actions step-actions">
-									<button v-if="next" type="button" class="lab-btn" @click="openStep(next)">{{ stepVerb(next, roll.labDelivery) }}</button>
-									<button type="button" class="lab-btn lab-btn--quiet" @click="openStep('lost')">Mark lost or ruined</button>
-									<button v-if="events.length > 1" type="button" class="lab-link small" :disabled="busy" @click="undo">Undo last step</button>
-								</div>
-							</div>
-						</li>
-						<li v-if="roll.status === 'lost'" class="step now lost">
-							<span class="pip" aria-hidden="true">!</span>
-							<div class="step-body">
-								<span class="step-t">{{ STATUS_LABEL.lost }}</span>
-								<span v-for="ev in eventsFor('lost')" :key="ev.id" class="step-d">{{ formatDay(ev.on) }}<template v-if="ev.note"> · {{ ev.note }}</template></span>
-								<div class="lab-actions step-actions">
-									<button type="button" class="lab-link small" :disabled="busy" @click="undo">Undo</button>
-								</div>
-							</div>
-						</li>
-					</ol>
-				</section>
-
 				<!-- Scans -->
 				<section class="lab-section" aria-labelledby="scans-h">
 					<header>
@@ -237,6 +283,7 @@ import {
 	daysBetween,
 	formatDay,
 	formatDays,
+	formatMoney,
 	nextStage,
 	pushPull,
 	STAGES,
@@ -262,6 +309,10 @@ import StepForm from './StepForm.vue';
 import TrackingNumber from './TrackingNumber.vue';
 import { useTracks } from '../../lib/lab/use-tracks';
 import type { NegativeProfileKey } from '../film/negative';
+import type { RollReport } from '../../lib/lab/server/report';
+
+const DAY_STAGE = { camera: 'camera', waiting: 'shot', lab: 'lab', filing: 'scanned' } as const;
+const DAY_LABEL = { camera: 'camera', waiting: 'waiting', lab: 'lab', filing: 'to file' } as const;
 
 interface DeskPreview {
 	id: string;
@@ -282,14 +333,17 @@ const props = defineProps<{
 	today: string;
 	strip: {
 		profile: NegativeProfileKey;
-		scans: { file: string; src: string; full: string; frame: number; w?: number; h?: number; exposure: number }[];
+		scans: { file: string; src: string; full: string; frame: number; w?: number; h?: number; exposure: number; tone?: [number, number, number] | null; keeper?: boolean; mark?: number | null; priority?: number }[];
 	} | null;
 	frames: FrameView[];
 	lensNames: Record<string, string>;
 	lastPublished: string | null;
+	report: RollReport;
 }>();
 
 const framesList = ref<FrameView[]>([...props.frames]);
+/** The report card, kept here so marking keepers updates it. */
+const report = ref<RollReport>({ ...props.report });
 
 /** The roll page's frames list (a separate island) saved a change: keep the strip in step. */
 function onFrames(e: Event) {
@@ -811,15 +865,260 @@ async function remove() {
 }
 
 .step-d {
+	justify-self: start;
+	padding: 0;
+	border: 0;
+	background: none;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	color: var(--gray-300);
+	text-align: left;
+	cursor: pointer;
+}
+
+.step-d:hover {
+	color: var(--gray-0);
+}
+
+.step-d:focus-visible {
+	outline: 2px solid var(--accent-regular);
+	outline-offset: 2px;
+}
+
+.step-x {
+	font-size: var(--text-sm);
+	color: var(--gray-200);
+}
+
+.edit {
+	margin-left: 0.4rem;
+	font-family: var(--font-body);
+	font-size: 0.72rem;
+	text-decoration: underline;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+.step-d:hover .edit,
+.step-d:focus-visible .edit {
+	opacity: 0.8;
+}
+
+@media (pointer: coarse) {
+	.edit {
+		opacity: 0.7;
+	}
+}
+
+/* ---- the head's actions, and the report card ---- */
+.head-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.75rem;
+	margin-top: 0.35rem;
+}
+
+.lifeline-wrap {
+	min-width: 0;
+}
+
+.report {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: 0;
+	margin: 0;
+	border-radius: 0.7rem;
+	background: var(--lab-card);
+	box-shadow:
+		0 0 0 1px var(--gray-800),
+		var(--lab-lift-0);
+	overflow: hidden;
+}
+
+.report > div {
+	display: grid;
+	align-content: start;
+	gap: 0.15rem;
+	padding: 0.85rem 1rem 0.9rem;
+	border-left: 1px solid var(--gray-800);
+	min-width: 0;
+}
+
+.report > div:first-child {
+	border-left: 0;
+}
+
+.report dt {
+	font-family: var(--font-mono);
+	font-size: 0.64rem;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--lab-edge-text);
+}
+
+.report dd {
+	margin: 0;
+}
+
+.report b {
+	font-family: var(--font-brand);
+	font-size: var(--text-2xl);
+	font-weight: 500;
+	line-height: 1.1;
+	font-variant-numeric: tabular-nums;
+}
+
+.report small {
 	font-family: var(--font-mono);
 	font-size: 0.75rem;
 	color: var(--gray-300);
 }
 
-.edit {
-	margin-left: 0.5rem;
-	font-family: var(--font-body);
-	font-size: var(--text-sm);
+.report small.lift {
+	margin-left: 0.35rem;
+}
+
+.report small.warn {
+	color: var(--lab-warn);
+}
+
+.report small.good {
+	color: var(--lab-ok);
+}
+
+.report .sub {
+	font-size: 0.78rem;
+	line-height: 1.3;
+	color: var(--gray-300);
+	text-wrap: pretty;
+}
+
+.days-bar {
+	display: flex;
+	gap: 2px;
+	height: 1.9rem;
+	margin-top: 0.15rem;
+}
+
+.days-bar i {
+	display: grid;
+	place-items: center;
+	min-width: 1.4rem;
+	border-top: 3px solid var(--c);
+	background: color-mix(in oklch, var(--c) 22%, transparent);
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	font-style: normal;
+}
+
+@media (max-width: 56em) {
+	.report {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.report > div {
+		border-left: 0;
+		border-top: 1px solid var(--gray-800);
+	}
+
+	.report > div:nth-child(-n + 2) {
+		border-top: 0;
+	}
+
+	.report > div:nth-child(even) {
+		border-left: 1px solid var(--gray-800);
+	}
+
+	.r-days {
+		grid-column: 1 / -1;
+		border-left: 0 !important;
+	}
+}
+
+/*
+ * ---- On wide screens the line runs across the page: the six stations as
+ * frames on one strip of film, sprockets top and bottom. ----
+ */
+@media (min-width: 56em) {
+	.lifeline {
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		padding: 1.1rem 0.5rem 1rem;
+		border-radius: 4px;
+		background:
+			repeating-linear-gradient(90deg, oklch(84% 0.01 80) 0 6px, transparent 6px 13px) 0 0.3rem / 100% 4px no-repeat,
+			repeating-linear-gradient(90deg, oklch(84% 0.01 80) 0 6px, transparent 6px 13px) 0 calc(100% - 0.3rem) / 100% 4px no-repeat,
+			var(--lab-film);
+		box-shadow: var(--lab-lift-1);
+	}
+
+	.lifeline.lost {
+		grid-template-columns: repeat(7, minmax(0, 1fr));
+	}
+
+	.lifeline .step {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto 1fr;
+		gap: 0.45rem;
+		margin-inline: 0.2rem;
+		padding: 0.55rem 0.6rem 0.65rem;
+		border-radius: 2px;
+		background: var(--lab-film-frame);
+		color: oklch(88% 0.012 75);
+	}
+
+	.lifeline .step::before {
+		display: none;
+	}
+
+	.lifeline .pip {
+		justify-self: start;
+		width: 1.4rem;
+		height: 1.4rem;
+	}
+
+	.lifeline .step-t {
+		color: oklch(92% 0.01 80);
+		font-size: var(--text-base);
+	}
+
+	.lifeline .step.later .step-t {
+		color: oklch(66% 0.012 75);
+	}
+
+	.lifeline .step-d,
+	.lifeline .step-x {
+		color: oklch(78% 0.012 75);
+	}
+
+	.lifeline .step-d:hover {
+		color: oklch(97% 0.01 80);
+	}
+
+	/* The frame you're on: lit, held to the light. */
+	.lifeline .step.now {
+		background: var(--lab-lit);
+		color: oklch(22% 0.01 60);
+		box-shadow:
+			0 0 0 1px oklch(100% 0 0 / 0.4) inset,
+			0 0 24px -4px var(--lab-lit-glow);
+	}
+
+	.lifeline .step.now .step-t,
+	.lifeline .step.now .step-d,
+	.lifeline .step.now .step-x {
+		color: oklch(22% 0.01 60);
+	}
+
+	.lifeline .step.now .pip {
+		background: oklch(22% 0.01 60);
+		color: var(--lab-lit);
+		animation: none;
+	}
+
+	.lifeline .ev-edit {
+		display: grid;
+	}
 }
 
 .ev-edit {

@@ -1,6 +1,8 @@
 ---
 import FridgeShelves from '../../../components/lab/FridgeShelves.vue';
 import LabLayout from '../../../components/lab/LabLayout.astro';
+import BenchCloseup from '../../../components/lab/bench/BenchCloseup.astro';
+import { stageCounts } from '../../../lib/lab/server/bench';
 import labels from '../../../data/film-labels.json';
 import { todayInDurham } from '../../../lib/lab/inventory';
 import { isOwner, labConfig } from '../../../lib/lab/server/config';
@@ -12,6 +14,8 @@ export const prerender = false;
 
 const { user } = Astro.locals;
 const config = labConfig();
+// The mini-map's counts, read alongside the page's own data.
+const countsP = user && config.ok ? stageCounts(config.config, user.id) : Promise.resolve({});
 const data =
 	user && config.ok
 		? await (async () => {
@@ -51,18 +55,13 @@ const data =
 				};
 			})()
 		: null;
+const counts = await countsP;
 ---
 
-<LabLayout title="Fridge" current="fridge">
+<LabLayout title="Fridge" current="fridge" wide>
 	{
 		data && (
-			<>
-				<section class="lab-head">
-					<div>
-						<span class="lab-edge">Use oldest first</span>
-						<h1 class="lab-title">The fridge</h1>
-					</div>
-				</section>
+			<BenchCloseup zone="fridge" counts={counts} title="The fridge" lede="Unshot film, oldest dates in front. Drag a canister onto a camera on the bench to load it.">
 				<FridgeShelves
 					client:load
 					storage={data.storage}
@@ -74,7 +73,7 @@ const data =
 					forecast={data.forecast}
 					today={todayInDurham()}
 				/>
-			</>
+			</BenchCloseup>
 		)
 	}
 </LabLayout>

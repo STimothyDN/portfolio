@@ -12,7 +12,7 @@ import labels from '../data/film-labels.json';
 import { nextCode, STAGES, type RollStatus } from '../lib/lab/inventory';
 import { isOwner, labConfig } from '../lib/lab/server/config';
 import { getDb, type LabDb } from '../lib/lab/server/db/client';
-import { camera, filmStock, frame, lab, labSetting, lens, publish, roll, rollEvent, serviceLog } from '../lib/lab/server/db/schema';
+import { camera, filmStock, frame, lab, labSetting, lens, publish, roll, rollEvent, scanMark, serviceLog } from '../lib/lab/server/db/schema';
 import {
 	deskRolls,
 	guessCamera,
@@ -534,6 +534,41 @@ export const server = {
 				const key = config.ok ? config.config.trackingKey : undefined;
 				const mine = await ownNumbers(d, userId, [...new Set(numbers)]);
 				return { live: !!key, tracks: await trackNumbers(d, userId, mine, key) };
+			},
+		}),
+
+		/** A grease-pencil mark on one scan: 1–5 (a keeper from 4), -1 a reject, null to rub it out. */
+		markScan: defineAction({
+			input: z.object({ rollId: id, filename: z.string().min(1).max(200), mark: z.number().int().min(-1).max(5).nullable() }),
+			handler: async ({ rollId, filename, mark }, context) => {
+				const { d, userId } = await session(context);
+				const r = await loadRoll(d, userId, rollId);
+				if (!r.publicRollId) throw bad('This roll isn’t linked to its scans yet.');
+				const desk = (await getFilmRolls()).find((x) => x.id === r.publicRollId);
+				if (!desk?.data.photos.some((p) => p.filename === filename)) throw notFound('scan');
+				const key = and(eq(scanMark.userId, userId), eq(scanMark.publicRollId, r.publicRollId), eq(scanMark.filename, filename));
+				if (mark == null || mark === 0) await d.delete(scanMark).where(key);
+				else
+					await d
+						.insert(scanMark)
+						.values({ userId, publicRollId: r.publicRollId, filename, mark, updatedAt: new Date() })
+						.onConflictDoUpdate({ target: [scanMark.userId, scanMark.publicRollId, scanMark.filename], set: { mark, updatedAt: new Date() } });
+				return { filename, mark: mark || null };
+			},
+		}),
+
+		/** The ⌘K finder's index: every roll, briefly (read-only; asked for the first time it opens). */
+		paletteIndex: defineAction({
+			handler: async (_input, context) => {
+				const { d, userId } = await session(context);
+				const rolls = await d
+					.select({ code: roll.code, title: roll.title, status: roll.status, statusOn: roll.statusOn, stock: filmStock.name, camera: camera.name })
+					.from(roll)
+					.innerJoin(filmStock, eq(filmStock.id, roll.stockId))
+					.leftJoin(camera, eq(camera.id, roll.cameraId))
+					.where(eq(roll.userId, userId))
+					.orderBy(desc(roll.statusOn));
+				return { rolls };
 			},
 		}),
 

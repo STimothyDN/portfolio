@@ -30,6 +30,8 @@ export interface FrameRow {
 	ev: number | null;
 	scan: { thumb: string; n: number } | null;
 	thin: boolean;
+	/** Black point above the rest of its roll's (the scan's density against its neighbours), when scanned. */
+	lift: number | null;
 }
 
 export interface RollBrief {
@@ -37,6 +39,9 @@ export interface RollBrief {
 	title: string | null;
 	stock: string;
 	camera: string | null;
+	/** For the canister colour. */
+	token: string | null;
+	brand: string;
 }
 
 export interface ReviewPoint {
@@ -100,7 +105,7 @@ export async function framesPage(d: LabDb, userId: string, owner: boolean): Prom
 	for (const f of frames) {
 		const r = rollById.get(f.rollId);
 		if (!r) continue;
-		briefs[r.id] ??= { code: r.code, title: r.title, stock: r.stock.name, camera: r.camera?.name ?? null };
+		briefs[r.id] ??= { code: r.code, title: r.title, stock: r.stock.name, camera: r.camera?.name ?? null, token: r.stock.token, brand: r.stock.brand };
 		const iso = r.shotAtIso ?? r.stock.iso;
 		const t = shutterSeconds(f.shutter);
 		const ev = !f.flash && f.aperture && t && iso ? Math.round(ev100Of(f.aperture, t, iso) * 10) / 10 : null;
@@ -123,6 +128,7 @@ export async function framesPage(d: LabDb, userId: string, owner: boolean): Prom
 			ev,
 			scan: s ? { thumb: bunnyUrl(s.path, { width: 320, format: 'webp', quality: 65 }), n: s.n } : null,
 			thin,
+			lift: s?.tone ? Math.round((s.tone[0] - s.rollBlack) * 1000) / 1000 : null,
 		});
 		if (s?.tone) review.push({ id: f.id, code: r.code, number: f.number, camera: r.camera?.name ?? null, lens, ev, tone: s.tone, rollBlack: s.rollBlack });
 	}
@@ -144,7 +150,7 @@ export async function framesPage(d: LabDb, userId: string, owner: boolean): Prom
 let toneCache: { key: string; value: DeskTone } | null = null;
 
 /** Every desk scan's tone, by camera, film and lab, with what stands out. */
-function deskTone(desk: FilmRoll[]): DeskTone {
+export function deskTone(desk: FilmRoll[]): DeskTone {
 	const key = desk.map((r) => `${r.id}:${r.data.photos.length}`).join('|');
 	if (toneCache?.key === key) return toneCache.value;
 	const scans: DeskScan[] = desk.flatMap((r) =>

@@ -137,13 +137,15 @@ const props = defineProps<{
 	choices: StepChoices;
 	today: string;
 	binderHints?: string[];
+	/** What the bench already knows from where the roll was dropped (the camera it went onto, the lab's envelope). */
+	preset?: { cameraId?: string; labId?: string };
 }>();
 const emit = defineEmits<{ done: [roll: RollView]; cancel: [] }>();
 
 const on = ref(props.today);
-const cameraId = ref(props.roll.camera?.id ?? '');
+const cameraId = ref(props.preset?.cameraId ?? props.roll.camera?.id ?? '');
 const iso = ref<string | number>(props.roll.shotAtIso ?? props.roll.stock.iso ?? '');
-const labId = ref(props.roll.lab?.id ?? '');
+const labId = ref(props.preset?.labId ?? props.roll.lab?.id ?? '');
 const labOrder = ref(props.roll.labOrder ?? '');
 const cost = ref<string | number>(dollars(props.roll.devCostCents ?? props.choices.labs.find((l) => l.id === props.roll.lab?.id)?.costCents));
 const devNotes = ref(props.roll.devNotes ?? '');

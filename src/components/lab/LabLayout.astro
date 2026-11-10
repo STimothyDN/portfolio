@@ -7,31 +7,37 @@
  */
 import '@fontsource-variable/geist-mono';
 import '@fontsource/permanent-marker/400.css';
+import '../../styles/lab/index.css';
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { labConfig } from '../../lib/lab/server/config';
+import LabPalette from './LabPalette.vue';
 
 interface Props {
 	title: string;
 	door?: boolean;
 	/** Shooting mode: no site nav, footer or lab bar; the page draws its own. */
 	shoot?: boolean;
-	current?: 'home' | 'shoot' | 'rolls' | 'fridge' | 'gear' | 'labs' | 'account';
+	current?: 'home' | 'shoot' | 'rolls' | 'fridge' | 'gear' | 'labs' | 'account' | 'almanac';
+	/** The bench and its close-ups: the page spends the full width on the mat. */
+	wide?: boolean;
 }
 
-const { title, door = false, shoot = false, current } = Astro.props;
+const { title, door = false, shoot = false, current, wide = false } = Astro.props;
 const { user, labConfigured } = Astro.locals;
 const config = labConfig();
 const missing = config.ok ? [] : config.missing;
-// Each tab is a frame on a strip of film; the page you're on is the lit one.
-// Icons are 24-unit line drawings (stroke only).
-const tabs = [
-	['home', 'Light table', 'Table', '/photography/lab/', 'M3 5.5h18v13H3zM6.5 9h4.5v6H6.5zM13 9h4.5v6H13z'],
-	['shoot', 'Shoot', 'Shoot', '/photography/lab/shoot/', 'M3.5 8h3.5l2-2.5h6L17 8h3.5v11h-17zM12 16.5a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z'],
-	['rolls', 'Rolls', 'Rolls', '/photography/lab/rolls/', 'M8.5 3.5h5v2h-5zM7 5.5h8v15H7zM15 8.5h4v9h-4M7 10h8M7 16h8'],
-	['fridge', 'Fridge', 'Fridge', '/photography/lab/fridge/', 'M6 3h12v18H6zM6 10h12M9 5.5v2.5M9 12.5v3.5'],
-	['gear', 'Gear', 'Gear', '/photography/lab/gear/', 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM12 4v3.5M18.9 8 15.9 9.7'],
-	['labs', 'Labs', 'Labs', '/photography/lab/labs/', 'M8 3.5h8v3H8zM6.5 6.5h11v14h-11zM6.5 11h11M10 14.5h4'],
+/*
+ * Three places and a shutter button. The bench holds everything in motion
+ * (its fridge, kit and post are close-ups of it), the binder everything
+ * that's done, the almanac what it all adds up to. Icons are 24-unit line
+ * drawings (stroke only).
+ */
+const place = current === 'home' || current === 'fridge' || current === 'gear' || current === 'labs' ? 'bench' : current === 'rolls' ? 'binder' : current;
+const places = [
+	['bench', 'Bench', '/photography/lab/', 'M2.5 15.5h19M4 15.5v4M20 15.5v4M6 15.5v-4.2h4.5v4.2M13 15.5V7.5h5.5v8'],
+	['binder', 'Binder', '/photography/lab/rolls/', 'M6 3.5h12v17H6zM9 3.5v17M12 7.5h3.5M12 11h3.5'],
+	['almanac', 'Almanac', '/photography/lab/almanac/', 'M3.5 20h17M6 20v-6M10 20V9M14 20v-8M18 20V5'],
 ] as const;
 const initials = (user?.name ?? '')
 	.split(/\s+/)
@@ -52,7 +58,7 @@ const initials = (user?.name ?? '')
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 		<meta name="theme-color" content="#000000" />
 	</Fragment>
-	<div class="lab" data-lab>
+	<div class:list={['lab', { 'lab--wide': wide }]} data-lab>
 		{
 			!labConfigured ? (
 				<main class="lab-door">
@@ -97,27 +103,37 @@ const initials = (user?.name ?? '')
 							</span>
 						</a>
 					</header>
-					{/* A strip of film: one frame per page, the current one lit like a light table. On phones it docks at the bottom. */}
-					<nav class="lab-strip-nav" aria-label="Film Lab" transition:name="lab-nav">
-						<ol class="lab-strip-frames">
-							{tabs.map(([key, label, short, href, icon], i) => (
-								<li>
-									<a href={href} aria-current={current === key ? 'page' : undefined}>
-										<span class="lab-strip-no" aria-hidden="true">
-											{i + 1} ▸ {i + 1}A
-										</span>
-										<svg viewBox="0 0 24 24" aria-hidden="true">
-											<path d={icon} />
-										</svg>
-										<span class="lab-strip-label">
-											<span class="long">{label}</span>
-											<span class="short">{short}</span>
-										</span>
-									</a>
-								</li>
-							))}
-						</ol>
+					{/* The dock: a strip of film, one frame per place, the shutter release in the middle. */}
+					<nav class="lab-dock" aria-label="Film Lab" transition:name="lab-nav">
+						{places.slice(0, 2).map(([key, label, href, icon]) => (
+							<a href={href} aria-current={place === key ? 'page' : undefined}>
+								<svg viewBox="0 0 24 24" aria-hidden="true">
+									<path d={icon} />
+								</svg>
+								<span>{label}</span>
+							</a>
+						))}
+						<a class="lab-shutter" href="/photography/lab/shoot/" title="Shoot: log frames as you go">
+							<span class="sr-only">Shoot</span>
+						</a>
+						{places.slice(2).map(([key, label, href, icon]) => (
+							<a href={href} aria-current={place === key ? 'page' : undefined}>
+								<svg viewBox="0 0 24 24" aria-hidden="true">
+									<path d={icon} />
+								</svg>
+								<span>{label}</span>
+							</a>
+						))}
+						<button type="button" class="lab-find" data-lab-find aria-keyshortcuts="Meta+K Control+K /">
+							<svg viewBox="0 0 24 24" aria-hidden="true">
+								<circle cx="10.5" cy="10.5" r="6" />
+								<path d="m15 15 5 5" />
+							</svg>
+							<span>Find</span>
+							<kbd>⌘K</kbd>
+						</button>
 					</nav>
+					<LabPalette client:idle />
 					<div class="lab-progress" aria-hidden="true"></div>
 					<main class="lab-main lab-wrap">
 						<slot />
@@ -144,7 +160,8 @@ const initials = (user?.name ?? '')
 	const isLabLink = (el: EventTarget | null): HTMLAnchorElement | null => {
 		const a = (el as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
 		if (!a || a.target === '_blank' || a.hasAttribute('download')) return null;
-		const url = new URL(a.href, location.href);
+		// SVG links (the binder's line) keep their href as an attribute, not a string property.
+		const url = new URL(a.getAttribute('href') ?? '', location.href);
 		if (url.origin !== location.origin || !url.pathname.startsWith('/photography/lab/')) return null;
 		if (url.pathname === location.pathname && url.search === location.search) return null;
 		return a;
@@ -152,7 +169,7 @@ const initials = (user?.name ?? '')
 	const asked = new Map<string, number>();
 	function warm(a: HTMLAnchorElement) {
 		if (!navigator.serviceWorker?.controller) return; // nowhere to keep it
-		const url = new URL(a.href);
+		const url = new URL(a.getAttribute('href') ?? '', location.href);
 		const key = url.pathname + url.search;
 		if (Date.now() - (asked.get(key) ?? 0) < 12000) return;
 		asked.set(key, Date.now());
@@ -194,19 +211,23 @@ const initials = (user?.name ?? '')
 	 * instead, like a negative raised to the loupe. The header, the lab bar and
 	 * the strip hold still (they're named for the transition only while it runs).
 	 */
-	const STATION: Record<string, number> = { '': 0, shoot: 1, rolls: 2, r: 2, frames: 2.5, fridge: 3, labels: 3.5, gear: 4, labs: 5, account: 6 };
+	// The bench and its close-ups are one place; the binder and its rolls another.
+	const STATION: Record<string, number> = { '': 0, fridge: 0, gear: 0, labs: 0, labels: 0.5, rolls: 1, r: 1, frames: 1, almanac: 2, account: 3, shoot: -1 };
+	const BENCH = new Set(['', 'fridge', 'gear', 'labs']);
 	const stationOf = (url: URL) => {
 		if (!url.pathname.startsWith('/photography/lab')) return null;
 		const parts = url.pathname.replace(/^\/photography\/lab\/?/, '').split('/').filter(Boolean);
 		const head = parts[0] ?? '';
 		// The doors (sign-in, setup, invite) aren't stations.
-		return head in STATION ? { at: STATION[head], depth: parts.length } : null;
+		return head in STATION ? { head, at: STATION[head], depth: parts.length } : null;
 	};
 	const turnFor = (from: URL, to: URL) => {
 		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
 		const a = stationOf(from);
 		const b = stationOf(to);
 		if (!a || !b) return null;
+		// Bench to a close-up and back: the station grows to fill the mat (or shrinks back into it).
+		if (BENCH.has(a.head) && BENCH.has(b.head) && a.head !== b.head) return 'zone';
 		if (b.at !== a.at) return b.at > a.at ? 'next' : 'prev';
 		if (b.depth !== a.depth) return b.depth > a.depth ? 'in' : 'out';
 		return null;
@@ -241,1059 +262,11 @@ const initials = (user?.name ?? '')
 		const a = isLabLink(e.target);
 		if (a && !e.defaultPrevented && !e.metaKey && !e.ctrlKey && !e.shiftKey && a.hasAttribute('data-astro-reload')) busy(true);
 	});
+	// The dock's Find button opens the ⌘K finder (LabPalette listens).
+	document.addEventListener('click', (e) => {
+		if ((e.target as Element | null)?.closest?.('[data-lab-find]')) dispatchEvent(new Event('lab:palette'));
+	});
 	document.addEventListener('astro:after-swap', () => busy(false));
 	document.addEventListener('astro:page-load', () => busy(false));
 	window.addEventListener('pageshow', () => busy(false));
 </script>
-
-<style is:global>
-	/* ---------- Film Lab: shared pieces (every class is lab- prefixed) ---------- */
-	.lab {
-		/* Film: the strips, frames and edge print every page borrows. */
-		--lab-film: oklch(23% 0.018 50);
-		--lab-film-frame: oklch(31% 0.02 50);
-		--lab-sprocket: oklch(90% 0.01 80);
-		--lab-edge-ink: oklch(74% 0.13 62);
-		/* Edge print set on paper: the same amber, dark enough to read. */
-		--lab-edge-text: oklch(50% 0.12 58);
-		/* A frame held up to a light table. */
-		--lab-lit: oklch(96.5% 0.03 85);
-		--lab-lit-glow: oklch(92% 0.08 85 / 0.55);
-		/* The light table itself: a warm, evenly lit panel with a faint grid. */
-		--lab-table: oklch(98.6% 0.012 85);
-		--lab-table-edge: oklch(91% 0.02 80);
-		--lab-table-grid: oklch(88% 0.02 80 / 0.35);
-		--lab-warn: oklch(52% 0.13 55);
-		--lab-ok: oklch(48% 0.1 150);
-		padding-bottom: 5rem;
-	}
-
-	:root.theme-dark .lab {
-		--lab-sprocket: oklch(78% 0.01 80);
-		--lab-edge-text: oklch(76% 0.12 65);
-		--lab-lit: oklch(93% 0.035 85);
-		--lab-lit-glow: oklch(85% 0.1 80 / 0.45);
-		/* At night the table is dimmed, lit from below. */
-		--lab-table: oklch(19% 0.012 65);
-		--lab-table-edge: oklch(30% 0.02 70);
-		--lab-table-grid: oklch(40% 0.03 70 / 0.25);
-		--lab-warn: oklch(78% 0.13 70);
-		--lab-ok: oklch(76% 0.11 150);
-	}
-
-	/* Same side gutters as the site nav and footer. */
-	.lab-wrap {
-		--lab-gutter: 1.5rem;
-		width: 100%;
-		padding-inline: var(--lab-gutter);
-	}
-
-	@media (min-width: 50em) {
-		.lab-wrap {
-			--lab-gutter: 5rem;
-		}
-	}
-
-	.lab-bar {
-		display: flex;
-		align-items: center;
-		gap: clamp(1rem, 3vw, 2rem);
-		margin-top: -1.5rem;
-		padding-bottom: 0.9rem;
-	}
-
-	.lab-wordmark {
-		font-family: var(--font-brand);
-		font-style: italic;
-		font-weight: 400;
-		font-variation-settings: 'opsz' 144, 'SOFT' 60, 'WONK' 1;
-		font-size: var(--text-2xl);
-		line-height: 1;
-		color: var(--gray-0);
-		text-decoration: none;
-	}
-
-	/* Edge print, like the text along a film's rebate. */
-	.lab-bar-print,
-	.lab-edge-print {
-		font-family: var(--font-mono);
-		font-size: 0.66rem;
-		letter-spacing: 0.16em;
-		text-transform: uppercase;
-		color: var(--lab-edge-text);
-	}
-
-	.lab-me-label,
-	.lab-edge {
-		font-size: var(--text-sm);
-		letter-spacing: 0.1em;
-		font-variant-caps: all-small-caps;
-		color: var(--gray-300);
-		text-decoration: none;
-	}
-
-	.lab-me {
-		margin-left: auto;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.6rem;
-		text-decoration: none;
-		border-radius: 999px;
-	}
-
-	.lab-avatar {
-		display: grid;
-		place-items: center;
-		width: 2rem;
-		height: 2rem;
-		border-radius: 50%;
-		border: 1px solid var(--gray-700);
-		background: var(--gray-900);
-		font-family: var(--font-mono);
-		font-size: 0.72rem;
-		color: var(--gray-0);
-	}
-
-	.lab-me[aria-current='page'] .lab-avatar {
-		background: var(--accent-regular);
-		border-color: var(--accent-regular);
-		color: var(--accent-text-over);
-	}
-
-	/* ---------- the strip nav ---------- */
-	.lab-strip-nav {
-		--pitch: 1.05rem;
-		position: relative;
-		margin-inline: var(--lab-gutter, 1.5rem);
-		padding: 0.95rem 0.35rem;
-		border-radius: 3px;
-		background: var(--lab-film);
-		box-shadow: 0 10px 24px -18px rgb(0 0 0 / 0.6);
-	}
-
-	@media (min-width: 50em) {
-		.lab-strip-nav {
-			margin-inline: 5rem;
-		}
-	}
-
-	/* Sprocket holes, top and bottom. They wind on a few holes as a page opens. */
-	.lab-strip-nav::before,
-	.lab-strip-nav::after {
-		content: '';
-		position: absolute;
-		inset-inline: 0.45rem;
-		height: 0.42rem;
-		border-radius: 1px;
-		background: repeating-linear-gradient(90deg, var(--lab-sprocket) 0 0.55rem, transparent 0.55rem var(--pitch));
-		opacity: 0.85;
-	}
-
-	.lab-strip-nav::before {
-		top: 0.3rem;
-	}
-
-	.lab-strip-nav::after {
-		bottom: 0.3rem;
-	}
-
-	@media (prefers-reduced-motion: no-preference) {
-		.lab-strip-nav::before,
-		.lab-strip-nav::after {
-			animation: lab-sprocket-wind 0.7s cubic-bezier(0.33, 1, 0.68, 1) both;
-		}
-
-		/* Going back a station winds it the other way (the holes repeat every pitch). */
-		html[data-lab-turn='prev'] .lab-strip-nav::before,
-		html[data-lab-turn='prev'] .lab-strip-nav::after {
-			animation-direction: reverse;
-		}
-
-		@keyframes lab-sprocket-wind {
-			from {
-				background-position-x: calc(var(--pitch) * -3);
-			}
-		}
-	}
-
-	.lab-strip-frames {
-		display: grid;
-		grid-template-columns: repeat(6, minmax(0, 1fr));
-		gap: 0.3rem;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-
-	.lab-strip-frames a {
-		position: relative;
-		display: grid;
-		align-content: center;
-		justify-items: start;
-		gap: 0.1rem;
-		min-height: 3.1rem;
-		padding: 0.45rem 0.75rem;
-		border-radius: 2px;
-		background: var(--lab-film-frame);
-		color: oklch(84% 0.012 75);
-		text-decoration: none;
-		transition:
-			background-color 0.25s ease,
-			color 0.25s ease;
-	}
-
-	.lab-strip-frames a:hover {
-		background: oklch(38% 0.022 55);
-		color: oklch(96% 0.006 85);
-	}
-
-	/* The page you're on: a frame held up to the light. */
-	.lab-strip-frames a[aria-current='page'] {
-		background: var(--lab-lit);
-		color: oklch(22% 0.01 60);
-		box-shadow:
-			0 0 0 1px oklch(100% 0 0 / 0.35) inset,
-			0 0 22px -4px var(--lab-lit-glow);
-	}
-
-	@media (prefers-reduced-motion: no-preference) {
-		.lab-strip-frames a[aria-current='page'] {
-			animation: lab-lamp 0.6s ease-out both;
-		}
-
-		@keyframes lab-lamp {
-			from {
-				background-color: var(--lab-film-frame);
-				color: oklch(84% 0.012 75);
-				box-shadow: none;
-			}
-		}
-	}
-
-	.lab-strip-frames a:focus-visible {
-		outline: 2px solid var(--lab-lit);
-		outline-offset: 2px;
-	}
-
-	.lab-strip-no {
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		letter-spacing: 0.12em;
-		color: var(--lab-edge-ink);
-	}
-
-	.lab-strip-frames a[aria-current='page'] .lab-strip-no {
-		color: oklch(46% 0.13 55);
-	}
-
-	.lab-strip-frames svg {
-		display: none;
-		width: 1.3rem;
-		height: 1.3rem;
-		fill: none;
-		stroke: currentColor;
-		stroke-width: 1.5;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-	}
-
-	.lab-strip-label {
-		font-size: var(--text-sm);
-		letter-spacing: 0.08em;
-		font-variant-caps: all-small-caps;
-		white-space: nowrap;
-	}
-
-	.lab-strip-label .short {
-		display: none;
-	}
-
-	@media (max-width: 64em) {
-		.lab-me-label,
-		.lab-bar-print {
-			display: none;
-		}
-	}
-
-	/* Phones: the strip docks along the bottom edge, icons over short labels. */
-	@media (max-width: 49.99em) {
-		.lab-strip-nav {
-			position: fixed;
-			z-index: 40;
-			inset: auto 0 0;
-			margin: 0;
-			padding: 0.75rem max(0.3rem, env(safe-area-inset-right, 0px)) calc(0.75rem + env(safe-area-inset-bottom, 0px))
-				max(0.3rem, env(safe-area-inset-left, 0px));
-			border-radius: 0;
-			box-shadow: 0 -12px 28px -20px rgb(0 0 0 / 0.7);
-		}
-
-		.lab-strip-nav::before {
-			top: 0.22rem;
-		}
-
-		.lab-strip-nav::after {
-			bottom: calc(0.22rem + env(safe-area-inset-bottom, 0px));
-		}
-
-		.lab-strip-frames {
-			gap: 0.2rem;
-		}
-
-		.lab-strip-frames a {
-			justify-items: center;
-			min-height: 3.2rem;
-			padding: 0.3rem 0.1rem;
-		}
-
-		.lab-strip-no {
-			display: none;
-		}
-
-		.lab-strip-frames svg {
-			display: block;
-		}
-
-		.lab-strip-label {
-			font-size: 0.7rem;
-			letter-spacing: 0.04em;
-		}
-
-		.lab-strip-label .long {
-			display: none;
-		}
-
-		.lab-strip-label .short {
-			display: inline;
-		}
-
-		/* Room under the page (and the site footer) for the dock. */
-		.lab:has(> .lab-strip-nav) {
-			padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
-		}
-
-		.content:has(.lab-strip-nav) > footer {
-			padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
-		}
-	}
-
-	.lab-main {
-		display: grid;
-		gap: clamp(2rem, 5vw, 3.5rem);
-		padding-top: clamp(1.75rem, 4vw, 3rem);
-	}
-
-	/* ---------- shared motion: page sections rise in, a beat apart ---------- */
-	@media (prefers-reduced-motion: no-preference) {
-		.lab-main > * {
-			animation: lab-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
-		}
-
-		.lab-main > :nth-child(2) {
-			animation-delay: 0.06s;
-		}
-
-		.lab-main > :nth-child(3) {
-			animation-delay: 0.12s;
-		}
-
-		.lab-main > :nth-child(n + 4) {
-			animation-delay: 0.18s;
-		}
-
-		@keyframes lab-rise {
-			from {
-				opacity: 0.001;
-				translate: 0 14px;
-			}
-		}
-	}
-
-	/*
-	 * A backlit panel: the light table and anything laid out on it. Opal
-	 * acrylic, brightest where the tubes run under the middle, in an aluminium
-	 * frame (rings of shadow, so a scrolling panel doesn't clip it).
-	 */
-	.lab-lightbox {
-		position: relative;
-		border-radius: 0.75rem;
-		background:
-			linear-gradient(var(--lab-table-grid) 1px, transparent 1px) 0 0 / 100% 2rem,
-			linear-gradient(90deg, var(--lab-table-grid) 1px, transparent 1px) 0 0 / 2rem 100%,
-			radial-gradient(90% 70% at 50% 45%, color-mix(in oklch, var(--lab-table) 40%, white) 0%, var(--lab-table) 75%);
-		box-shadow:
-			inset 0 0 0 1px var(--lab-table-edge),
-			inset 0 1px 0 color-mix(in oklch, white 70%, transparent),
-			0 0 0 5px oklch(86% 0.005 80),
-			0 0 0 6px oklch(70% 0.008 75),
-			0 22px 44px -28px rgb(0 0 0 / 0.5);
-	}
-
-	:root.theme-dark .lab-lightbox {
-		background:
-			linear-gradient(var(--lab-table-grid) 1px, transparent 1px) 0 0 / 100% 2rem,
-			linear-gradient(90deg, var(--lab-table-grid) 1px, transparent 1px) 0 0 / 2rem 100%,
-			radial-gradient(90% 70% at 50% 45%, oklch(30% 0.03 72) 0%, var(--lab-table) 75%);
-		box-shadow:
-			inset 0 0 0 1px var(--lab-table-edge),
-			inset 0 1px 0 oklch(50% 0.04 75 / 0.6),
-			0 0 0 5px oklch(26% 0.005 60),
-			0 0 0 6px oklch(34% 0.006 60),
-			0 0 70px -30px oklch(80% 0.08 80 / 0.3);
-	}
-
-	@media (prefers-reduced-motion: no-preference) {
-		/* Switched on: the tubes flicker and settle. */
-		.lab-lightbox {
-			animation: lab-tubes 1.1s 0.15s ease-out both;
-		}
-
-		@keyframes lab-tubes {
-			0% {
-				filter: brightness(0.7);
-			}
-			10% {
-				filter: brightness(1.05);
-			}
-			16% {
-				filter: brightness(0.78);
-			}
-			30%,
-			100% {
-				filter: none;
-			}
-		}
-	}
-
-	.lab-door {
-		width: 100%;
-		max-width: 33rem;
-		margin-inline: auto;
-		padding-inline: 1.5rem;
-		display: grid;
-		gap: 1.25rem;
-		padding-top: clamp(1rem, 8vh, 5rem);
-	}
-
-	.lab-edge {
-		display: block;
-	}
-
-	.lab-title {
-		font-family: var(--font-brand);
-		font-style: italic;
-		font-weight: 380;
-		font-variation-settings: 'opsz' 144, 'SOFT' 60, 'WONK' 1;
-		font-size: var(--text-4xl);
-		line-height: 1;
-		letter-spacing: -0.01em;
-		text-wrap: balance;
-	}
-
-	.lab-lede {
-		font-size: var(--text-lg);
-		color: var(--gray-200);
-		max-width: 38rem;
-		text-wrap: pretty;
-	}
-
-	.lab-h2 {
-		font-family: var(--font-brand);
-		font-size: var(--text-xl);
-		font-weight: 560;
-		font-variation-settings: 'opsz' 30;
-		letter-spacing: -0.01em;
-	}
-
-	.lab-meta {
-		font-size: var(--text-sm);
-		color: var(--gray-300);
-	}
-
-	.lab-mono {
-		font-family: var(--font-mono);
-		font-size: 0.8125rem;
-		letter-spacing: 0.01em;
-	}
-
-	/* Buttons: ink pills, like the film desk's controls. */
-	.lab-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		min-height: 2.75rem;
-		padding: 0.55rem 1.3rem;
-		border: 1px solid var(--accent-regular);
-		border-radius: 999px;
-		background: var(--accent-regular);
-		color: var(--accent-text-over);
-		font: inherit;
-		font-size: var(--text-base);
-		letter-spacing: 0.01em;
-		text-decoration: none;
-		cursor: pointer;
-		transition:
-			opacity var(--theme-transition),
-			background-color var(--theme-transition);
-	}
-
-	.lab-btn--wide {
-		width: 100%;
-		min-height: 3.25rem;
-		font-size: var(--text-md);
-	}
-
-	.lab-btn--ghost {
-		background: transparent;
-		color: var(--gray-0);
-		border-color: var(--gray-600);
-	}
-
-	.lab-btn--quiet {
-		min-height: 2.25rem;
-		padding: 0.3rem 0.9rem;
-		background: transparent;
-		color: var(--gray-0);
-		border-color: var(--gray-700);
-		font-size: var(--text-sm);
-	}
-
-	.lab-btn--danger {
-		color: var(--lab-warn);
-		border-color: color-mix(in oklch, var(--lab-warn) 55%, transparent);
-	}
-
-	.lab-btn:disabled {
-		opacity: 0.5;
-		cursor: default;
-	}
-
-	.lab-btn:focus-visible,
-	.lab-link:focus-visible,
-	.lab-me:focus-visible,
-	.lab-wordmark:focus-visible {
-		outline: 2px solid var(--accent-regular);
-		outline-offset: 3px;
-	}
-
-	.lab-link {
-		background: none;
-		border: 0;
-		padding: 0;
-		font: inherit;
-		color: var(--gray-0);
-		text-decoration: underline;
-		text-decoration-color: var(--gray-600);
-		text-underline-offset: 0.2em;
-		cursor: pointer;
-	}
-
-	/*
-	 * Fingers, not cursors: on touch screens the small text-style controls
-	 * (links, roll codes, Edit buttons, switches, checkboxes) get a hit area
-	 * of about 44 px without changing how they look.
-	 */
-	@media (pointer: coarse) {
-		.lab-main .lab-link,
-		.lab-main a.lab-code,
-		.lab-main [role='switch'] {
-			position: relative;
-		}
-
-		.lab-main .lab-link::after,
-		.lab-main a.lab-code::after {
-			content: '';
-			position: absolute;
-			inset: -0.7rem -0.4rem;
-		}
-
-		.lab-main [role='switch']::before {
-			content: '';
-			position: absolute;
-			inset: -0.6rem -0.25rem;
-		}
-
-		.lab-main input[type='checkbox'] {
-			width: 1.35rem;
-			height: 1.35rem;
-		}
-	}
-
-	/* A strip of film winding across the top while the next page comes. */
-	.lab-progress {
-		position: fixed;
-		inset: 0 0 auto;
-		z-index: 60;
-		height: 3px;
-		opacity: 0;
-		pointer-events: none;
-		background: repeating-linear-gradient(90deg, var(--lab-edge-ink) 0 14px, transparent 14px 22px);
-		background-size: 44px 100%;
-		transition: opacity 0.15s ease;
-	}
-
-	html.lab-navigating .lab-progress {
-		opacity: 1;
-		/* Only once it's taking a moment: quick pages shouldn't flash it. */
-		transition-delay: 0.12s;
-	}
-
-	html.lab-navigating .lab-progress {
-		animation: lab-progress-wind 0.6s linear infinite;
-	}
-
-	@keyframes lab-progress-wind {
-		to {
-			background-position: 44px 0;
-		}
-	}
-
-	.lab-pending {
-		opacity: 0.55;
-		transition: opacity 0.1s ease;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		html.lab-navigating .lab-progress {
-			animation: none;
-		}
-	}
-
-	/* ---------- the room: ambient light over every station ---------- */
-	.lab {
-		position: relative;
-		isolation: isolate;
-		/* Daylight through the studio window, warm and low. */
-		--lab-ambient: oklch(93% 0.05 82 / 0.55);
-		--lab-ambient-2: oklch(95% 0.03 70 / 0.35);
-	}
-
-	/* The advance lever's throw: slow off the mark, quick through, settling. On
-	   the root, since the transition's pseudo-elements inherit from <html>. */
-	:root {
-		--lab-advance: cubic-bezier(0.7, 0, 0.2, 1);
-	}
-
-	/* At night it's a darkroom: the safelight's amber-red, pooling from the corner. */
-	:root.theme-dark .lab {
-		--lab-ambient: oklch(42% 0.15 32 / 0.26);
-		--lab-ambient-2: oklch(35% 0.09 45 / 0.16);
-	}
-
-	.lab::before {
-		content: '';
-		position: fixed;
-		inset: 0;
-		z-index: -1;
-		pointer-events: none;
-		background:
-			radial-gradient(70vmax 50vmax at 100% -10%, var(--lab-ambient), transparent 70%),
-			radial-gradient(60vmax 40vmax at -10% 110%, var(--lab-ambient-2), transparent 70%);
-	}
-
-	@media (prefers-reduced-motion: no-preference) {
-		:root.theme-dark .lab::before {
-			animation: lab-safelight 9s ease-in-out infinite alternate;
-		}
-
-		@keyframes lab-safelight {
-			to {
-				opacity: 0.78;
-			}
-		}
-	}
-
-	/* ---------- winding the film between stations ---------- */
-	html[data-lab-turn] .content > nav {
-		view-transition-name: lab-site-nav;
-	}
-
-	html[data-lab-turn] .lab-bar {
-		view-transition-name: lab-bar;
-	}
-
-	/* Between two frames: the film base, glimpsed as the next frame comes in. */
-	html[data-lab-turn]::view-transition {
-		background: oklch(16% 0.015 50);
-	}
-
-	@media (prefers-reduced-motion: no-preference) {
-		html[data-lab-turn='next']::view-transition-old(root) {
-			animation: lab-frame-out-l 0.62s var(--lab-advance) both;
-		}
-
-		html[data-lab-turn='next']::view-transition-new(root) {
-			animation: lab-frame-in-r 0.62s var(--lab-advance) both;
-		}
-
-		html[data-lab-turn='prev']::view-transition-old(root) {
-			animation: lab-frame-out-r 0.62s var(--lab-advance) both;
-		}
-
-		html[data-lab-turn='prev']::view-transition-new(root) {
-			animation: lab-frame-in-l 0.62s var(--lab-advance) both;
-		}
-
-		/* Into a roll: the table drops back and dims as the roll comes up to the eye. */
-		html[data-lab-turn='in']::view-transition-old(root) {
-			animation: lab-lift-under 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
-		}
-
-		html[data-lab-turn='in']::view-transition-new(root) {
-			animation: lab-lift-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-		}
-
-		html[data-lab-turn='out']::view-transition-old(root) {
-			animation: lab-lift-away 0.45s cubic-bezier(0.4, 0, 1, 1) both;
-		}
-
-		html[data-lab-turn='out']::view-transition-new(root) {
-			animation: lab-lift-back 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-		}
-
-		html[data-lab-turn='in']::view-transition,
-		html[data-lab-turn='out']::view-transition {
-			background: var(--gray-999);
-		}
-
-		html[data-lab-turn]::view-transition-group(lab-site-nav),
-		html[data-lab-turn]::view-transition-group(lab-bar) {
-			animation-duration: 0.5s;
-			animation-timing-function: var(--lab-advance);
-		}
-	}
-
-	/* A frame line's width apart, so the film base shows between them. */
-	@keyframes lab-frame-out-l {
-		to {
-			translate: calc(-100% - 1.5rem) 0;
-			filter: brightness(0.82);
-		}
-	}
-
-	@keyframes lab-frame-in-r {
-		from {
-			translate: calc(100% + 1.5rem) 0;
-			filter: brightness(0.82);
-		}
-	}
-
-	@keyframes lab-frame-out-r {
-		to {
-			translate: calc(100% + 1.5rem) 0;
-			filter: brightness(0.82);
-		}
-	}
-
-	@keyframes lab-frame-in-l {
-		from {
-			translate: calc(-100% - 1.5rem) 0;
-			filter: brightness(0.82);
-		}
-	}
-
-	@keyframes lab-lift-under {
-		to {
-			scale: 0.94;
-			opacity: 0;
-			filter: blur(3px);
-		}
-	}
-
-	@keyframes lab-lift-up {
-		from {
-			translate: 0 3rem;
-			scale: 1.015;
-			opacity: 0;
-		}
-	}
-
-	@keyframes lab-lift-away {
-		to {
-			translate: 0 3rem;
-			opacity: 0;
-		}
-	}
-
-	@keyframes lab-lift-back {
-		from {
-			scale: 0.95;
-			opacity: 0;
-			filter: blur(3px);
-		}
-	}
-
-	/* ---------- the darkroom door's lamp (sign-in, setup, invite) ---------- */
-	.lab-sign {
-		justify-self: center;
-		padding: 0.45rem;
-		border-radius: 0.5rem;
-		background: linear-gradient(180deg, oklch(26% 0.01 50), oklch(16% 0.01 50));
-		box-shadow:
-			0 1px 0 oklch(40% 0.01 50) inset,
-			0 14px 30px -14px rgb(0 0 0 / 0.6);
-	}
-
-	.lab-sign-glass {
-		--lit: oklch(62% 0.23 28);
-		display: grid;
-		justify-items: center;
-		gap: 0.2rem;
-		padding: 0.55rem 1.6rem 0.6rem;
-		border-radius: 0.25rem;
-		background: radial-gradient(120% 140% at 50% 50%, oklch(45% 0.17 28), oklch(24% 0.09 28));
-		color: oklch(97% 0.04 40);
-		text-align: center;
-		box-shadow:
-			inset 0 0 0 1px oklch(70% 0.2 30 / 0.4),
-			inset 0 0 18px oklch(75% 0.2 35 / 0.5),
-			0 0 34px 4px oklch(58% 0.22 28 / 0.45);
-	}
-
-	.lab-sign-glass b {
-		font-family: var(--font-mono);
-		font-size: 0.95rem;
-		font-weight: 600;
-		letter-spacing: 0.42em;
-		margin-right: -0.42em;
-		text-transform: uppercase;
-		text-shadow: 0 0 10px oklch(80% 0.2 35 / 0.9);
-	}
-
-	.lab-sign-glass i {
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		font-style: normal;
-		letter-spacing: 0.18em;
-		text-transform: uppercase;
-		opacity: 0.85;
-	}
-
-	@media (prefers-reduced-motion: no-preference) {
-		/* The tube struggles, then catches. */
-		.lab-sign-glass {
-			animation: lab-sign-on 1.6s 0.3s steps(1, end) both;
-		}
-
-		@keyframes lab-sign-on {
-			0% {
-				filter: brightness(0.25) saturate(0.4);
-				box-shadow: inset 0 0 0 1px oklch(70% 0.2 30 / 0.2);
-			}
-			12% {
-				filter: none;
-			}
-			18% {
-				filter: brightness(0.3) saturate(0.4);
-				box-shadow: inset 0 0 0 1px oklch(70% 0.2 30 / 0.2);
-			}
-			26% {
-				filter: none;
-			}
-			30% {
-				filter: brightness(0.45) saturate(0.6);
-			}
-			44%,
-			100% {
-				filter: none;
-			}
-		}
-	}
-
-	/* Fields */
-	.lab-form {
-		display: grid;
-		gap: 1rem;
-	}
-
-	.lab-field {
-		display: grid;
-		gap: 0.35rem;
-		min-width: 0;
-	}
-
-	.lab-field > span {
-		font-size: var(--text-sm);
-		letter-spacing: 0.08em;
-		font-variant-caps: all-small-caps;
-		color: var(--gray-300);
-	}
-
-	.lab-input {
-		width: 100%;
-		min-width: 0;
-		min-height: 2.9rem;
-		padding: 0.55rem 0.85rem;
-		border: 1px solid var(--gray-700);
-		border-radius: 0.6rem;
-		background: var(--gray-999);
-		color: var(--gray-0);
-		font: inherit;
-		font-size: 1rem;
-	}
-
-	.lab-input:focus-visible {
-		outline: 2px solid var(--accent-regular);
-		outline-offset: 1px;
-		border-color: transparent;
-	}
-
-	.lab-input.lab-mono {
-		font-size: 1rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-	}
-
-	.lab-hint {
-		font-size: var(--text-sm);
-		color: var(--gray-300);
-	}
-
-	.lab-error {
-		padding: 0.7rem 0.9rem;
-		border-radius: 0.6rem;
-		border: 1px solid color-mix(in oklch, var(--lab-warn) 45%, transparent);
-		color: var(--lab-warn);
-		font-size: var(--text-sm);
-	}
-
-	.lab-notice {
-		padding: 0.85rem 1rem;
-		border-radius: 0.6rem;
-		background: var(--gray-900);
-		border: 1px solid var(--gray-800);
-		font-size: var(--text-base);
-	}
-
-	.lab-chip {
-		display: inline-block;
-		padding: 0.1rem 0.55rem;
-		border-radius: 999px;
-		border: 1px solid var(--gray-700);
-		font-family: var(--font-mono);
-		font-size: 0.6875rem;
-		letter-spacing: 0.04em;
-		color: var(--gray-300);
-		white-space: nowrap;
-	}
-
-	.lab-chip--ok {
-		color: var(--lab-ok);
-		border-color: color-mix(in oklch, var(--lab-ok) 45%, transparent);
-	}
-
-	.lab-chip--warn {
-		color: var(--lab-warn);
-		border-color: color-mix(in oklch, var(--lab-warn) 45%, transparent);
-	}
-
-	/* A short run of 35mm film, used as a divider. */
-	.lab-sprockets {
-		height: 1.1rem;
-		border-radius: 2px;
-		background:
-			repeating-linear-gradient(90deg, var(--lab-sprocket) 0 0.45rem, transparent 0.45rem 0.95rem) center 0.2rem / calc(100% - 0.5rem) 0.25rem no-repeat,
-			repeating-linear-gradient(90deg, var(--lab-sprocket) 0 0.45rem, transparent 0.45rem 0.95rem) center calc(100% - 0.2rem) / calc(100% - 0.5rem) 0.25rem no-repeat,
-			var(--lab-film);
-	}
-
-	.lab-section {
-		display: grid;
-		gap: 1rem;
-		align-content: start;
-	}
-
-	.lab-section > header {
-		display: grid;
-		gap: 0.3rem;
-		padding-bottom: 0.75rem;
-		border-bottom: 1px solid var(--gray-800);
-	}
-
-	.lab-rows {
-		display: grid;
-		list-style: none;
-		padding: 0;
-	}
-
-	.lab-rows > li {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.5rem 1rem;
-		padding-block: 0.85rem;
-		border-bottom: 1px solid var(--gray-800);
-	}
-
-	.lab-rows .lab-grow {
-		flex: 1 1 12rem;
-		min-width: 0;
-		display: grid;
-		gap: 0.15rem;
-	}
-
-	/* Roll codes, as written on the canister in marker. */
-	.lab-code {
-		display: inline-block;
-		font-family: 'Permanent Marker', 'Marker Felt', cursive;
-		font-size: 1rem;
-		line-height: 1;
-		letter-spacing: 0.02em;
-		color: var(--gray-0);
-		text-decoration: none;
-		rotate: -3deg;
-	}
-
-	a.lab-code:hover {
-		text-decoration: underline;
-		text-decoration-thickness: 1px;
-	}
-
-	.lab-select {
-		appearance: none;
-		padding-right: 2.2rem;
-		background-image:
-			linear-gradient(45deg, transparent 50%, var(--gray-300) 50%),
-			linear-gradient(135deg, var(--gray-300) 50%, transparent 50%);
-		background-position:
-			calc(100% - 1.1rem) 52%,
-			calc(100% - 0.75rem) 52%;
-		background-size: 0.35rem 0.35rem;
-		background-repeat: no-repeat;
-	}
-
-	.lab-row2 {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
-		gap: 0.75rem;
-	}
-
-	.lab-head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-end;
-		justify-content: space-between;
-		gap: 1rem 1.5rem;
-	}
-
-	.lab-head > div {
-		display: grid;
-		gap: 0.6rem;
-	}
-
-	.lab-empty {
-		padding: 1.25rem;
-		border: 1px dashed var(--gray-700);
-		border-radius: 0.6rem;
-		color: var(--gray-300);
-		text-align: center;
-	}
-
-	.lab-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		align-items: center;
-	}
-</style>

@@ -25,6 +25,13 @@
 				<a class="sticker" :href="`/photography/lab/rolls/${roll.code}/`">{{ roll.code }}</a>
 			</section>
 
+			<!-- Pre-flight: frames left, the pace, and one thing worth knowing. -->
+			<ul class="preflight" aria-label="Before the next frame">
+				<li><b>{{ Math.max(0, roll.exposures - (next - 1)) }}</b> left</li>
+				<li v-if="preflight?.[roll.id]?.pace">{{ preflight[roll.id].pace }}</li>
+				<li v-if="preflight?.[roll.id]?.hint" class="hint-chip">{{ preflight[roll.id].hint }}</li>
+			</ul>
+
 			<!-- The frame counter, like the window on the camera's top plate -->
 			<section class="counter" aria-label="Frame counter">
 				<button type="button" class="adj" aria-label="One frame back" @click="adjust(-1)">−</button>
@@ -151,8 +158,16 @@
 
 		<section v-else class="empty">
 			<h1>Nothing’s loaded</h1>
-			<p>Load a roll on the light table and it shows up here, ready to log frames.</p>
-			<a class="log as-link" href="/photography/lab/">Open the light table</a>
+			<template v-if="nextUp?.length">
+				<p>Next out of the fridge (oldest dates first):</p>
+				<ul class="next-up">
+					<li v-for="n in nextUp" :key="n.code">
+						<a :href="`/photography/lab/?move=${n.code}`"><b>{{ n.code }}</b> {{ n.stock }}<small v-if="n.expires"> · exp {{ n.expires }}</small><span aria-hidden="true">Load →</span></a>
+					</li>
+				</ul>
+			</template>
+			<p v-else>Load a roll on the bench and it shows up here, ready to log frames.</p>
+			<a class="log as-link" href="/photography/lab/">Open the bench</a>
 		</section>
 
 		<footer class="foot">
@@ -206,6 +221,10 @@ const props = defineProps<{
 	initialCode: string | null;
 	spots: string[];
 	today: string;
+	/** Per loaded roll: its pace and one thing worth knowing before the next frame. */
+	preflight?: Record<string, { pace: string | null; hint: string | null }>;
+	/** The oldest-dated rolls in the fridge, offered when a roll comes out. */
+	nextUp?: { code: string; stock: string; expires: string | null }[];
 }>();
 
 /* ---------- rolls and frames ---------- */
@@ -1286,6 +1305,73 @@ onBeforeUnmount(() => {
 	display: grid;
 	gap: 0.9rem;
 	padding-top: 2rem;
+}
+
+/* Pre-flight: what's left, the pace, one thing worth knowing. */
+.preflight {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.preflight li {
+	padding: 0.25rem 0.65rem;
+	border: 1px solid var(--shoot-line);
+	border-radius: 999px;
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	color: var(--shoot-body);
+}
+
+.preflight b {
+	color: var(--shoot-ink);
+}
+
+.preflight .hint-chip {
+	border-radius: 0.6rem;
+	border-color: color-mix(in oklch, var(--shoot-mark) 50%, transparent);
+	font-family: inherit;
+	font-size: var(--text-sm);
+	color: var(--shoot-ink);
+}
+
+/* The roll just came out: what to load next. */
+.next-up {
+	display: grid;
+	gap: 0.4rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.next-up a {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
+	min-height: 3rem;
+	padding: 0.6rem 0.9rem;
+	border-radius: 0.7rem;
+	background: var(--shoot-panel);
+	color: var(--shoot-ink);
+	text-decoration: none;
+}
+
+.next-up b {
+	font-family: 'Permanent Marker', 'Marker Felt', cursive;
+	font-weight: 400;
+}
+
+.next-up small {
+	color: var(--shoot-meta);
+}
+
+.next-up span {
+	margin-left: auto;
+	font-size: var(--text-sm);
+	color: var(--shoot-meta);
 }
 
 .foot {

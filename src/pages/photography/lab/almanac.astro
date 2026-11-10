@@ -1,0 +1,32 @@
+---
+/**
+ * The almanac: what your film adds up to, findings first, then nine chapters.
+ * Read-only and drawn on the server; see AlmanacPage.vue and server/almanac.ts.
+ */
+import LabLayout from '../../../components/lab/LabLayout.astro';
+import AlmanacPage from '../../../components/lab/almanac/AlmanacPage.vue';
+import { labConfig } from '../../../lib/lab/server/config';
+import { almanacData } from '../../../lib/lab/server/almanac';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const data = user && config.ok ? await almanacData(config.config, user) : null;
+---
+
+<LabLayout title="Almanac" current="almanac">
+	{
+		data && (
+			<>
+				<section class="lab-head">
+					<div>
+						<span class="lab-edge">What your film adds up to</span>
+						<h1 class="lab-title">The almanac</h1>
+					</div>
+				</section>
+				<AlmanacPage client:visible data={data} />
+			</>
+		)
+	}
+</LabLayout>

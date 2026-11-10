@@ -18,6 +18,8 @@
 			</div>
 		</header>
 
+		<FrameField v-if="props.rows.length" :rows="props.rows" :rolls="props.rolls" :matched="matched" />
+
 		<div class="layout" :class="{ 'no-map': !located.length }">
 			<div class="sheet-wrap lab-lightbox">
 				<!-- On the light table with a loupe: hover a frame to see it up close. -->
@@ -72,6 +74,7 @@ import { formatExposure, frameTime } from '../../lib/lab/inventory';
 import { formatEv } from '../../lib/lab/light';
 import type { FrameRow, RollBrief } from '../../lib/lab/server/frames';
 import FrameMap from './FrameMap.vue';
+import FrameField from './frames/FrameField.vue';
 
 const props = defineProps<{ rows: FrameRow[]; rolls: Record<string, RollBrief>; initialQuery?: string }>();
 
@@ -85,6 +88,8 @@ const chips = computed(() => describe(query.value));
 const results = computed(() => (isEmpty(query.value) ? rows.value : rows.value.filter((r) => matches(r, query.value))));
 const pickedIds = ref<string[] | null>(null);
 const visible = computed(() => (pickedIds.value ? results.value.filter((r) => pickedIds.value!.includes(r.id)) : results.value));
+/** What the field dims: null when nothing narrows the frames. */
+const matched = computed(() => (isEmpty(query.value) && !pickedIds.value ? null : new Set(visible.value.map((r) => r.id))));
 const limit = ref(36);
 const shown = computed(() => visible.value.slice(0, limit.value));
 /** The shown frames, roll by roll (a contact sheet per roll), most recent roll first. */

@@ -1,69 +1,34 @@
 ---
+/**
+ * The binder: every roll on one time line, then a sleeve page for each.
+ * See BinderPage.vue.
+ */
 import LabLayout from '../../../../components/lab/LabLayout.astro';
-import RollsList from '../../../../components/lab/RollsList.vue';
 import RollsTabs from '../../../../components/lab/RollsTabs.astro';
-import { todayInDurham } from '../../../../lib/lab/inventory';
-import { isOwner, labConfig } from '../../../../lib/lab/server/config';
-import { getDb } from '../../../../lib/lab/server/db/client';
-import { deskRolls, frameDigest, listStocks, rollMilestones, rollViews, stepChoices } from '../../../../lib/lab/server/inventory';
+import BinderPage from '../../../../components/lab/binder/BinderPage.vue';
+import { labConfig } from '../../../../lib/lab/server/config';
+import { binderData } from '../../../../lib/lab/server/binder';
 
 export const prerender = false;
 
 const { user } = Astro.locals;
 const config = labConfig();
-const data =
-	user && config.ok
-		? await (async () => {
-				const d = await getDb(config.config);
-				const [rolls, stocks, choices, milestones, frames, desk] = await Promise.all([
-					rollViews(d, user.id),
-					listStocks(d, user.id),
-					stepChoices(d, user.id, isOwner(user)),
-					rollMilestones(d, user.id),
-					frameDigest(d, user.id),
-					deskRolls(),
-				]);
-				const unique = (vals: (string | null)[]) => [...new Set(vals.filter((v): v is string => !!v))].sort();
-				return {
-					rolls,
-					stocks,
-					spots: unique(rolls.map((r) => r.storageSpot)),
-					shops: unique(rolls.map((r) => r.purchasedFrom)),
-					importable: choices.deskRolls.length,
-					milestones,
-					frames,
-					deskCounts: Object.fromEntries(desk.map((r) => [r.id, r.count])),
-				};
-			})()
-		: null;
+const data = user && config.ok ? await binderData(config.config, user) : null;
 const status = Astro.url.searchParams.get('status');
 ---
 
-<LabLayout title="Rolls" current="rolls">
+<LabLayout title="Binder" current="rolls" wide>
 	{
 		data && (
 			<>
 				<section class="lab-head">
 					<div>
-						<span class="lab-edge">Rolls</span>
-						<h1 class="lab-title">The almanac</h1>
-						<p class="lab-edge-print">Every roll you’ve logged, charted · tap any chart to filter the list</p>
+						<span class="lab-edge">Everything that’s been round the bench</span>
+						<h1 class="lab-title">The binder</h1>
 					</div>
 					<RollsTabs current="rolls" />
 				</section>
-				<RollsList
-					client:load
-					rolls={data.rolls}
-					stocks={data.stocks}
-					spots={data.spots}
-					shops={data.shops}
-					today={todayInDurham()}
-					importable={data.rolls.length ? data.importable : 0}
-					initialStatus={status}
-					milestones={data.milestones}
-					frames={data.frames}
-					deskCounts={data.deskCounts}
-				/>
+				<BinderPage client:load data={data} initialStatus={status} />
 			</>
 		)
 	}

@@ -14,8 +14,8 @@
  *
  * Signing out deletes these caches (they hold the logbook).
  */
-const PAGES = 'film-lab-pages-v1';
-const ASSETS = 'film-lab-assets-v1';
+const PAGES = 'film-lab-pages-v2';
+const ASSETS = 'film-lab-assets-v2';
 const KEEP = [PAGES, ASSETS];
 const MAX_ASSETS = 400;
 

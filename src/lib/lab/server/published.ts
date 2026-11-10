@@ -14,7 +14,7 @@ import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { alignScans, publicExposure, type PublicExposure } from '../alignment';
 import { labConfig, type LabConfig } from './config';
 import { getDb } from './db/client';
-import { filmStock, frame, labSetting, lens, roll, user } from './db/schema';
+import { filmStock, frame, labSetting, lens, roll, scanMark, user } from './db/schema';
 import { rollViews } from './inventory';
 
 export type PublishedExposures = Map<string, Map<string, PublicExposure>>;
@@ -37,6 +37,25 @@ async function guarded<T>(what: string, empty: T, fn: (config: LabConfig) => Pro
 
 export const publishedExposures = (desk: { id: string; files: string[] }[]): Promise<PublishedExposures> =>
 	guarded('what the logbook shares', new Map(), (config) => read(config, desk));
+
+/** Desk roll id → scan filename → the owner's grease-pencil mark (1–5, -1 a reject). */
+export type PublishedMarks = Map<string, Map<string, number>>;
+
+/** The owner's marks from the lab's contact sheets: they set each print's place in the desk's pile. */
+export const publishedMarks = (): Promise<PublishedMarks> =>
+	guarded('the contact-sheet marks', new Map(), async (config) => {
+		const d = await getDb(config);
+		const [owner] = await d.select({ id: user.id }).from(user).where(eq(user.role, 'owner')).limit(1);
+		if (!owner) return new Map();
+		const rows = await d.select({ roll: scanMark.publicRollId, file: scanMark.filename, mark: scanMark.mark }).from(scanMark).where(eq(scanMark.userId, owner.id));
+		const out: PublishedMarks = new Map();
+		for (const r of rows) {
+			const m = out.get(r.roll) ?? new Map<string, number>();
+			m.set(r.file, r.mark);
+			out.set(r.roll, m);
+		}
+		return out;
+	});
 
 /** "In the Minolta X-700: Kodak Portra 400, 22 of 36", for each loaded camera. */
 export interface LoadedNow {

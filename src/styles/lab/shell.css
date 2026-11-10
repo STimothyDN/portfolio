@@ -1,0 +1,353 @@
+/* The lab bar, the dock (a strip of film at the bottom of every station) and the main column. */
+.lab-bar {
+	display: flex;
+	align-items: center;
+	gap: clamp(1rem, 3vw, 2rem);
+	margin-top: -1.5rem;
+	padding-bottom: 0.9rem;
+}
+
+.lab-wordmark {
+	font-family: var(--font-brand);
+	font-style: italic;
+	font-weight: 400;
+	font-variation-settings: 'opsz' 144, 'SOFT' 60, 'WONK' 1;
+	font-size: var(--text-2xl);
+	line-height: 1;
+	color: var(--gray-0);
+	text-decoration: none;
+}
+
+/* Edge print, like the text along a film's rebate. */
+.lab-bar-print,
+.lab-edge-print {
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--lab-edge-text);
+}
+
+.lab-me-label,
+.lab-edge {
+	font-size: var(--text-sm);
+	letter-spacing: 0.1em;
+	font-variant-caps: all-small-caps;
+	color: var(--gray-300);
+	text-decoration: none;
+}
+
+.lab-me {
+	margin-left: auto;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.6rem;
+	text-decoration: none;
+	border-radius: 999px;
+}
+
+.lab-avatar {
+	display: grid;
+	place-items: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: 50%;
+	border: 1px solid var(--gray-700);
+	background: var(--gray-900);
+	font-family: var(--font-mono);
+	font-size: 0.72rem;
+	color: var(--gray-0);
+}
+
+.lab-me[aria-current='page'] .lab-avatar {
+	background: var(--accent-regular);
+	border-color: var(--accent-regular);
+	color: var(--accent-text-over);
+}
+
+@media (max-width: 64em) {
+	.lab-me-label,
+	.lab-bar-print {
+		display: none;
+	}
+}
+
+/*
+ * The dock: a short strip of film floating at the bottom of every station,
+ * one frame per place (the one you're in is lit, as if held up to a light
+ * table), with the shutter release in the middle for shooting mode. On
+ * phones it spans the bottom edge.
+ */
+.lab-dock {
+	--pitch: 0.95rem;
+	position: fixed;
+	z-index: 40;
+	left: 50%;
+	bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+	translate: -50% 0;
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.78rem 0.4rem;
+	border-radius: 0.55rem;
+	background: var(--lab-film);
+	box-shadow:
+		0 0 0 1px oklch(100% 0 0 / 0.06) inset,
+		0 18px 40px -16px rgb(0 0 0 / 0.65);
+}
+
+.lab-dock::before,
+.lab-dock::after {
+	content: '';
+	position: absolute;
+	inset-inline: 0.5rem;
+	height: 0.32rem;
+	border-radius: 1px;
+	background: repeating-linear-gradient(90deg, var(--lab-sprocket) 0 0.48rem, transparent 0.48rem var(--pitch));
+	opacity: 0.8;
+	pointer-events: none;
+}
+
+.lab-dock::before {
+	top: 0.22rem;
+}
+
+.lab-dock::after {
+	bottom: 0.22rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.lab-dock::before,
+	.lab-dock::after {
+		animation: lab-sprocket-wind 0.7s cubic-bezier(0.33, 1, 0.68, 1) both;
+	}
+
+	html[data-lab-turn='prev'] .lab-dock::before,
+	html[data-lab-turn='prev'] .lab-dock::after {
+		animation-direction: reverse;
+	}
+
+	@keyframes lab-sprocket-wind {
+		from {
+			background-position-x: calc(var(--pitch) * -3);
+		}
+	}
+}
+
+.lab-dock a,
+.lab-dock button {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	min-height: 2.6rem;
+	padding: 0.35rem 0.85rem;
+	border: 0;
+	border-radius: 2px;
+	background: var(--lab-film-frame);
+	color: oklch(86% 0.012 75);
+	font: inherit;
+	font-size: var(--text-sm);
+	letter-spacing: 0.06em;
+	font-variant-caps: all-small-caps;
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+	transition:
+		background-color 0.25s ease,
+		color 0.25s ease;
+}
+
+.lab-dock a:hover,
+.lab-dock button:hover {
+	background: oklch(38% 0.022 55);
+	color: oklch(97% 0.006 85);
+}
+
+.lab-dock a[aria-current='page'] {
+	background: var(--lab-lit);
+	color: oklch(22% 0.01 60);
+	box-shadow:
+		0 0 0 1px oklch(100% 0 0 / 0.35) inset,
+		0 0 22px -4px var(--lab-lit-glow);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.lab-dock a[aria-current='page'] {
+		animation: lab-lamp 0.6s ease-out both;
+	}
+
+	@keyframes lab-lamp {
+		from {
+			background-color: var(--lab-film-frame);
+			color: oklch(84% 0.012 75);
+			box-shadow: none;
+		}
+	}
+}
+
+.lab-dock a:focus-visible,
+.lab-dock button:focus-visible {
+	outline: 2px solid var(--lab-lit);
+	outline-offset: 2px;
+}
+
+.lab-dock svg {
+	width: 1.15rem;
+	height: 1.15rem;
+	flex: none;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.lab-dock kbd {
+	font-family: var(--font-mono);
+	font-size: 0.62rem;
+	font-variant-caps: normal;
+	letter-spacing: 0;
+	padding: 0.05rem 0.3rem;
+	border: 1px solid oklch(60% 0.01 70 / 0.5);
+	border-radius: 0.25rem;
+	opacity: 0.8;
+}
+
+/* The shutter release: chrome collar, a black button, raised above the strip. */
+.lab-dock .lab-shutter {
+	width: 3.1rem;
+	height: 3.1rem;
+	min-height: 0;
+	margin-block: -0.9rem;
+	margin-inline: 0.35rem;
+	padding: 0;
+	justify-content: center;
+	border-radius: 50%;
+	background: radial-gradient(circle at 50% 35%, oklch(96% 0.004 80), oklch(70% 0.006 80) 70%, oklch(55% 0.006 75));
+	box-shadow:
+		0 2px 0 oklch(100% 0 0 / 0.5) inset,
+		0 8px 16px -6px rgb(0 0 0 / 0.6);
+}
+
+.lab-dock .lab-shutter::before {
+	content: '';
+	width: 62%;
+	height: 62%;
+	border-radius: 50%;
+	background: radial-gradient(circle at 40% 30%, oklch(40% 0.01 60), oklch(14% 0.005 60) 70%);
+	box-shadow:
+		0 -1px 0 oklch(100% 0 0 / 0.2) inset,
+		0 2px 3px rgb(0 0 0 / 0.5);
+	transition: scale 0.12s ease;
+}
+
+.lab-dock .lab-shutter::after {
+	content: '';
+	position: absolute;
+	top: 0.35rem;
+	right: 0.4rem;
+	width: 0.42rem;
+	height: 0.42rem;
+	border-radius: 50%;
+	background: oklch(62% 0.21 28);
+	box-shadow: 0 0 6px oklch(62% 0.21 28 / 0.8);
+}
+
+.lab-dock .lab-shutter:hover {
+	background: radial-gradient(circle at 50% 35%, oklch(98% 0.004 80), oklch(74% 0.006 80) 70%, oklch(58% 0.006 75));
+}
+
+.lab-dock .lab-shutter:active::before {
+	scale: 0.88;
+}
+
+/* Room under every page (and the site footer) for the dock. */
+.lab:has(> .lab-dock) {
+	padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.content:has(.lab-dock) > footer {
+	padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Phones: the strip spans the bottom edge, icons over short labels. */
+@media (max-width: 49.99em) {
+	.lab-dock {
+		left: 0;
+		right: 0;
+		bottom: 0;
+		translate: none;
+		justify-content: space-around;
+		gap: 0.15rem;
+		padding: 0.72rem max(0.3rem, env(safe-area-inset-right, 0px)) calc(0.72rem + env(safe-area-inset-bottom, 0px)) max(0.3rem, env(safe-area-inset-left, 0px));
+		border-radius: 0;
+	}
+
+	.lab-dock::after {
+		bottom: calc(0.22rem + env(safe-area-inset-bottom, 0px));
+	}
+
+	.lab-dock a,
+	.lab-dock button {
+		flex: 1;
+		flex-direction: column;
+		justify-content: center;
+		gap: 0.1rem;
+		min-height: 3.1rem;
+		padding: 0.25rem 0.1rem;
+		font-size: 0.72rem;
+	}
+
+	.lab-dock .lab-shutter {
+		flex: none;
+		width: 3.5rem;
+		height: 3.5rem;
+		margin-block: -1.4rem -0.2rem;
+	}
+
+	.lab-dock kbd {
+		display: none;
+	}
+}
+
+.lab-main {
+	display: grid;
+	gap: clamp(2rem, 5vw, 3.5rem);
+	padding-top: clamp(1.75rem, 4vw, 3rem);
+}
+
+/* ---------- shared motion: page sections rise in, a beat apart ---------- */
+@media (prefers-reduced-motion: no-preference) {
+	.lab-main > * {
+		animation: lab-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.lab-main > :nth-child(2) {
+		animation-delay: 0.06s;
+	}
+
+	.lab-main > :nth-child(3) {
+		animation-delay: 0.12s;
+	}
+
+	.lab-main > :nth-child(n + 4) {
+		animation-delay: 0.18s;
+	}
+
+	@keyframes lab-rise {
+		from {
+			opacity: 0.001;
+			translate: 0 14px;
+		}
+	}
+}
+
+/* The bench and its close-ups spend the width on the mat: narrower gutters. */
+.lab.lab--wide .lab-wrap {
+	--lab-gutter: clamp(1rem, 2.4vw, 2.5rem);
+}
+
+.lab.lab--wide .lab-main {
+	padding-top: clamp(0.75rem, 2vw, 1.4rem);
+}

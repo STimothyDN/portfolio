@@ -2,7 +2,6 @@
 import FramesDesk from '../../../components/lab/FramesDesk.vue';
 import LabLayout from '../../../components/lab/LabLayout.astro';
 import RollsTabs from '../../../components/lab/RollsTabs.astro';
-import ToneReview from '../../../components/lab/ToneReview.vue';
 import { isOwner, labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
 import { framesPage } from '../../../lib/lab/server/frames';
@@ -15,7 +14,7 @@ const data = user && config.ok ? await framesPage(await getDb(config.config), us
 const q = Astro.url.searchParams.get('q') ?? '';
 ---
 
-<LabLayout title="Frames" current="rolls">
+<LabLayout title="Frames" current="rolls" wide>
 	{
 		data && (
 			<>
@@ -23,13 +22,14 @@ const q = Astro.url.searchParams.get('q') ?? '';
 					<div>
 						<span class="lab-edge">Rolls</span>
 						<h1 class="lab-title">Frames</h1>
-						<p class="lab-edge-print">Search every frame you’ve logged · see how the negatives came back</p>
+						<p class="lab-edge-print">Every frame you’ve logged · ask the field a question · search · map</p>
 					</div>
 					<RollsTabs current="frames" />
 				</section>
-				<ToneReview review={data.review} desk={data.desk} part="findings" />
 				<FramesDesk client:load rows={data.rows} rolls={data.rolls} initialQuery={q} />
-				<ToneReview review={data.review} desk={data.desk} part="charts" />
+				<p class="lab-meta">
+					How the negatives come back, camera by camera and lab by lab, is in the <a class="lab-link" href="/photography/lab/almanac/#exposure">almanac</a>.
+				</p>
 			</>
 		)
 	}

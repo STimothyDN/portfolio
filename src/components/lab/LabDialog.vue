@@ -1,7 +1,7 @@
 <template>
 	<!-- Native <dialog>: it opens in the top layer, so no Teleport (see the
 	     Teleport hydration trap) and the browser handles focus and Esc. -->
-	<dialog ref="el" class="lab-dialog" :class="{ wide }" :aria-labelledby="titleId" @cancel.prevent="emit('close')" @click="onBackdrop">
+	<dialog ref="el" class="lab-dialog" :class="{ wide }" :aria-labelledby="titleId" @cancel.prevent="emit('close')" @close="!props.open || emit('close')" @click="onBackdrop">
 		<div class="dialog-card">
 			<header class="dialog-head">
 				<h2 :id="titleId" class="lab-h2">{{ title }}</h2>

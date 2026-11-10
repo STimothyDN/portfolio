@@ -72,8 +72,14 @@ const exposureOf = (photo: FilmRoll['data']['photos'][number]) => (photo.tone ? 
 /** Compact island props for the film desk: rolls plus every frame on them. */
 export function toFilmDeskData(
 	rolls: FilmRoll[],
-	published?: PublishedExposures
+	published?: PublishedExposures,
+	marks?: Map<string, Map<string, number>>
 ): { rolls: FilmRollData[]; photos: FilmPhotoData[] } {
+	// A mark from the lab's contact sheet overrides the uploaded rating: a reject sinks to the bottom of the pile.
+	const priorityOf = (rollId: string, photo: FilmRoll['data']['photos'][number]) => {
+		const m = marks?.get(rollId)?.get(photo.filename);
+		return m == null ? photo.priority : m < 0 ? 1 : Math.min(5, Math.max(1, m));
+	};
 	const rollData = rolls.map((roll): FilmRollData => {
 		const { data } = roll;
 		// Strip previews: the roll's favorite frames in frame order. Among equally
@@ -81,10 +87,10 @@ export function toFilmDeskData(
 		// on a roll are often throwaways.
 		const ranked = data.photos
 			.map((photo, i) => ({ photo, i }))
-			.sort((a, b) => b.photo.priority - a.photo.priority || a.i - b.i);
-		const cutoff = ranked[Math.min(PREVIEW_FRAMES, ranked.length) - 1].photo.priority;
-		const sure = ranked.filter((r) => r.photo.priority > cutoff);
-		const tied = ranked.filter((r) => r.photo.priority === cutoff).sort((a, b) => a.i - b.i);
+			.sort((a, b) => priorityOf(roll.id, b.photo) - priorityOf(roll.id, a.photo) || a.i - b.i);
+		const cutoff = priorityOf(roll.id, ranked[Math.min(PREVIEW_FRAMES, ranked.length) - 1].photo);
+		const sure = ranked.filter((r) => priorityOf(roll.id, r.photo) > cutoff);
+		const tied = ranked.filter((r) => priorityOf(roll.id, r.photo) === cutoff).sort((a, b) => a.i - b.i);
 		const need = Math.min(PREVIEW_FRAMES, ranked.length) - sure.length;
 		const spread = Array.from({ length: need }, (_, k) => tied[Math.floor(((k + 0.5) * tied.length) / need)]);
 		const previews = [...sure, ...spread]
@@ -121,7 +127,7 @@ export function toFilmDeskData(
 				f: photo.filename,
 				w: photo.width,
 				h: photo.height,
-				p: photo.priority,
+				p: priorityOf(roll.id, photo),
 				n: i + 1,
 				x: exposureOf(photo),
 				...(photo.caption ? { c: photo.caption } : {}),

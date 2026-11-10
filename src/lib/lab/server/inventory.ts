@@ -20,7 +20,7 @@ import type {
 	StockView,
 } from '../inventory';
 import type { LabDb } from './db/client';
-import { camera, filmStock, frame, lab, labSetting, lens, roll, rollEvent, serviceLog } from './db/schema';
+import { camera, filmStock, frame, lab, labSetting, lens, roll, rollEvent, scanMark, serviceLog } from './db/schema';
 
 /* ---------- rolls ---------- */
 
@@ -202,6 +202,21 @@ export async function frameDigest(d: LabDb, userId: string): Promise<[number | n
 	]);
 }
 
+/** Someone's grease-pencil marks: desk roll id → scan filename → mark (1–5, or -1 for a reject). */
+export async function scanMarks(d: LabDb, userId: string, publicRollIds?: string[]): Promise<Record<string, Record<string, number>>> {
+	if (publicRollIds && !publicRollIds.length) return {};
+	const rows = await d
+		.select({ roll: scanMark.publicRollId, file: scanMark.filename, mark: scanMark.mark })
+		.from(scanMark)
+		.where(publicRollIds ? and(eq(scanMark.userId, userId), inArray(scanMark.publicRollId, publicRollIds)) : eq(scanMark.userId, userId));
+	const out: Record<string, Record<string, number>> = {};
+	for (const r of rows) (out[r.roll] ??= {})[r.file] = r.mark;
+	return out;
+}
+
+/** A scan's standing: your mark if you made one, else the rating it was uploaded with. */
+export const standing = (mark: number | undefined, priority: number) => (mark == null ? priority : mark < 0 ? 0 : mark);
+
 /* ---------- catalogue ---------- */
 
 /** Someone's lab settings (defaults until they change one). */
@@ -347,7 +362,7 @@ export async function deskRollPreview(id: string) {
  */
 export async function deskRollStrip(id: string): Promise<{
 	profile: NegativeProfileKey;
-	scans: { path: string; frame: number; w?: number; h?: number; exposure: number }[];
+	scans: { path: string; frame: number; w?: number; h?: number; exposure: number; tone: [number, number, number] | null; priority: number }[];
 } | null> {
 	const r = (await getFilmRolls()).find((x) => x.id === id);
 	if (!r) return null;
@@ -361,6 +376,8 @@ export async function deskRollStrip(id: string): Promise<{
 			w: p.width,
 			h: p.height,
 			exposure: p.tone ? frameExposure(p.tone) : 0,
+			tone: (p.tone as [number, number, number] | undefined) ?? null,
+			priority: p.priority,
 		})),
 	};
 }

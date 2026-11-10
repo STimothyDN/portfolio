@@ -1,0 +1,11 @@
+/*
+ * Film Lab: shared styles (every class is lab- prefixed). Imported by
+ * LabLayout.astro, so they load on lab pages only. Order matters: later files
+ * refine earlier ones (.lab-select after .lab-input, and so on).
+ */
+@import './tokens.css';
+@import './shell.css';
+@import './lightbox.css';
+@import './type.css';
+@import './room.css';
+@import './forms.css';

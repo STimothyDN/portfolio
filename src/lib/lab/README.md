@@ -10,36 +10,32 @@ focus on the phone; search across every frame; what your scans say about your ca
 film and labs; cost per frame; pace and restock forecasts; and a "loaded now" line on the
 film desk).
 
-## The pages
+## The places
 
-| Page | What it's for |
+Three places and a shutter button, in the dock (a strip of film along the bottom of every
+page; ⌘K, Ctrl+K or `/` opens a finder for any place, roll or next move).
+
+| Place | What it's for |
 | --- | --- |
-| **Light table** (`/photography/lab/`) | What's loaded in each camera, with its pace ("about 2 frames a day · done around Nov 17"), and "the line": six columns, one per stage. Drag a roll to its next stage on a laptop, or tap its → button. Every move records a date and has an Undo. At the bottom, **Rewind**: a roll developed about a year (or six, three, one months) ago today. |
-| **Rolls** | The almanac (charts that filter the list below them, cost per frame, days a roll spends in each camera) and every roll, filterable by stage and searchable. Each roll's page has its timeline (dates are editable), its details, and its scans on the public desk. |
-| **Frames** (`/photography/lab/frames/`, the Rolls page's second tab) | Every frame you've logged, as contact sheets with their scans, a search box and a map. Above it, what the scans say about how your negatives come back. See *Insight* below. |
-| **Fridge** | Unshot film, as canisters on shelves grouped by where they're kept ("Fridge door"). Oldest expiry first, with the usual rule of thumb for expired film, and how long each stock lasts at the rate you load it (flagging rolls that will pass their date first). Below it, the film stock catalogue (ISO, process, format). |
-| **Gear** | Cameras (mount or fixed lens, battery, service log) and lenses grouped by mount, with which cameras each fits. |
-| **Shoot** (`/photography/lab/shoot/`) | The phone screen for logging frames while you shoot. See below. |
+| **The bench** (`/photography/lab/`) | Everything in motion on one surface, laid out as a roll's loop: **fridge → cameras → shot → at the lab → light table → binder**, with the verbs printed on the mat between stations. A roll is a physical thing at each stage (a canister, film across a camera's gate, a loose canister, an envelope, a strip of negatives, a sleeve). Drag it to where it goes next, or tap it for its menu; the drop target fills in what the slip used to ask (which camera, which lab), you confirm, and it flies there. Every move has an Undo. The **Today** card ranks the few things worth doing next (`nudges.ts`); **Annotate** (`A`) numbers every object and lists its readouts (pace, idle days, months of film, when scans should be back). On wide screens the whole bench fits one screen; on phones and small windows it's a column. |
+| **Fridge**, **Kit**, **Post** (`/fridge/`, `/gear/`, `/labs/`) | Close-ups of the bench: the station fills the mat and the rest shrinks to a mini-map at the side (the station grows into place as you open it). Fridge: unshot film by shelf, oldest dates first, restock forecast, the stock catalogue. Kit: cameras (battery, service log) and lenses by mount. Post: send a batch (drop-off or mail, tracking, prints), envelopes on their way, negatives coming back, your labs. |
+| **The binder** (`/photography/lab/rolls/`) | Every roll. **The line**: each roll as a ribbon in its film's colour on one time axis, running through its camera's lane, then waiting, at a lab, scans in, filed; drag across it to pick a stretch of time. Above it, the average roll (median days at each stage). Below, the **sheets**: a glassine sleeve per roll with its best frames showing through, stage tabs, search, a list view. |
+| **A roll** (`/photography/lab/rolls/R-021/`) | The roll as a sleeve page: its lifeline (the six stations, dated; click a date to fix it) and next step in the head, a report card (yield, keepers, density against the same film elsewhere, cost per frame, days per stage), the scans in strips of six (negative or positive), and a close-up of any frame (the scan, what it was shot at, when, a density gauge, and **grease-pencil marks**: 1–5 or ✕, keys work). Details and sharing below. |
+| **Frames** (`/photography/lab/frames/`) | **The field**: every logged frame as a dot, re-arranged by exposure (aperture × shutter, lines of equal light), light × density, time of day, or roll by roll, coloured by film, camera or density. Then the contact sheets, search and map. |
+| **The almanac** (`/photography/lab/almanac/`) | What it all adds up to. See *Insight* below. |
+| **Shoot** (`/photography/lab/shoot/`) | The phone screen for logging frames while you shoot (the shutter button in the dock). A pre-flight strip says frames left, the pace and one thing worth knowing about the camera; when a roll comes out it offers the next one from the fridge. See below. |
 | **Labels** (`/photography/lab/labels/`) | Printable QR stickers for canisters and camera backs. The phone's own camera opens them: shooting mode if the roll is loaded, otherwise its page (`/photography/lab/r/R-031`). |
-| **Labs** | Shot rolls waiting to be sent: tick a batch, pick the lab, say whether it's **dropped off** or **mailed in** (with an optional tracking number for the envelope), the price per roll and whether it includes prints (or what prints cost), and print a slip with each roll's process and push/pull. Mailed rolls show where their envelope is; once scans are in, rolls whose negatives are in the post show under "Negatives on the way back". Lab cards show typical turnaround once rolls go from "sent" to "scans in". |
 
-**The look: a darkroom you walk around.** Each page is a station in one room, and the
-room changes with the light: daylight through the studio window by day, the safelight's
-amber-red pooling from the corner at night. Moving between stations winds the film: the
-page slides out through the gate as the next frame comes in, in the strip nav's order
-(opening a roll from its list lifts it toward you instead). A roll on the line takes the
-shape it has in real life at each stage: a length of film in the camera, a rewound
-canister, a kraft envelope at the lab (airmail-bordered if mailed, postmarked), a
-darkroom print once scans are in, a glassine sleeve once it's filed. Loaded cameras show
-their top plate with a frame counter that winds up to the frames logged, the box end in
-the memo holder and the film across the gate. The fridge door swings open as you arrive
-(drawers, door bins and the freezer look the part when their shelf is named that way);
-gear sits in a foam-lined case, named on embossed label tape, with a film window and a
-lit LED on loaded cameras; labs are business cards, and a roll at the lab travels the road
-from home to the lab as its days count toward the usual turnaround. Frames lie on the
-light table under a loupe (hover a frame with a mouse). Everything that moves stays still
-under "reduce motion". The transition and room styles live in `LabLayout.astro`; each
-station's objects live in its own component.
+**The look: the maker's side of the film desk.** The desk shows prints under room light;
+the lab shows the same rolls still in motion, under transmitted light. One lamp (top
+right) casts every shadow, and anything you pick up rises toward it. By day the bench is a
+cutting mat on a warm table; at night it's under the safelight. Moving between places
+winds the film (the page slides through the gate); a roll opened from the binder lifts
+toward you; a close-up grows out of its station. Every motion is a plain fade under
+"reduce motion". Shared styles live in `src/styles/lab/`; the motion kit (drag with a
+long press on touch, carrying an object across a change of shape, FLIP) in
+`src/lib/lab/motion/`; the objects (canister, camera top, envelope, negative strip,
+sleeve, binder, Today card) in `src/components/lab/objects/`.
 
 The six stages: **In storage → In camera → Shot → At the lab → Scans in → Negatives home**
 (plus **Lost or ruined**). Rolls get codes like `R-023`, short enough to write on the
@@ -156,31 +152,43 @@ the database.
 
 ## Insight
 
-The **Frames** page (`src/lib/lab/server/frames.ts`, `src/lib/lab/insight.ts`) starts
-with what the scans say. Every desk scan carries its measured tone (black point,
-log-average, white point, stored by the uploader). A thin negative scans with grey,
-raised blacks, so a high black point is the signal. Film and lab scanning raise blacks
-too, so the comparisons are made fairly:
+The **almanac** (`src/lib/lab/server/almanac.ts`, pure maths in `src/lib/lab/stats/`,
+tested with `npm test`) leads with what stands out, each a sentence with its numbers and
+sample size, then nine chapters, each a question with the figure that answers it, a
+table view, and one link to act on it. With too little data a figure says what it needs.
 
-- A **camera** is compared with the same film shot in your other cameras. One that sits
-  0.025 or more higher (over at least 20 comparable scans) "comes back thin". If every
-  roll from it went to one lab, the finding says the lab may be part of it.
-- A **film** that scans flat everywhere is called out as the film's own character, with
-  the usual advice to rate it a stop slower.
-- A **lab** is compared with your other labs on the same film.
-- **Frames you logged** are compared with the rest of their own roll. When thin frames
-  cluster in one kind of light (bright, shade and overcast, dim, night), with one lens or
-  in one camera, it says so.
+1. **The life of a roll**: days at each stage (every roll a dot, the middle half shaded),
+   and what piled up week by week.
+2. **Exposure**: which light gives you thin negatives (logged frames' light against
+   their scan's density), and cameras and labs **compared on the same film** (a camera
+   whose rolls all went to one lab is flagged, since the lab may be part of it). Every
+   desk scan carries its measured tone; a thin negative scans with raised blacks.
+3. **Film for the light**: per film speed, the light you shot in against what that speed
+   can hold by hand (f/2 at 1/30 to f/16 at 1/1000), and the speed that would fit best.
+4. **Keepers**: the share of scans you rate four stars or more (your marks first, then the
+   upload rating) by camera, film, lab and position on the roll, each with a 95% Wilson
+   interval; cost per keeper.
+5. **Rhythm**: hour of day, day of week, rolls per month, what you load.
+6. **Kit**: per camera, rolls, frames back, frames lost a roll, days empty, cost a roll,
+   density on the same film; per lens, the apertures you use.
+7. **Labs**: turnaround (every roll a dot) and when scans would be back if sent today.
+8. **Money**: month by month (film when bought, lab when sent), this year, the projection
+   to December, cost per frame by film.
+9. **Shelf life**: each roll in the fridge at its date against when you'd reach it.
 
-Below the findings: the contact sheets (one per roll, unscanned frames tinted by the light
-they were exposed for), the search box, and a map of where frames were taken (OpenStreetMap
-tiles, greyed; the tile server sees which area you're looking at). Searches read settings,
-flags and dates as such: `f/1.7`, `1/500`, `flash`, `noted`, `scanned`, `thin`, `mapped`,
-`R-021`, `october`, `2026-10`. Every other word must appear on the frame (stock, camera,
-lens, roll title, note). The search stays in the address (`?q=`), so a roll's Frames table
-links straight to its contact sheet. At the bottom, a chart of light against density for
-logged frames, a "barcode" of every scan's tonal range per camera, and tables by film and
-by lab.
+The same numbers turn up where the decision is made: the send slip shows each lab's
+return window, envelopes on the bench flag a lab running late, shooting mode warns when a
+camera's negatives tend to come back thin.
+
+Searches on the Frames page read settings, flags and dates as such: `f/1.7`, `1/500`,
+`flash`, `noted`, `scanned`, `thin`, `mapped`, `R-021`, `october`, `2026-10`. Every other
+word must appear on the frame (stock, camera, lens, roll title, note). The search stays in
+the address (`?q=`). The map uses OpenStreetMap tiles (greyed; the tile server sees which
+area you're looking at).
+
+**Marks reach the portfolio.** Grease-pencil marks (table `scan_mark`, migration
+`0006_marks.sql`) set how close to the top of the film desk's pile each print lands, from
+the next publish (read at build time with the rest, `publishedMarks()`).
 
 ## On the portfolio
 
@@ -257,6 +265,21 @@ To start over, delete `.data/film-lab.db*` and run `npm run db:migrate` again (r
 
 `astro preview` doesn't work with the Vercel adapter. To check a production build, use
 `npm run build` and look in `.vercel/output/`.
+
+### Tests
+
+`npm test` runs the almanac's maths (vitest, `src/lib/lab/stats/stats.test.ts`). The
+browser tests drive headless Chrome over CDP with a virtual passkey, against
+`npm run dev` (which only ever uses the local database). Most start by claiming the lab,
+so empty the local logbook first:
+
+```bash
+node scripts/lab-harness/reset-db.mjs && node scripts/lab-harness/run.mjs bench
+```
+
+Modules: `bench`, `binder`, `almanac`, `smoke`, `p2`–`p6`, `audit` (five widths, empty
+and full), `perf`, and `seed` + `look` (screenshots; `LOOK=home,rolls VIEWS=light,phone`).
+Output goes to `.data/harness/` (`LAB_OUT` to change it).
 
 ## Going live on timo3.dev
 
@@ -357,10 +380,22 @@ Vercel if you like.
 | `src/lib/lab/frame-search.ts`         | the Frames search: query parsing and matching                |
 | `src/lib/lab/pace.ts`                 | a loaded roll's pace; how fast each stock leaves the fridge  |
 | `src/lib/lab/server/frames.ts`        | the Frames page's data (frames, their scans, desk tone)      |
-| `src/lib/lab/server/rewind.ts`        | the light table's Rewind pick                                |
+| `src/lib/lab/server/rewind.ts`        | the Today card's Rewind pick                                 |
 | `src/lib/lab/tracking.ts`             | carrier from a tracking number's shape, links, status words  |
 | `src/lib/lab/server/tracking.ts`      | live status from 17TRACK, cached in `shipment`               |
 | `src/components/lab/LabSendFields.vue`| drop-off or mail, tracking, prints (send forms)              |
+| `src/styles/lab/`                     | the lab's shared styles and tokens (stage colours, lamp, mat) |
+| `src/lib/lab/motion/`                 | drag (long press on touch), carry across shapes, FLIP        |
+| `src/components/lab/objects/`         | canister, camera top, envelope, negative strip, sleeve, binder, Today |
+| `src/components/lab/bench/`           | the bench, its slips and the close-ups' frame                |
+| `src/components/lab/binder/`          | the binder page and the line                                 |
+| `src/components/lab/almanac/`, `charts/` | the almanac and its chart kit                             |
+| `src/components/lab/frames/`          | the field                                                    |
+| `src/lib/lab/server/bench.ts`         | the bench's data (one batch), negative strips                |
+| `src/lib/lab/server/binder.ts`, `report.ts`, `almanac.ts` | the binder, a roll's report card, the almanac |
+| `src/lib/lab/stats/`                  | pipeline, labs, keepers, light fit, money, rhythm, kit, shelf (+ tests) |
+| `src/lib/lab/nudges.ts`               | the Today card's ranking                                     |
+| `scripts/lab-harness/`                | browser tests over CDP (`node scripts/lab-harness/run.mjs bench`) |
 | `public/photography/lab/`             | service worker, web app manifest, icons                      |
 
 ## Changing the schema
