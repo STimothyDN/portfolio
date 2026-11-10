@@ -7,11 +7,6 @@ import { GUEST_PAGES, guestOwner } from './lib/lab/server/guest';
 const LAB = '/photography/lab';
 /** Lab pages you can open signed out. Everything else under /photography/lab needs a session. */
 const OPEN_PAGES = /^\/photography\/lab\/(sign-in|setup|invite\/[^/]+)\/?$/;
-/**
- * Not a secret: tells the static film desk that this device has signed in to
- * the lab before, so it can show the Lab button (FilmFilterDock.vue).
- */
-export const DEVICE_HINT_COOKIE = 'film_lab_device';
 
 export const onRequest = defineMiddleware(async (context, next) => {
 	// Public pages are prerendered at build time; none of this applies to them.
@@ -66,14 +61,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		}
 		if (context.locals.user && /\/sign-in\/?$/.test(pathname)) {
 			return noindex(context.redirect(`${LAB}/`));
-		}
-		if (context.locals.user) {
-			context.cookies.set(DEVICE_HINT_COOKIE, '1', {
-				path: '/',
-				maxAge: 60 * 60 * 24 * 365,
-				sameSite: 'lax',
-				secure: context.url.protocol === 'https:',
-			});
 		}
 	}
 

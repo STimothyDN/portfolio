@@ -3,14 +3,14 @@
 		<!-- The Digital ⇄ Film switch, passed in from the page. -->
 		<template v-if="$slots.default">
 			<slot />
-			<!-- Film Lab: only on devices that have signed in before (a plain
-			     cookie the lab sets), so the static desk doesn't advertise it. -->
-			<a v-if="labDevice" class="dock-btn dock-lab" href="/photography/lab/" data-astro-reload>
+			<!-- Film Lab: for everyone. Signed out it's the owner's lab, read-only
+			     (with a guide in the margin); signed in, your own. -->
+			<a class="dock-btn dock-lab" href="/photography/lab/" data-astro-reload title="Film Lab: where these rolls are logged">
 				<svg viewBox="0 0 256 256" aria-hidden="true">
 					<rect x="56" y="32" width="144" height="192" rx="12" />
 					<path d="M96 32v192M128 80h40M128 112h40" />
 				</svg>
-				<span class="action-label">Lab</span>
+				<span class="action-label">Film Lab</span>
 			</a>
 			<span class="dock-rule" aria-hidden="true"></span>
 		</template>
@@ -246,12 +246,7 @@ function onPointerDown(e: PointerEvent) {
 	if (open.value && !dockRef.value?.contains(e.target as Node)) open.value = null;
 }
 
-const labDevice = ref(false);
-
-onMounted(() => {
-	document.addEventListener('pointerdown', onPointerDown);
-	labDevice.value = /(?:^|;\s*)film_lab_device=1(?:;|$)/.test(document.cookie);
-});
+onMounted(() => document.addEventListener('pointerdown', onPointerDown));
 onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown));
 </script>
 

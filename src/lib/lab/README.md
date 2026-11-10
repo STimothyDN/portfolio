@@ -361,9 +361,8 @@ lab as before. Test: `node scripts/lab-harness/run.mjs guest`.
   server too.
 - **Preview deployments** run on `*.vercel.app`. Passkeys are bound to `timo3.dev`, so
   they don't work there, but recovery codes do (if the preview has the env vars).
-- **The Lab button on the film desk** shows only on devices that have signed in before.
-  It reads a plain, non-secret cookie (`film_lab_device`) that the lab sets. Anyone else
-  can still reach the sign-in page at `/photography/lab`, but nothing points to it.
+- **The Lab button on the film desk** shows for everyone. Signed out it opens the owner's
+  lab read-only (see *Guests*); signed in, your own.
 - Lab pages and the auth API send `X-Robots-Tag: noindex` and `Cache-Control: no-store`.
 
 ## Where things live
