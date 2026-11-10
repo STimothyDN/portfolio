@@ -9,7 +9,7 @@ import { computed, onMounted, ref } from 'vue';
 import type { Nudge } from '../../../lib/lab/nudges';
 import { sunReport } from '../../../lib/lab/light';
 
-const props = defineProps<{ nudges: Nudge[]; today: string; rewind?: { when: string; title: string; code: string | null } | null }>();
+const props = defineProps<{ nudges: Nudge[]; today: string; rewind?: { when: string; title: string; code: string | null } | null; readOnly?: boolean }>();
 const emit = defineEmits<{ act: [nudge: Nudge] }>();
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -41,10 +41,10 @@ onMounted(() => {
 		<ol v-if="nudges.length" class="list">
 			<li v-for="n in nudges" :key="n.key" :class="n.tone">
 				<span class="text">{{ n.text }}</span>
-				<button type="button" class="act" @click="emit('act', n)">{{ n.label }}</button>
+				<button v-if="!readOnly" type="button" class="act" @click="emit('act', n)">{{ n.label }}</button>
 			</li>
 		</ol>
-		<p v-else class="clear">Nothing waiting on you. Go shoot something.</p>
+		<p v-else class="clear">{{ readOnly ? 'Nothing waiting today.' : 'Nothing waiting on you. Go shoot something.' }}</p>
 		<p v-if="rewind" class="rewind">
 			{{ rewind.when }}: <a v-if="rewind.code" :href="`/photography/lab/rolls/${rewind.code}/`">{{ rewind.title }}</a><template v-else>{{ rewind.title }}</template>
 		</p>

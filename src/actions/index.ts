@@ -560,7 +560,13 @@ export const server = {
 		/** The ⌘K finder's index: every roll, briefly (read-only; asked for the first time it opens). */
 		paletteIndex: defineAction({
 			handler: async (_input, context) => {
-				const { d, userId } = await session(context);
+				// Read-only, so a guest gets the owner's index (what the guest view shows).
+				const viewer = context.locals.user ?? context.locals.guest;
+				if (!viewer) throw new ActionError({ code: 'UNAUTHORIZED', message: 'Sign in to search your lab.' });
+				const config = labConfig();
+				if (!config.ok) throw new ActionError({ code: 'INTERNAL_SERVER_ERROR', message: 'Film Lab isn’t configured here.' });
+				const d = await getDb(config.config);
+				const userId = viewer.id;
 				const rolls = await d
 					.select({ code: roll.code, title: roll.title, status: roll.status, statusOn: roll.statusOn, stock: filmStock.name, camera: camera.name })
 					.from(roll)

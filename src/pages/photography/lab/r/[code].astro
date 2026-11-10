@@ -6,16 +6,18 @@
 import { labConfig } from '../../../../lib/lab/server/config';
 import { getDb } from '../../../../lib/lab/server/db/client';
 import { rollByCode } from '../../../../lib/lab/server/inventory';
+import { viewerOf, visible } from '../../../../lib/lab/server/guest';
 
 export const prerender = false;
 
-const { user } = Astro.locals;
+// Signed out, a guest sees the owner's lab, read-only and with private details taken out.
+const { user, guest } = viewerOf(Astro.locals);
 const config = labConfig();
 const code = (Astro.params.code ?? '').toUpperCase();
 const found = user && config.ok ? await rollByCode(await getDb(config.config), user.id, code) : null;
 
 return Astro.redirect(
-	found?.roll.status === 'camera' ? `/photography/lab/shoot/?roll=${found.roll.code}` : `/photography/lab/rolls/${code}/`,
+	found?.roll.status === 'camera' && !guest ? `/photography/lab/shoot/?roll=${found.roll.code}` : `/photography/lab/rolls/${code}/`,
 	302
 );
 ---

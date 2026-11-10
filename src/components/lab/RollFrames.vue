@@ -9,7 +9,7 @@
 					<template v-if="list.length"> · <a class="lab-link" :href="`/photography/lab/frames/?q=${code}`">On the contact sheet</a></template>
 				</p>
 			</div>
-			<button v-if="!adding" type="button" class="lab-btn lab-btn--quiet" @click="startAdd">Add a frame</button>
+			<button v-if="!adding && !readOnly" type="button" class="lab-btn lab-btn--quiet" @click="startAdd">Add a frame</button>
 		</header>
 
 		<div v-if="list.length || adding" class="table-wrap">
@@ -41,7 +41,7 @@
 							</td>
 							<td class="note">{{ f.note }}</td>
 							<td class="acts">
-								<button type="button" class="lab-link" @click="startEdit(f)">Edit</button>
+								<button v-if="!readOnly" type="button" class="lab-link" @click="startEdit(f)">Edit</button>
 							</td>
 						</tr>
 						<tr v-else class="edit-row">
@@ -99,6 +99,8 @@ const props = defineProps<{
 	lenses: LensView[];
 	scanFiles: string[];
 	firstScanFrame: number;
+	/** A guest: the frames, but no editing. */
+	readOnly?: boolean;
 }>();
 
 const firstScan = ref(props.firstScanFrame);

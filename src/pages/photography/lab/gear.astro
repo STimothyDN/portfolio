@@ -7,14 +7,16 @@ import { todayInDurham } from '../../../lib/lab/inventory';
 import { labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
 import { listCameras, listLenses, listService, rollViews } from '../../../lib/lab/server/inventory';
+import { viewerOf, visible } from '../../../lib/lab/server/guest';
 
 export const prerender = false;
 
-const { user } = Astro.locals;
+// Signed out, a guest sees the owner's lab, read-only and with private details taken out.
+const { user, guest } = viewerOf(Astro.locals);
 const config = labConfig();
 // The mini-map's counts, read alongside the page's own data.
 const countsP = user && config.ok ? stageCounts(config.config, user.id) : Promise.resolve({});
-const data =
+const data = visible(
 	user && config.ok
 		? await (async () => {
 				const d = await getDb(config.config);
@@ -33,7 +35,9 @@ const data =
 				}
 				return { cameras, lenses, service, usage };
 			})()
-		: null;
+		: null,
+	guest
+);
 const counts = await countsP;
 ---
 
@@ -43,6 +47,7 @@ const counts = await countsP;
 			<BenchCloseup zone="cameras" counts={counts} title="Kit" lede="Cameras and lenses, with batteries and service.">
 				<GearShelf
 					client:load
+					readOnly={guest}
 					cameras={data.cameras}
 					lenses={data.lenses}
 					service={data.service}

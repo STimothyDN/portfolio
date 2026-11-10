@@ -327,6 +327,19 @@ Vercel if you like.
    Publish says it isn't set up. Anyone with the URL can trigger a rebuild, so keep it
    out of the repo. Previews never publish.
 
+## Guests
+
+Signed out, anyone can look round **the owner's lab**, live and read-only: the bench and
+its close-ups, the binder and every roll, frames and the almanac
+(`src/lib/lab/server/guest.ts`). The middleware sets `locals.guest` to the owner, never
+`locals.user`, so every write action refuses (they all need `user`); the islands get
+`readOnly` and show no controls, and nothing can be picked up. Before a guest page's data
+reaches the browser, `forGuest()` blanks where frames were taken and tracking and lab
+order numbers. Shooting mode, labels and the account still ask for sign-in. A margin
+guide (a column at 100em and wider, a sticky strip otherwise) explains each place and
+offers an invite by email (accounts stay invite-only). Signed in, everyone gets their own
+lab as before. Test: `node scripts/lab-harness/run.mjs guest`.
+
 ## How sign-in works
 
 - **Passkeys only.** No passwords and no email sending. Better Auth stores sessions in

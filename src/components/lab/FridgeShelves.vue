@@ -5,7 +5,7 @@
 				{{ storage.length }} {{ storage.length === 1 ? 'roll' : 'rolls' }} across {{ stockCount }} {{ stockCount === 1 ? 'stock' : 'stocks' }}<template v-if="forecast?.perMonth && forecast.monthsOfFilm != null">
 					· you load about {{ forecast.perMonth }} a month, so that’s {{ formatMonths(forecast.monthsOfFilm) }} of film</template>
 			</p>
-			<span class="lab-actions">
+			<span v-if="!readOnly" class="lab-actions">
 				<a class="lab-btn lab-btn--quiet" href="/photography/lab/labels/">Print canister labels</a>
 				<button type="button" class="lab-btn" @click="openAdd()">Add rolls</button>
 			</span>
@@ -57,7 +57,7 @@
 							</p>
 							<p v-if="forecastText(g.stock.id)" class="lab-meta forecast">{{ forecastText(g.stock.id) }}</p>
 						</div>
-						<form class="move" @submit.prevent="moveGroup(g.rolls.map((r) => r.id))">
+						<form v-if="!readOnly" class="move" @submit.prevent="moveGroup(g.rolls.map((r) => r.id))">
 							<input :id="`move-${g.key}`" v-model="moveTo" class="lab-input" type="text" maxlength="60" list="fridge-spots" placeholder="Move all to…" aria-label="Move all of these to" />
 							<button type="submit" class="lab-btn lab-btn--quiet" :disabled="busy || !moveTo.trim()">Move</button>
 						</form>
@@ -73,7 +73,7 @@
 								</span>
 								<span class="lab-meta">{{ [r.priceCents != null ? formatMoney(r.priceCents) : null, r.purchasedFrom, r.purchasedOn ? formatDay(r.purchasedOn) : null].filter(Boolean).join(' · ') }}</span>
 							</div>
-							<button type="button" class="lab-btn lab-btn--quiet" @click="loadRoll = r">Load into a camera</button>
+							<button v-if="!readOnly" type="button" class="lab-btn lab-btn--quiet" @click="loadRoll = r">Load into a camera</button>
 						</li>
 					</ul>
 				</div>
@@ -88,7 +88,7 @@
 		<section v-if="wishlist.length" class="shelf-wrap" aria-label="Want to try">
 			<h2 class="shelf-label">Want to try <span>{{ wishlist.length }}</span></h2>
 			<div class="shelf">
-				<button v-for="s in wishlist" :key="s.id" type="button" class="slot ghost" :title="`Add rolls of ${s.name}`" @click="openAdd(s.id)">
+				<button v-for="s in wishlist" :key="s.id" type="button" class="slot ghost" :disabled="readOnly" :title="readOnly ? s.name : `Add rolls of ${s.name}`" @click="openAdd(s.id)">
 					<span class="can" :style="{ '--can-h': '86px' }">
 						<FilmCanister :stock="s.token ?? s.id" :stock-label="s.name" :stock-brand="s.brand" />
 					</span>
@@ -111,9 +111,9 @@
 					<h2 id="stocks-h" class="lab-h2">Film stocks</h2>
 					<p class="lab-meta">The kinds of film you shoot. Speed and process feed the push/pull notes and lab slips.</p>
 				</div>
-				<button type="button" class="lab-btn lab-btn--quiet" @click="editing = 'new'">Add film stock</button>
+				<button v-if="!readOnly" type="button" class="lab-btn lab-btn--quiet" @click="editing = 'new'">Add film stock</button>
 			</header>
-			<div v-if="deskNames.length" class="lab-notice desk-sync">
+			<div v-if="deskNames.length && !readOnly" class="lab-notice desk-sync">
 				<p>
 					Named on the film desk but not in your logbook yet: <b>{{ deskNames.join(', ') }}</b>. Adding them keeps the logbook and
 					the desk using the same names (any you already added by hand are matched, not duplicated).
@@ -139,7 +139,7 @@
 							<td>{{ s.format }}</td>
 							<td class="num">{{ s.inFridge || '' }}</td>
 							<td class="num">{{ s.total || '' }}</td>
-							<td><button type="button" class="lab-link" @click="editing = s.id">Edit</button></td>
+							<td><button v-if="!readOnly" type="button" class="lab-link" @click="editing = s.id">Edit</button></td>
 						</tr>
 					</tbody>
 				</table>
@@ -186,6 +186,8 @@ const props = defineProps<{
 	deskNames: string[];
 	today: string;
 	forecast?: { byStock: Record<string, StockForecast>; perMonth: number; monthsOfFilm: number | null };
+	/** A guest looking round the owner's lab: nothing can be changed. */
+	readOnly?: boolean;
 }>();
 
 const late = computed(() => new Set(Object.values(props.forecast?.byStock ?? {}).flatMap((f) => f.late)));

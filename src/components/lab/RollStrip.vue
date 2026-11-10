@@ -3,7 +3,7 @@
 		<header class="strip-head">
 			<span class="lab-edge-print">{{ headline }}</span>
 			<!-- Line the logbook up with the lab's scans -->
-			<div v-if="scans && frames.length" class="align" role="group" aria-label="Line up frames with scans">
+			<div v-if="scans && frames.length && !readOnly" class="align" role="group" aria-label="Line up frames with scans">
 				<span>Scan 1 is frame</span>
 				<button type="button" aria-label="Earlier frame" :disabled="firstScanFrame <= -1" @click="emit('shift', firstScanFrame - 1)">‹</button>
 				<b>{{ firstScanFrame === -1 ? '00' : firstScanFrame }}</b>
@@ -163,6 +163,7 @@ const props = defineProps<{
 	exposures: number;
 	firstScanFrame: number;
 	rollId?: string;
+	readOnly?: boolean;
 }>();
 const emit = defineEmits<{ shift: [firstScanFrame: number]; marked: [keepers: number] }>();
 

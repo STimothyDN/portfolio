@@ -22,14 +22,16 @@ import { bunnyUrl } from '../../../../utils/bunny';
 import { publish } from '../../../../lib/lab/server/db/schema';
 import { rollReport } from '../../../../lib/lab/server/report';
 import { desc, eq } from 'drizzle-orm';
+import { viewerOf, visible } from '../../../../lib/lab/server/guest';
 
 export const prerender = false;
 
-const { user } = Astro.locals;
+// Signed out, a guest sees the owner's lab, read-only and with private details taken out.
+const { user, guest } = viewerOf(Astro.locals);
 const config = labConfig();
 const code = (Astro.params.code ?? '').toUpperCase();
 
-const data =
+const data = visible(
 	user && config.ok
 		? await (async () => {
 				const d = await getDb(config.config);
@@ -93,7 +95,9 @@ const data =
 					},
 				};
 			})()
-		: null;
+		: null,
+	guest
+);
 if (user && config.ok && !data) Astro.response.status = 404;
 ---
 
@@ -103,6 +107,7 @@ if (user && config.ok && !data) Astro.response.status = 404;
 			<>
 			<RollDetail
 				client:load
+				readOnly={guest}
 				roll={data.roll}
 				events={data.events}
 				choices={data.choices}
@@ -119,6 +124,7 @@ if (user && config.ok && !data) Astro.response.status = 404;
 			/>
 			<RollFrames
 				client:load
+				readOnly={guest}
 				rollId={data.roll.id}
 				code={data.roll.code}
 				exposures={data.roll.exposures}

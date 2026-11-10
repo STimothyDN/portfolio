@@ -9,14 +9,16 @@ import { isOwner, labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
 import { labelGaps, listCameras, listLabs, listStocks, rollMilestones, rollViews, stepChoices } from '../../../lib/lab/server/inventory';
 import { restockForecast } from '../../../lib/lab/pace';
+import { viewerOf, visible } from '../../../lib/lab/server/guest';
 
 export const prerender = false;
 
-const { user } = Astro.locals;
+// Signed out, a guest sees the owner's lab, read-only and with private details taken out.
+const { user, guest } = viewerOf(Astro.locals);
 const config = labConfig();
 // The mini-map's counts, read alongside the page's own data.
 const countsP = user && config.ok ? stageCounts(config.config, user.id) : Promise.resolve({});
-const data =
+const data = visible(
 	user && config.ok
 		? await (async () => {
 				const d = await getDb(config.config);
@@ -54,7 +56,9 @@ const data =
 					],
 				};
 			})()
-		: null;
+		: null,
+	guest
+);
 const counts = await countsP;
 ---
 
@@ -64,6 +68,7 @@ const counts = await countsP;
 			<BenchCloseup zone="fridge" counts={counts} title="The fridge" lede="Unshot film, oldest dates in front. Drag a canister onto a camera on the bench to load it.">
 				<FridgeShelves
 					client:load
+					readOnly={guest}
 					storage={data.storage}
 					stocks={data.stocks}
 					totals={data.totals}

@@ -351,3 +351,200 @@
 .lab.lab--wide .lab-main {
 	padding-top: clamp(0.75rem, 2vw, 1.4rem);
 }
+
+/*
+ * The guest view's margin: what this place does, and how to get a lab of your
+ * own. A column beside the page on wide screens; a strip that stays at the top
+ * (opening for the details) everywhere else.
+ */
+.lab-guest {
+	display: grid;
+	min-width: 0;
+}
+
+.lab-guide,
+.lab-guide-strip {
+	--guide-ink: var(--gray-200);
+	color: var(--guide-ink);
+	font-size: var(--text-sm);
+	line-height: 1.5;
+}
+
+.lab-guide-eye b {
+	font-family: var(--font-brand);
+	font-style: italic;
+	font-weight: 420;
+	font-variation-settings: 'opsz' 60, 'SOFT' 60, 'WONK' 1;
+	font-size: 1.05rem;
+	color: var(--gray-0);
+}
+
+.lab-guide-name {
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--lab-edge-text);
+}
+
+.lab-guide a:not(.lab-btn),
+.lab-guide-strip a {
+	color: var(--gray-0);
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+}
+
+/* The strip: pinned to the top of the screen while you scroll. */
+.lab-guide-strip {
+	position: sticky;
+	top: 0;
+	z-index: 35;
+	margin-block: 0.25rem 0.5rem;
+}
+
+.lab-guide-strip summary {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.3rem 1rem;
+	min-height: 2.75rem;
+	padding: 0.45rem 0.9rem;
+	border-radius: 0.6rem;
+	background: color-mix(in oklch, var(--lab-card) 94%, transparent);
+	box-shadow:
+		0 0 0 1px var(--gray-800),
+		var(--lab-lift-0);
+	backdrop-filter: blur(6px);
+	cursor: pointer;
+	list-style: none;
+}
+
+.lab-guide-strip summary::-webkit-details-marker {
+	display: none;
+}
+
+.lab-guide-more {
+	font-family: var(--font-mono);
+	font-size: 0.68rem;
+	letter-spacing: 0.08em;
+	color: var(--lab-note);
+	white-space: nowrap;
+}
+
+.lab-guide-more::after {
+	content: ' ▾';
+}
+
+.lab-guide-strip[open] .lab-guide-more::after {
+	content: ' ▴';
+}
+
+.lab-guide-body {
+	display: grid;
+	gap: 0.5rem;
+	margin-top: 0.4rem;
+	padding: 0.9rem 1rem;
+	border-radius: 0.6rem;
+	background: var(--lab-card);
+	box-shadow:
+		0 0 0 1px var(--gray-800),
+		var(--lab-lift-1);
+	max-width: 46rem;
+}
+
+.lab-guide-cta {
+	color: var(--gray-0);
+}
+
+/* The column: an index card pinned in the right margin. */
+.lab-guide {
+	display: none;
+}
+
+@media (min-width: 100em) {
+	.lab-guide-strip {
+		display: none;
+	}
+
+	.lab-guest {
+		grid-template-columns: minmax(0, 1fr) 17.5rem;
+		gap: 0 1.5rem;
+		padding-right: clamp(1rem, 2.4vw, 2.5rem);
+	}
+
+	.lab-guide {
+		position: sticky;
+		top: 1.25rem;
+		align-self: start;
+		display: grid;
+		gap: 0.7rem;
+		margin-top: clamp(1.75rem, 4vw, 3rem);
+		padding: 1.1rem 1.15rem 1.2rem;
+		border-radius: 2px;
+		background: var(--lab-card);
+		box-shadow: var(--lab-lift-1);
+		rotate: 0.4deg;
+	}
+
+	.lab.lab--wide .lab-guide {
+		margin-top: clamp(0.75rem, 2vw, 1.4rem);
+	}
+
+	.lab-guide-eye {
+		display: grid;
+		gap: 0.1rem;
+		padding-bottom: 0.6rem;
+		border-bottom: 1.5px solid var(--lab-card-red);
+	}
+
+	.lab-guide-eye span {
+		font-family: var(--font-mono);
+		font-size: 0.64rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--lab-stage-camera);
+	}
+
+	.lab-guide-note {
+		font-size: 0.78rem;
+		color: var(--gray-300);
+	}
+
+	.lab-guide-cta {
+		display: grid;
+		gap: 0.6rem;
+		margin-top: 0.3rem;
+		padding-top: 0.8rem;
+		border-top: 1px dashed var(--gray-700);
+	}
+
+	.lab-guide-cta p {
+		display: grid;
+		gap: 0.2rem;
+		color: var(--guide-ink);
+	}
+
+	.lab-guide-cta b {
+		color: var(--gray-0);
+	}
+
+	.lab-guide-cta .lab-btn {
+		min-height: 2.5rem;
+		font-size: var(--text-sm);
+	}
+
+	.lab-guide-cta .lab-link {
+		justify-self: start;
+		font-size: var(--text-sm);
+	}
+}
+
+.lab-me--guest .lab-avatar {
+	font-family: inherit;
+}
+
+/* A guest always sees the words "Sign in", even where the account label hides. */
+.lab-me.lab-me--guest .lab-me-label {
+	display: inline;
+}

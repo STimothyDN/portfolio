@@ -39,6 +39,35 @@ const places = [
 	['binder', 'Binder', '/photography/lab/rolls/', 'M6 3.5h12v17H6zM9 3.5v17M12 7.5h3.5M12 11h3.5'],
 	['almanac', 'Almanac', '/photography/lab/almanac/', 'M3.5 20h17M6 20v-6M10 20V9M14 20v-8M18 20V5'],
 ] as const;
+/*
+ * A guest (signed out) looks round the owner's lab, live and read-only. The
+ * margin explains what each place does and how to get a lab of your own.
+ */
+const guestOf = !user ? (Astro.locals.guest ?? null) : null;
+const owner = guestOf?.name.split(/\s+/)[0] ?? '';
+const here = Astro.url.pathname;
+const signIn = `/photography/lab/sign-in/?next=${encodeURIComponent(here)}`;
+const invite = 'mailto:timothyrjs@gmail.com?subject=' + encodeURIComponent('A Film Lab of my own');
+const onRoll = /^\/photography\/lab\/rolls\/[^/]+\/?$/.test(here);
+const GUIDE: Record<string, { name: string; text: string[] }> = {
+	home: {
+		name: 'The bench',
+		text: [
+			'Every roll in motion, laid out the way film travels: out of the fridge, into a camera, shot, off to a lab, back as scans on the light table, then filed in the binder.',
+			'In your own lab you drag a roll to where it goes next and it travels there (every move can be undone). The Today card ranks what needs doing; press A to number everything and read its details.',
+		],
+	},
+	fridge: { name: 'The fridge', text: ['Unshot film, shelf by shelf, oldest dates first: how many of each, when they expire, and how long they’ll last at the rate they get loaded.'] },
+	gear: { name: 'The kit', text: ['Every camera with its battery and service history, what’s loaded in it, and the lenses grouped by the mount they fit.'] },
+	labs: { name: 'The post', text: ['Film waiting to be sent, envelopes at a lab with how long that lab usually takes, and the labs used.'] },
+	rolls: onRoll
+		? { name: 'A roll', text: ['One roll as a sleeve of negatives: where it’s been and when, what it yielded and cost, how dense its negatives came back against the same film elsewhere, and every scan in strips of six. Tap a frame to look closer.'] }
+		: { name: 'The binder', text: ['Every roll as a line through time: along its camera’s lane while loaded, then waiting, at a lab, scans in, filed. Drag across the line to pick a stretch of time; the sleeves below follow.'] },
+	frames: { name: 'The frames', text: ['Every frame logged on the phone (aperture, shutter, time) as one dot. Re-arrange them by exposure, by light against how dense the negative came back, by hour, or roll by roll.'] },
+	almanac: { name: 'The almanac', text: ['What it all adds up to, in nine chapters: where film waits, which cameras give thin negatives, whether the film speed suits the light, keepers, rhythm, kit, labs, money and shelf life.'] },
+};
+const guide = GUIDE[current ?? 'home'] ?? GUIDE.home;
+
 const initials = (user?.name ?? '')
 	.split(/\s+/)
 	.filter(Boolean)
@@ -96,13 +125,42 @@ const initials = (user?.name ?? '')
 						<span class="lab-bar-print" aria-hidden="true">
 							Timo3 · Private · Safety film
 						</span>
-						<a class="lab-me" href="/photography/lab/account/" aria-current={current === 'account' ? 'page' : undefined}>
-							<span class="lab-me-label">Account</span>
-							<span class="lab-avatar" aria-hidden="true">
-								{initials || '·'}
-							</span>
-						</a>
+						{guestOf ? (
+							<a class="lab-me lab-me--guest" href={signIn}>
+								<span class="lab-me-label">Sign in</span>
+								<span class="lab-avatar" aria-hidden="true">
+									→
+								</span>
+							</a>
+						) : (
+							<a class="lab-me" href="/photography/lab/account/" aria-current={current === 'account' ? 'page' : undefined}>
+								<span class="lab-me-label">Account</span>
+								<span class="lab-avatar" aria-hidden="true">
+									{initials || '·'}
+								</span>
+							</a>
+						)}
 					</header>
+					{guestOf && (
+						/* Narrower screens: a strip along the top that stays in view; open it for how this place works. */
+						<details class="lab-guide-strip lab-wrap">
+							<summary>
+								<span class="lab-guide-eye">
+									<b>{owner}’s Film Lab</b>, live and read-only
+								</span>
+								<span class="lab-guide-more">How it works</span>
+							</summary>
+							<div class="lab-guide-body">
+								<p class="lab-guide-name">{guide.name}</p>
+								{guide.text.map((t) => (
+									<p>{t}</p>
+								))}
+								<p class="lab-guide-cta">
+									Want one of your own? Film Lab is invite-only for now: <a href={invite}>ask for an invite</a> and you get a lab of your own, empty and ready. Have one? <a href={signIn}>Sign in</a>.
+								</p>
+							</div>
+						</details>
+					)}
 					{/* The dock: a strip of film, one frame per place, the shutter release in the middle. */}
 					<nav class="lab-dock" aria-label="Film Lab" transition:name="lab-nav">
 						{places.slice(0, 2).map(([key, label, href, icon]) => (
@@ -113,7 +171,7 @@ const initials = (user?.name ?? '')
 								<span>{label}</span>
 							</a>
 						))}
-						<a class="lab-shutter" href="/photography/lab/shoot/" title="Shoot: log frames as you go">
+						<a class="lab-shutter" href={guestOf ? signIn : '/photography/lab/shoot/'} title={guestOf ? 'Shooting mode: sign in to your own lab' : 'Shoot: log frames as you go'}>
 							<span class="sr-only">Shoot</span>
 						</a>
 						{places.slice(2).map(([key, label, href, icon]) => (
@@ -133,11 +191,43 @@ const initials = (user?.name ?? '')
 							<kbd>⌘K</kbd>
 						</button>
 					</nav>
-					<LabPalette client:idle />
+					<LabPalette client:idle guest={!!guestOf} />
 					<div class="lab-progress" aria-hidden="true"></div>
-					<main class="lab-main lab-wrap">
-						<slot />
-					</main>
+					{guestOf ? (
+						<div class="lab-guest">
+							<main class="lab-main lab-wrap">
+								<slot />
+							</main>
+							{/* Wide screens: the margin, always in view. */}
+							<aside class="lab-guide" aria-label="About this lab">
+								<p class="lab-guide-eye">
+									<b>{owner}’s Film Lab</b>
+									<span>Live · read-only</span>
+								</p>
+								<p class="lab-guide-name">{guide.name}</p>
+								{guide.text.map((t) => (
+									<p>{t}</p>
+								))}
+								<p class="lab-guide-note">On a phone, shooting mode logs each frame as it’s taken (aperture, shutter, time, roughly where), with no signal if need be. Where frames were taken, tracking and order numbers stay private here.</p>
+								<div class="lab-guide-cta">
+									<p>
+										<b>A lab of your own</b>
+										Every account gets its own lab, empty and ready for your cameras and film. It’s invite-only for now.
+									</p>
+									<a class="lab-btn" href={invite}>
+										Ask for an invite
+									</a>
+									<a class="lab-link" href={signIn}>
+										I have one: sign in
+									</a>
+								</div>
+							</aside>
+						</div>
+					) : (
+						<main class="lab-main lab-wrap">
+							<slot />
+						</main>
+					)}
 				</>
 			)
 		}

@@ -54,7 +54,7 @@ import TodayCard from '../objects/TodayCard.vue';
 import ArriveSlip from './ArriveSlip.vue';
 import SendSlip from './SendSlip.vue';
 
-const props = defineProps<{ data: BenchData; firstName?: string; move?: string | null }>();
+const props = defineProps<{ data: BenchData; firstName?: string; move?: string | null; /** A guest looking round the owner's lab: everything visible, nothing movable. */ readOnly?: boolean }>();
 
 const today = props.data.today;
 const rolls = ref<RollView[]>([...props.data.rolls]);
@@ -171,8 +171,8 @@ const nudges = computed(() =>
 		today,
 		turnaround: Object.fromEntries(props.data.labs.filter((l) => l.turnaround).map((l) => [l.id, l.turnaround!])),
 		forecast: props.data.forecast,
-		canLink: props.data.owner && props.data.choices.deskRolls.length > 0,
-		passkeys: props.data.passkeys,
+		canLink: !props.readOnly && props.data.owner && props.data.choices.deskRolls.length > 0,
+		passkeys: props.readOnly ? 2 : props.data.passkeys,
 	})
 );
 const fridgeValue = computed(() => storage.value.reduce((s, r) => s + (r.priceCents ?? 0), 0));
@@ -464,8 +464,12 @@ onMounted(() => {
 	} catch {
 		// Private mode: annotations start off.
 	}
-	if (stage.value) {
+	if (stage.value && !props.readOnly) {
 		stopDrag = createDrag({ root: stage.value, accepts, onDrop, onLift: () => closeMenu(false) });
+		ro = new ResizeObserver(() => measure());
+		ro.observe(stage.value);
+	}
+	if (stage.value && !ro) {
 		ro = new ResizeObserver(() => measure());
 		ro.observe(stage.value);
 	}
@@ -550,7 +554,7 @@ const ticker = computed(() => [
 </script>
 
 <template>
-	<div class="bench-wrap" :class="{ annotate }">
+	<div class="bench-wrap" :class="{ annotate, 'read-only': readOnly }">
 		<div ref="stage" class="bench" :class="{ empty: data.total === 0 }">
 			<NegFilters :uses="negUses" />
 
@@ -564,7 +568,7 @@ const ticker = computed(() => [
 						<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="3.2" /><path d="M9.5 9.5 15 15M15 15h5M7 5.8v2.4" /></svg>
 						Annotate
 					</button>
-					<button v-if="storage.length" type="button" class="tool" @click="openLoad()">
+					<button v-if="storage.length && !readOnly" type="button" class="tool" @click="openLoad()">
 						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 3.5h5v2h-5zM7 5.5h8v15H7zM15 12h6m-3-3 3 3-3 3" /></svg>
 						Load a roll
 					</button>
@@ -624,7 +628,7 @@ const ticker = computed(() => [
 				<header class="z-head">
 					<h2 id="z-cameras-h"><b>2</b> Cameras</h2>
 					<span class="z-count">{{ counts.camera }} loaded</span>
-					<span v-if="share !== null && (loaded.length || share)" class="desk-share" :title="'Show what’s loaded on the film desk (from the next publish)'">
+					<span v-if="!readOnly && share !== null && (loaded.length || share)" class="desk-share" :title="'Show what’s loaded on the film desk (from the next publish)'">
 						<button id="share-loaded" type="button" class="switch" role="switch" :aria-checked="share" aria-labelledby="share-loaded-l" @click="toggleShare"></button>
 						<span id="share-loaded-l">On the desk</span>
 						<PublishButton v-if="shareChanged" quiet />
@@ -649,7 +653,7 @@ const ticker = computed(() => [
 							</button>
 							<p class="cam-foot">
 								<span class="pace" :title="paces.get(s.roll.id) ? `${paces.get(s.roll.id)!.rate} · ${paces.get(s.roll.id)!.finish}` : undefined">{{ paces.get(s.roll.id)?.finish ?? `loaded ${formatDay(s.roll.statusOn, false)}` }}</span>
-								<span class="lab-actions">
+								<span v-if="!readOnly" class="lab-actions">
 									<a class="mini" :href="`/photography/lab/shoot/?roll=${s.roll.code}`">Log</a>
 									<button type="button" class="mini" @click="openStep(s.roll, 'shot')">Finish</button>
 								</span>
@@ -660,7 +664,7 @@ const ticker = computed(() => [
 						<ul role="list" :aria-label="slots.loaded.length ? 'Empty cameras' : 'Nothing loaded: drop a canister on a camera'">
 							<li class="empties-label" aria-hidden="true">{{ slots.loaded.length ? 'Empty' : 'Nothing loaded · drop film on a camera' }}</li>
 							<li v-for="c in slots.empty" :key="c.id">
-								<button type="button" class="obj cam-empty" data-drop-kind="camera-slot" :data-drop-id="c.id" :disabled="!storage.length" :title="storage.length ? `Load the ${c.name}` : 'No film in the fridge'" @click="openLoad(undefined, c.id)">
+								<button type="button" class="obj cam-empty" data-drop-kind="camera-slot" :data-drop-id="c.id" :disabled="readOnly || !storage.length" :title="storage.length ? `Load the ${c.name}` : 'No film in the fridge'" @click="openLoad(undefined, c.id)">
 									<span class="glyph" aria-hidden="true"><i></i></span>
 									<span class="nm">{{ c.name }}</span>
 									<span v-if="annotate && balloon('cameras', c.id)" class="balloon">{{ balloon('cameras', c.id) }}</span>
@@ -705,7 +709,7 @@ const ticker = computed(() => [
 						</li>
 					</ul>
 					<p v-else class="z-empty">Finished rolls land here, waiting for a lab.</p>
-					<button v-if="shot.length" type="button" class="mini push" @click="openSend()">Send {{ shot.length > 1 ? 'a batch' : 'it' }}…</button>
+					<button v-if="shot.length && !readOnly" type="button" class="mini push" @click="openSend()">Send {{ shot.length > 1 ? 'a batch' : 'it' }}…</button>
 				</div>
 				<footer v-if="annotate" class="spec">
 					<p v-if="zoneNote.shot" class="spec-note">{{ zoneNote.shot }}</p>
@@ -717,13 +721,13 @@ const ticker = computed(() => [
 
 			<!-- Today -->
 			<div class="z-today">
-				<TodayCard :nudges="data.total ? nudges : []" :today="today" :rewind="data.rewind" @act="act" />
+				<TodayCard :nudges="data.total ? nudges : []" :today="today" :rewind="data.rewind" :read-only="readOnly" @act="act" />
 				<ul v-if="data.rewind?.scans.length" class="rewind-prints" :aria-label="`${data.rewind.when}: ${data.rewind.title}`">
 					<li v-for="(p, i) in data.rewind.scans" :key="p.src" :style="{ '--i': i }">
 						<img :src="p.src" :width="p.w" :height="p.h" alt="" loading="lazy" decoding="async" />
 					</li>
 				</ul>
-				<div v-if="data.total === 0" class="first-run">
+				<div v-if="data.total === 0 && !readOnly" class="first-run">
 					<template v-if="data.choices.deskRolls.length">
 						<p>Your bench is empty. Start with the {{ data.choices.deskRolls.length }} rolls already on the film desk: each lands in the binder, linked to its scans, with its camera, film and lab.</p>
 						<ImportDesk :count="data.choices.deskRolls.length" />
@@ -760,7 +764,7 @@ const ticker = computed(() => [
 							</button>
 						</li>
 					</ul>
-					<ul v-if="shot.length && outgoing.length" class="outgoing" role="list" :aria-label="'Blank envelopes: drop shot film on one to send it'">
+					<ul v-if="shot.length && outgoing.length && !readOnly" class="outgoing" role="list" :aria-label="'Blank envelopes: drop shot film on one to send it'">
 						<li v-for="l in outgoing" :key="l.id">
 							<button type="button" class="obj out-btn" data-drop-kind="post-lab" :data-drop-id="l.id" @click="openSend(undefined, l.id)">
 								<Envelope :lab="l.name" :codes="[]" :sent-on="today" blank />
@@ -852,7 +856,8 @@ const ticker = computed(() => [
 						<span class="lab-code">{{ r.code }}</span>
 						<span>{{ r.title ?? r.stock.name }}</span>
 					</p>
-					<template v-if="r.status === 'storage'">
+					<template v-if="readOnly"></template>
+					<template v-else-if="r.status === 'storage'">
 						<button type="button" role="menuitem" @click="openLoad(r.id)">Load into a camera</button>
 					</template>
 					<template v-else-if="r.status === 'camera'">
@@ -871,7 +876,7 @@ const ticker = computed(() => [
 					</template>
 					<a role="menuitem" class="quiet" :href="`/photography/lab/rolls/${r.code}/`">Open {{ r.code }}</a>
 				</template>
-				<button v-if="menuRolls.length > 1 && menuRolls[0].status === 'lab'" type="button" role="menuitem" @click="openArrive(menuRolls)">Scans arrived for these</button>
+				<button v-if="!readOnly && menuRolls.length > 1 && menuRolls[0].status === 'lab'" type="button" role="menuitem" @click="openArrive(menuRolls)">Scans arrived for these</button>
 			</div>
 		</div>
 
@@ -1221,6 +1226,16 @@ const ticker = computed(() => [
 :global(html.lab-dragging),
 :global(html.lab-dragging *) {
 	cursor: grabbing !important;
+}
+
+/* A guest can pick nothing up: objects open their menu (to the roll's page), no more. */
+.read-only .obj {
+	cursor: pointer;
+}
+
+.read-only .cam-empty {
+	cursor: default;
+	opacity: 1;
 }
 
 /* ---------- 1 · fridge: cold, lit from the top ---------- */

@@ -7,7 +7,7 @@
 			<header class="sec-head">
 				<div>
 					<h2 id="send-h" class="lab-h2">Ready to send</h2>
-					<p class="lab-meta">Shot rolls waiting for a lab. Tick the ones going in this batch.</p>
+					<p class="lab-meta">{{ readOnly ? 'Shot rolls waiting for a lab.' : 'Shot rolls waiting for a lab. Tick the ones going in this batch.' }}</p>
 				</div>
 			</header>
 			<p v-if="!shot.length" class="lab-empty">Nothing waiting. Finished rolls land here.</p>
@@ -18,7 +18,7 @@
 				</div>
 				<ul class="lab-rows">
 					<li v-for="r in shot" :key="r.id">
-						<input :id="`send-${r.id}`" v-model="picked" type="checkbox" class="pick" :value="r.id" />
+						<input v-if="!readOnly" :id="`send-${r.id}`" v-model="picked" type="checkbox" class="pick" :value="r.id" />
 						<label :for="`send-${r.id}`" class="lab-grow">
 							<span><span class="lab-code">{{ r.code }}</span> {{ r.stock.name }}</span>
 							<span class="lab-meta">{{ [r.stock.process, pushPull(r.stock.iso, r.shotAtIso), r.devNotes, r.camera?.name].filter(Boolean).join(' · ') }}</span>
@@ -26,7 +26,7 @@
 						<span class="lab-meta">shot {{ formatDay(r.statusOn, false) }}</span>
 					</li>
 				</ul>
-				<form class="batch" @submit.prevent="send">
+				<form v-if="!readOnly" class="batch" @submit.prevent="send">
 					<label class="lab-field">
 						<span>Lab</span>
 						<select id="batch-lab" v-model="labId" class="lab-input lab-select" required @change="fillCost">
@@ -93,7 +93,7 @@
 						<span>{{ r.stock.name }}</span>
 						<span class="lab-meta">{{ [r.lab?.name, `scans in ${formatDay(r.statusOn, false)}`].filter(Boolean).join(' · ') }}</span>
 						<TrackingNumber v-if="r.trackingBack" :number="r.trackingBack" :track="tracks[r.trackingBack]" />
-						<span v-else class="lab-meta">No return tracking number yet: add it on the roll’s page.</span>
+						<span v-else-if="!readOnly" class="lab-meta">No return tracking number yet: add it on the roll’s page.</span>
 					</span>
 				</li>
 			</ul>
@@ -103,7 +103,7 @@
 		<section class="lab-section" aria-labelledby="labs-h">
 			<header class="sec-head">
 				<h2 id="labs-h" class="lab-h2">Labs</h2>
-				<button type="button" class="lab-btn lab-btn--quiet" @click="editLab = 'new'">Add lab</button>
+				<button v-if="!readOnly" type="button" class="lab-btn lab-btn--quiet" @click="editLab = 'new'">Add lab</button>
 			</header>
 			<div class="cards">
 				<article v-for="l in labs" :key="l.id" class="card" :data-initial="l.name.trim().charAt(0).toUpperCase()">
@@ -118,7 +118,7 @@
 					</dl>
 					<p v-if="stats[l.id]?.medianDays == null" class="lab-hint">Turnaround appears once a roll goes from “sent” to “scans in” here.</p>
 					<div class="lab-actions">
-						<button type="button" class="lab-link" @click="editLab = l.id">Edit</button>
+						<button v-if="!readOnly" type="button" class="lab-link" @click="editLab = l.id">Edit</button>
 						<a v-if="l.url" class="lab-link" :href="l.url" target="_blank" rel="noopener">Website</a>
 					</div>
 				</article>
@@ -184,6 +184,8 @@ const props = defineProps<{
 	stats: Record<string, LabStats>;
 	lastDelivery: Record<string, Delivery>;
 	today: string;
+	/** A guest looking round the owner's lab: nothing can be changed. */
+	readOnly?: boolean;
 }>();
 const comingBack = ref<RollView[]>([...props.comingBack]);
 const sendDraft = ref<SendDraft>({ delivery: 'dropoff', tracking: '', printsIncluded: false, printsCost: '' });

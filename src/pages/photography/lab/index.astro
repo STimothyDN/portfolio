@@ -8,13 +8,15 @@ import BenchWorld from '../../../components/lab/bench/BenchWorld.vue';
 import { todayInDurham } from '../../../lib/lab/inventory';
 import { labConfig } from '../../../lib/lab/server/config';
 import { benchData } from '../../../lib/lab/server/bench';
+import { viewerOf, visible } from '../../../lib/lab/server/guest';
 
 export const prerender = false;
 
-const { user } = Astro.locals;
+// Signed out, a guest sees the owner's lab, read-only and with private details taken out.
+const { user, guest } = viewerOf(Astro.locals);
 const config = labConfig();
-const data = user && config.ok ? await benchData(config.config, user, todayInDurham()) : null;
-const move = Astro.url.searchParams.get('move');
+const data = user && config.ok ? visible(await benchData(config.config, user, todayInDurham()), guest) : null;
+const move = guest ? null : Astro.url.searchParams.get('move');
 ---
 
 <LabLayout title="Bench" current="home" wide>
@@ -28,5 +30,5 @@ const move = Astro.url.searchParams.get('move');
 			}
 		} catch {}
 	</script>
-	{data && <BenchWorld client:load data={data} firstName={user?.name.split(/\s+/)[0]} move={move} />}
+	{data && <BenchWorld client:load data={data} firstName={user?.name.split(/\s+/)[0]} move={move} readOnly={guest} />}
 </LabLayout>

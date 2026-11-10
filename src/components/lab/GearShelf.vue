@@ -6,13 +6,13 @@
 		<section class="lab-section" aria-labelledby="cam-h">
 			<header class="sec-head">
 				<h2 id="cam-h" class="lab-h2">Cameras</h2>
-				<button type="button" class="lab-btn lab-btn--quiet" @click="editCamera = 'new'">Add camera</button>
+				<button v-if="!readOnly" type="button" class="lab-btn lab-btn--quiet" @click="editCamera = 'new'">Add camera</button>
 			</header>
 			<!-- The case: each camera pressed into its own cutout in the foam, named on a strip of embossed label tape. -->
 			<div v-if="inUse.length" class="cards">
 				<span class="latch latch--l" aria-hidden="true"></span>
 				<span class="latch latch--r" aria-hidden="true"></span>
-				<button v-for="(c, ci) in inUse" :key="c.id" type="button" class="card" :data-kind="c.kind" :style="{ '--ci': ci }" @click="editCamera = c.id">
+				<button v-for="(c, ci) in inUse" :key="c.id" type="button" class="card" :class="{ 'read-only': readOnly }" :data-kind="c.kind" :style="{ '--ci': ci }" :aria-disabled="readOnly || undefined" @click="readOnly || (editCamera = c.id)">
 					<CameraGlyph :kind="c.kind" :mount="c.mount" :format="c.format" />
 					<span class="card-top">
 						<span class="card-name">{{ c.name }}</span>
@@ -51,7 +51,7 @@
 				<ul class="lab-rows">
 					<li v-for="c in grp.list" :key="c.id">
 						<span class="lab-grow"><strong>{{ c.name }}</strong><span class="lab-meta">{{ CAMERA_KINDS[c.kind] ?? c.kind }}</span></span>
-						<button type="button" class="lab-link" @click="editCamera = c.id">Edit</button>
+						<button v-if="!readOnly" type="button" class="lab-link" @click="editCamera = c.id">Edit</button>
 					</li>
 				</ul>
 			</details>
@@ -61,7 +61,7 @@
 		<section class="lab-section" aria-labelledby="lens-h">
 			<header class="sec-head">
 				<h2 id="lens-h" class="lab-h2">Lenses</h2>
-				<button type="button" class="lab-btn lab-btn--quiet" @click="openLens('new')">Add lens</button>
+				<button v-if="!readOnly" type="button" class="lab-btn lab-btn--quiet" @click="openLens('new')">Add lens</button>
 			</header>
 			<p v-if="!lenses.length" class="lab-empty">
 				No lenses yet.<template v-if="mounts.length"> Your SLRs take {{ mounts.join(', ') }}.</template>
@@ -78,7 +78,7 @@
 							<strong>{{ l.name }}</strong>
 							<span class="lab-meta">{{ lensSpec(l) }}<template v-if="l.status !== 'active'"> · {{ GEAR_STATUS[l.status] }}</template></span>
 						</div>
-						<button type="button" class="lab-link" @click="openLens(l.id)">Edit</button>
+						<button v-if="!readOnly" type="button" class="lab-link" @click="openLens(l.id)">Edit</button>
 					</li>
 				</ul>
 			</div>
@@ -126,6 +126,8 @@ const props = defineProps<{
 	service: ServiceEntry[];
 	usage: Record<string, { total: number; loaded: { code: string; stock: string } | null }>;
 	today: string;
+	/** A guest looking round the owner's lab: nothing can be changed. */
+	readOnly?: boolean;
 }>();
 
 const cameras = ref<CameraView[]>([...props.cameras]);
@@ -638,5 +640,10 @@ function lensDeleted(id: string) {
 	font-weight: 400;
 	font-variant-caps: normal;
 	letter-spacing: 0;
+}
+
+/* A guest looks at the case; the cameras don't open for editing. */
+.card.read-only {
+	cursor: default;
 }
 </style>

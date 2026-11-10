@@ -18,7 +18,7 @@ import LabDialog from '../LabDialog.vue';
 import SleeveCard from '../objects/SleeveCard.vue';
 import RollLine from './RollLine.vue';
 
-const props = defineProps<{ data: BinderData; initialStatus: string | null }>();
+const props = defineProps<{ data: BinderData; initialStatus: string | null; readOnly?: boolean }>();
 
 const rolls = ref<RollView[]>([...props.data.rolls]);
 const stockList = ref<StockView[]>([...props.data.stocks]);
@@ -96,8 +96,10 @@ const filterNote = computed(() => [facet.value?.label, window.value ? `${formatD
 					<button type="button" :aria-pressed="view === 'sheets'" @click="view = 'sheets'">Sheets</button>
 					<button type="button" :aria-pressed="view === 'rows'" @click="view = 'rows'">List</button>
 				</div>
-				<a class="lab-btn lab-btn--quiet" href="/photography/lab/labels/">Print labels</a>
-				<button type="button" class="lab-btn" @click="adding = true">Add rolls</button>
+				<template v-if="!readOnly">
+					<a class="lab-btn lab-btn--quiet" href="/photography/lab/labels/">Print labels</a>
+					<button type="button" class="lab-btn" @click="adding = true">Add rolls</button>
+				</template>
 			</div>
 		</div>
 
@@ -128,7 +130,7 @@ const filterNote = computed(() => [facet.value?.label, window.value ? `${formatD
 		</TransitionGroup>
 		<p v-else class="lab-empty">{{ rolls.length ? 'No rolls match.' : 'No rolls yet. Add the film in your fridge to get started.' }}</p>
 
-		<aside v-if="data.importable > 0" class="lab-notice desk-note">
+		<aside v-if="data.importable > 0 && !readOnly" class="lab-notice desk-note">
 			<p>
 				{{ data.importable }} {{ data.importable === 1 ? 'roll' : 'rolls' }} on the public film desk {{ data.importable === 1 ? 'isn’t' : 'aren’t' }} linked to anything here.
 				Importing files each one in the binder. To tie scans to a roll you already logged, use its page instead.

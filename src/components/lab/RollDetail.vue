@@ -13,9 +13,11 @@
 				</p>
 				<div class="head-actions">
 					<span class="lab-chip stage-stamp" :class="{ 'lab-chip--warn': roll.status === 'lost' }">{{ stageLabel(roll.status, roll.labDelivery) }}</span>
+					<template v-if="!readOnly">
 					<button v-if="next" type="button" class="lab-btn" @click="openStep(next)">{{ stepVerb(next, roll.labDelivery) }}</button>
 					<button v-if="roll.status !== 'lost'" type="button" class="lab-btn lab-btn--quiet" @click="openStep('lost')">Mark lost or ruined</button>
 					<button v-if="events.length > 1" type="button" class="lab-link small" :disabled="busy" @click="undo">Undo last step</button>
+					</template>
 				</div>
 			</div>
 		</header>
@@ -37,6 +39,7 @@
 									<button type="button" class="lab-btn lab-btn--quiet" @click="editing = null">Cancel</button>
 								</span>
 							</form>
+							<span v-else-if="readOnly" class="step-d">{{ formatDay(ev.on) }}<template v-if="ev.note"> · {{ ev.note }}</template></span>
 							<button v-else type="button" class="step-d" :title="ev.note ?? 'Change the date'" @click="startEdit(ev)">
 								{{ formatDay(ev.on) }}<template v-if="ev.note"> · {{ ev.note }}</template>
 								<span class="edit" aria-hidden="true">edit</span>
@@ -110,7 +113,8 @@
 			:frames="framesList"
 			:exposures="roll.exposures"
 			:first-scan-frame="roll.firstScanFrame"
-			:roll-id="roll.id"
+			:roll-id="readOnly ? undefined : roll.id"
+			:read-only="readOnly"
 			@shift="shiftScans"
 			@marked="(n: number) => (report.keepers = report.keepers ? { ...report.keepers, n } : report.keepers)"
 		/>
@@ -128,9 +132,10 @@
 						</p>
 						<div class="lab-actions">
 							<a class="lab-btn lab-btn--quiet" href="/photography/">Open the film desk</a>
-							<button type="button" class="lab-btn lab-btn--quiet lab-btn--danger" :disabled="busy" @click="link(null)">Unlink</button>
+							<button v-if="!readOnly" type="button" class="lab-btn lab-btn--quiet lab-btn--danger" :disabled="busy" @click="link(null)">Unlink</button>
 						</div>
 					</template>
+					<p v-else-if="readOnly" class="lab-meta">Not on the public film desk yet.</p>
 					<form v-else class="link-form" @submit.prevent="link(linkId)">
 						<p class="lab-meta">
 							Not linked to the public film desk.
@@ -150,14 +155,15 @@
 			<!-- Details -->
 			<aside class="col-side">
 				<RollShare
-					v-if="roll.publicRollId && strip"
+					v-if="roll.publicRollId && strip && !readOnly"
 					:key="roll.publicRollId"
 					:roll="roll"
 					:sample="shareSample"
 					:last-published="lastPublished"
 					@saved="roll = $event"
 				/>
-				<form class="lab-form details" @submit.prevent="saveDetails">
+				<form class="lab-form details" :class="{ 'read-only': readOnly }" @submit.prevent="saveDetails">
+					<fieldset class="ro-wrap" :disabled="readOnly">
 					<div class="docket" aria-hidden="true">
 						<span class="docket-no">Roll docket · {{ roll.code }}</span>
 						<span class="barcode" :style="{ background: barcode }"></span>
@@ -258,7 +264,8 @@
 					</label>
 					<p v-if="saved" class="lab-hint" role="status">Saved.</p>
 					<p v-if="error" class="lab-error" role="alert">{{ error }}</p>
-					<div class="lab-actions">
+					</fieldset>
+					<div v-if="!readOnly" class="lab-actions">
 						<button type="submit" class="lab-btn" :disabled="busy">Save details</button>
 						<button type="button" class="lab-btn lab-btn--quiet lab-btn--danger push-right" :disabled="busy" @click="remove">
 							{{ confirmDelete ? 'Delete it for good?' : 'Delete roll' }}
@@ -339,6 +346,8 @@ const props = defineProps<{
 	lensNames: Record<string, string>;
 	lastPublished: string | null;
 	report: RollReport;
+	/** A guest looking round: everything shown, nothing changed. */
+	readOnly?: boolean;
 }>();
 
 const framesList = ref<FrameView[]>([...props.frames]);
@@ -1335,6 +1344,26 @@ legend::after {
 
 textarea.lab-input {
 	resize: vertical;
+}
+
+.ro-wrap {
+	display: contents;
+	border: 0;
+	margin: 0;
+	padding: 0;
+}
+
+/* A guest reads the docket; the fields look printed, not editable. */
+.details.read-only .lab-input {
+	background: transparent;
+	border-color: transparent;
+	padding-inline: 0;
+	opacity: 1;
+	-webkit-text-fill-color: currentColor;
+}
+
+.details.read-only .lab-select {
+	background-image: none;
 }
 
 .push-right {

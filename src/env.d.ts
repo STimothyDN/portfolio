@@ -13,6 +13,8 @@ declare namespace App {
 	interface Locals {
 		/** Film Lab: the signed-in user on /photography/lab pages (src/middleware.ts). */
 		user: import('./lib/lab/server/auth').LabUser | null;
+		/** Film Lab: signed out on a page guests may read: the owner, whose lab they see (read-only). Never set with `user`. */
+		guest?: import('./lib/lab/server/auth').LabUser | null;
 		/** Film Lab: false when the deployment is missing its env vars. */
 		labConfigured: boolean;
 	}

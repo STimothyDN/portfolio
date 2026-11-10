@@ -32,6 +32,8 @@ const PLACES: Item[] = [
 	['Account', 'Passkeys and invites', '/photography/lab/account/', 'passkey invite sign out'],
 ].map(([title, sub, href, keys]) => ({ id: `p-${href}`, title, sub, href, group: 'Places', keys: `${title} ${sub} ${keys}`.toLowerCase() }));
 
+/** A guest gets places and rolls, no moves (and not the pages that need an account). */
+const props = defineProps<{ guest?: boolean }>();
 const dialog = ref<HTMLDialogElement | null>(null);
 const input = ref<HTMLInputElement | null>(null);
 const q = ref('');
@@ -40,13 +42,13 @@ const rolls = ref<{ code: string; title: string | null; status: string; stock: s
 const loading = ref(false);
 
 const items = computed<Item[]>(() => {
-	const list: Item[] = [...PLACES];
+	const list: Item[] = props.guest ? PLACES.filter((p) => !/shoot|labels|account/.test(p.href)) : [...PLACES];
 	for (const r of rolls.value ?? []) {
 		const label = r.title ?? r.stock;
 		const keys = `${r.code} ${r.code.replace('-', '')} ${label} ${r.stock} ${r.camera ?? ''} ${STATUS_LABEL[r.status as RollStatus] ?? ''}`.toLowerCase();
 		list.push({ id: `r-${r.code}`, title: `${r.code} · ${label}`, sub: [STATUS_LABEL[r.status as RollStatus], r.camera].filter(Boolean).join(' · '), href: `/photography/lab/rolls/${r.code}/`, group: 'Rolls', keys });
 		const next = nextStage(r.status as RollStatus);
-		if (next) list.push({ id: `m-${r.code}`, title: `${STEP_VERB[next]}: ${r.code}`, sub: label, href: `/photography/lab/?move=${r.code}`, group: 'Moves', keys: `${STEP_VERB[next]} ${keys}`.toLowerCase() });
+		if (next && !props.guest) list.push({ id: `m-${r.code}`, title: `${STEP_VERB[next]}: ${r.code}`, sub: label, href: `/photography/lab/?move=${r.code}`, group: 'Moves', keys: `${STEP_VERB[next]} ${keys}`.toLowerCase() });
 	}
 	return list;
 });
