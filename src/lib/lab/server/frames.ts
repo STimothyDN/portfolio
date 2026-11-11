@@ -110,7 +110,8 @@ export async function framesPage(d: LabDb, userId: string, owner: boolean): Prom
 		const t = shutterSeconds(f.shutter);
 		const ev = !f.flash && f.aperture && t && iso ? Math.round(ev100Of(f.aperture, t, iso) * 10) / 10 : null;
 		const s = scanOf.get(f.id);
-		const lens = f.lensId ? (lensName.get(f.lensId) ?? null) : null;
+		// A frame that doesn't name a lens was shot through the one the roll was loaded with.
+		const lens = lensName.get(f.lensId ?? r.lens?.id ?? '') ?? null;
 		const thin = !!s?.tone && isThin({ tone: s.tone, rollBlack: s.rollBlack });
 		rows.push({
 			id: f.id,

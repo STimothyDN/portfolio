@@ -26,6 +26,7 @@ const emit = defineEmits<{ done: [views: RollView[]]; cancel: [] }>();
 const picked = ref<string[]>(props.preset?.rollIds?.length ? [...props.preset.rollIds] : props.shot.map((r) => r.id));
 const firstLab = props.preset?.labId ?? props.labs.find((l) => l.delivery)?.id ?? props.labs[0]?.id ?? '';
 const labId = ref(firstLab);
+const isHomeLab = computed(() => !!props.labs.find((l) => l.id === labId.value)?.home);
 const on = ref(typeof window === 'undefined' ? props.today : deviceToday());
 const order = ref('');
 const lab = computed(() => props.labs.find((l) => l.id === labId.value));
@@ -128,11 +129,13 @@ async function send() {
 			<label class="lab-field"><span>Order number</span><input id="slip-order" v-model="order" class="lab-input" type="text" maxlength="60" /></label>
 			<label class="lab-field"><span>Dev + scans per roll ($)</span><input id="slip-cost" v-model="cost" class="lab-input" type="number" min="0" step="0.01" /></label>
 		</div>
-		<LabSendFields v-model="draft" />
+		<LabSendFields v-if="!isHomeLab" v-model="draft" />
+			<p v-else class="lab-hint">Your own darkroom: no post. The darkroom page times the run and records the recipe on the roll.</p>
 		<p v-if="error" class="lab-error" role="alert">{{ error }}</p>
 		<div class="lab-actions">
 			<button type="submit" class="lab-btn" :disabled="busy || !picked.length || !labId">Send {{ picked.length }} {{ picked.length === 1 ? 'roll' : 'rolls' }}</button>
 			<button type="button" class="lab-btn lab-btn--quiet" @click="emit('cancel')">Cancel</button>
+			<span v-if="!picked.length || !labId" class="lab-hint">{{ !picked.length ? 'Tick at least one roll.' : 'Choose the lab first.' }}</span>
 		</div>
 	</form>
 </template>

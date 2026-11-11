@@ -25,6 +25,9 @@ page; ⌘K, Ctrl+K or `/` opens a finder for any place, roll or next move).
 | **The almanac** (`/photography/lab/almanac/`) | What it all adds up to. See *Insight* below. |
 | **Shoot** (`/photography/lab/shoot/`) | The phone screen for logging frames while you shoot (the shutter button in the dock). A pre-flight strip says frames left, the pace and one thing worth knowing about the camera; when a roll comes out it offers the next one from the fridge. See below. |
 | **Labels** (`/photography/lab/labels/`) | Printable QR stickers for canisters and camera backs. The phone's own camera opens them: shooting mode if the roll is loaded, otherwise its page (`/photography/lab/r/R-031`). |
+| **Darkroom** (`/photography/lab/darkroom/`) | Developing at home (the bench's **Darkroom** tool). Pick the rolls going in the tank and a recipe (yours, or a starting point from the makers' data sheets with its source), say how warm the developer is, and a timer runs every step: the developer time adjusted for temperature (black and white, 18–24 °C) and for rolls already through a reusable kit (Cs41: +2% a roll), each agitation called with a tone and a buzz, the screen kept awake (the page is saved for offline like the bench, so the timer runs with no signal; recording the run needs a bar). Finishing records the run on each roll (`roll.dev_run`) and moves it to **Developed at home** (a lab marked `home`, made the first time). The **chemistry shelf** counts rolls through each batch and warns when it's nearly spent or past its keeping time. Maths in `src/lib/lab/darkroom.ts`. |
+| **Trip planner** (`/photography/lab/trip/`) | Where (looked up by name on Open-Meteo's geocoder; only the name is sent), when and which cameras. Each day's light (the forecast within 16 days, sun times every day, in the destination's time), how much film at the pace you shoot on a day out (minus what's left in the cameras, plus a spare), the speed mix that light asks for, which rolls in the fridge to bring (one tap moves them to a "Trip: …" shelf), and checks: old batteries, empty cameras, x-rays when flying. Trips save. Sums in `src/lib/lab/trip.ts`. |
+| **Contact sheet** (`/photography/lab/rolls/R-021/sheet/`) | A roll's scans in strips of six on black paper, edge numbers, each frame's settings and notes, grease-pencil marks; positive or negative, Letter or A4; download as PNG or print. With no scans, a shooting log of the logged frames. Drawn on a canvas (`src/lib/lab/contact-sheet.ts`); the CDN allows cross-origin reads, so it exports. |
 
 **The look: the maker's side of the film desk.** The desk shows prints under room light;
 the lab shows the same rolls still in motion, under transmitted light. One lamp (top
@@ -48,6 +51,12 @@ scans arrived and an optional tracking number for the negatives coming back, and
 they arrived. A lab remembers how you last sent it film. Each roll also records its
 develop-and-scan price, whether that includes prints, and if not, what prints cost (the
 almanac counts prints in what a frame costs).
+
+**Lenses on rolls.** Loading a roll into a camera with a mount asks which lens is on it (the one it last shot with comes first; `roll.lens_id`). Shooting mode starts on that lens, frames that don't name one count as shot through it (roll page, Frames page, the film desk's lightbox), and the roll page names every lens the roll went through.
+
+**Batteries.** A camera's battery is written as cells and type ("2 × LR44"; `batteryOf` reads the variants, and sizes that stand in for each other share a compartment: SR44 and 357 count as LR44). The Kit page's **battery box** keeps spares by type, shows which cameras take each and how old their set is (18 months counts as old), and **Swap in fresh** logs the swap and takes the cells out of the box (deleting the entry puts them back). The Today card speaks up when a loaded camera's set is old and the box can't cover it; the trip planner checks the cameras going along. Maths in `src/lib/lab/batteries.ts`.
+
+**Shutter ranges.** A camera's fastest and slowest speeds (Kit page; known models such as the X-700 fill in from `KNOWN_SHUTTERS`) limit shooting mode's dial and the meter's suggestions.
 
 **Rated speed and exposure compensation.** Loading a roll asks the speed it's rated at
 (push/pull, for the lab) and any exposure compensation you dial in on the camera (+1,
@@ -254,6 +263,8 @@ It decides what the desk's lightbox shows for that roll's scans:
 All three start off. The card previews the line as the lightbox will show it. Only the
 owner's rolls reach the portfolio.
 
+**Suggested alignment.** Many labs print each frame's edge number into the scan's file name (`…-R1-005-1.jpg` is frame 1, `-00` is frame 00). When they do, the strip suggests the alignment from the names, including pins for any frame the lab skipped; otherwise it compares each logged setting's light with how bright its scan came out and suggests a shift when one clearly wins. **Line them up** applies it in one write (`applyAlignment`). `suggestAlignment` in `alignment.ts`.
+
 **Lining frames up with scans.** Scans rarely start at frame 1: labs scan frame 0 or 00,
 or skip a blank. The strip on the roll's page shows the logged settings under each scan.
 **Scan 1 is frame ‹ N ›** shifts the whole roll until they match, and the count beside it
@@ -318,8 +329,9 @@ To start over, delete `.data/film-lab.db*` and run `npm run db:migrate` again (r
 
 ### Tests
 
-`npm test` runs the almanac's maths and the photo meter's (vitest,
-`src/lib/lab/stats/stats.test.ts`, `src/lib/lab/meter/meter.test.ts`). The
+`npm test` runs the almanac's maths, the photo meter's, and the kit's (batteries,
+shutter ranges, alignment suggestions, darkroom, trip planner) with vitest
+(`src/lib/lab/stats/stats.test.ts`, `src/lib/lab/meter/meter.test.ts`, `src/lib/lab/kit.test.ts`). The
 browser tests drive headless Chrome over CDP with a virtual passkey, against
 `npm run dev` (which only ever uses the local database). Most start by claiming the lab,
 so empty the local logbook first:
@@ -328,7 +340,7 @@ so empty the local logbook first:
 node scripts/lab-harness/reset-db.mjs && node scripts/lab-harness/run.mjs bench
 ```
 
-Modules: `bench`, `binder`, `almanac`, `meter` (the photo meter, with a generated scene
+Modules: `bench`, `binder`, `almanac`, `kit` (shutter ranges, the battery box, lenses on rolls, suggested alignment, the darkroom, the trip planner, contact sheets, the bench at laptop sizes), `meter` (the photo meter, with a generated scene
 carrying iPhone-style EXIF), `offline`, `smoke`, `p2`–`p6`, `audit` (five widths, empty
 and full), `perf`, and `seed` + `look` (screenshots; `LOOK=home,rolls VIEWS=light,phone`).
 Output goes to `.data/harness/` (`LAB_OUT` to change it).
@@ -439,6 +451,11 @@ lab as before. Test: `node scripts/lab-harness/run.mjs guest`.
 | `src/lib/lab/server/published.ts`     | the build-time read of what the film desk shows              |
 | `scripts/lib/logbook.mjs`             | the logbook lookups behind `upload-film --roll`              |
 | `src/lib/lab/light.ts`                | EV, Sunny 16 from the sky, dial settings, reciprocity, DoF, sun |
+| `src/lib/lab/batteries.ts`            | the battery box: cameras' sets, what's due, what to buy       |
+| `src/lib/lab/darkroom.ts`             | recipes, temperature and reuse compensation, agitation, chemistry |
+| `src/lib/lab/trip.ts`                 | trip days, film needed, speed mix, rolls to pack, checks      |
+| `src/lib/lab/contact-sheet.ts`        | the contact sheet's canvas drawing                            |
+| `src/lib/lab/server/darkroom.ts`      | saved recipes, chemistry, the home darkroom, trips            |
 | `src/lib/lab/meter/`                  | Photo meter: EXIF, pixels to stops, scenes and tones, advice |
 | `src/lib/lab/sky-weather.ts`          | shooting mode's weather reading (Open-Meteo, cached)         |
 | `src/lib/lab/insight.ts`              | scan tone by camera, film and lab; thin frames by light      |

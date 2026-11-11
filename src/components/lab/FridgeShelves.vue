@@ -593,12 +593,13 @@ async function moveGroup(ids: string[]) {
 .shelf-wrap.is-door .slot::after {
 	content: '';
 	position: absolute;
-	top: calc(0.4rem + 86px * 0.7);
+	/* Low on the can, below the printed name, and clear enough to read through. */
+	top: calc(0.4rem + 86px * 0.86);
 	left: -0.7rem;
 	right: -0.7rem;
-	height: calc(86px * 0.3);
+	height: calc(86px * 0.16);
 	border-radius: 0 0 3px 3px;
-	background: linear-gradient(180deg, oklch(100% 0 0 / 0.7), oklch(93% 0.02 220 / 0.45) 30%, oklch(90% 0.025 220 / 0.55));
+	background: linear-gradient(180deg, oklch(100% 0 0 / 0.55), oklch(93% 0.02 220 / 0.3) 30%, oklch(90% 0.025 220 / 0.4));
 	box-shadow:
 		inset 0 1px 0 oklch(100% 0 0 / 0.9),
 		inset 0 -1px 0 oklch(75% 0.03 225 / 0.6);

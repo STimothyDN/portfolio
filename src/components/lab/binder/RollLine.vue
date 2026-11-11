@@ -139,6 +139,9 @@ const layout = computed(() => {
 
 const months = computed(() => {
 	const out: { x: number; label: string; year: boolean }[] = [];
+	// On a narrow line the months sit closer than a label is wide ("AUG 2026" ran into "SEP"):
+	// every month keeps its rule, but only every second or third is named.
+	const every = Math.max(1, Math.ceil(64 / ((30 / span.value) * inner.value)));
 	let y = +start.value.slice(0, 4);
 	let m = +start.value.slice(5, 7) + 1;
 	const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -149,7 +152,8 @@ const months = computed(() => {
 		}
 		const iso = `${y}-${String(m).padStart(2, '0')}-01`;
 		if (iso > end.value) break;
-		out.push({ x: x(iso), label: MON[m - 1], year: m === 1 || out.length === 0 });
+		const named = out.length % every === 0;
+		out.push({ x: x(iso), label: named ? MON[m - 1] : '', year: named && (m === 1 || out.length === 0) });
 		if (out.at(-1)!.year) out.at(-1)!.label += ` ${y}`;
 		m++;
 	}
@@ -289,9 +293,9 @@ const summary = computed(() => {
 				</g>
 				<!-- months, along the top like edge print -->
 				<g class="months">
-					<g v-for="m in months" :key="m.label + m.x">
+					<g v-for="m in months" :key="m.x">
 						<line :x1="m.x" :x2="m.x" :y1="AXIS - 6" :y2="layout.height" />
-						<text :x="m.x + 4" :y="AXIS - 10" :class="{ year: m.year }">{{ m.label }}</text>
+						<text v-if="m.label" :x="m.x + 4" :y="AXIS - 10" :class="{ year: m.year }">{{ m.label }}</text>
 					</g>
 				</g>
 				<!-- the background you drag across -->
@@ -391,9 +395,13 @@ const summary = computed(() => {
 	font-style: normal;
 	font-size: 0.66rem;
 	color: var(--gray-200);
-	white-space: nowrap;
+	/* Two lines before it's cut: on a phone "In the camera" read "In the ca…". */
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
 	overflow: hidden;
-	text-overflow: ellipsis;
+	overflow-wrap: anywhere;
 }
 
 .hint {

@@ -19,8 +19,9 @@ import type {
 	StepChoices,
 	StockView,
 } from '../inventory';
+import { parseDevRun } from '../darkroom';
 import type { LabDb } from './db/client';
-import { camera, filmStock, frame, lab, labSetting, lens, roll, rollEvent, scanMark, serviceLog } from './db/schema';
+import { batteryStock, camera, filmStock, frame, lab, labSetting, lens, roll, rollEvent, scanMark, serviceLog } from './db/schema';
 
 /* ---------- rolls ---------- */
 
@@ -39,6 +40,9 @@ const rollSelect = {
 	cameraName: camera.name,
 	labId: lab.id,
 	labName: lab.name,
+	labHome: lab.home,
+	lensId: lens.id,
+	lensName: lens.name,
 	frameCount: sql<number>`(select count(*) from ${frame} where ${frame.rollId} = ${roll.id})`,
 };
 
@@ -49,10 +53,13 @@ type RollRow = {
 	cameraName: string | null;
 	labId: string | null;
 	labName: string | null;
+	labHome: boolean | null;
+	lensId: string | null;
+	lensName: string | null;
 	frameCount: number;
 };
 
-function toRollView({ roll: r, stock, cameraId, cameraName, labId, labName, frameCount }: RollRow): RollView {
+function toRollView({ roll: r, stock, cameraId, cameraName, labId, labName, labHome, lensId, lensName, frameCount }: RollRow): RollView {
 	return {
 		id: r.id,
 		code: r.code,
@@ -62,7 +69,8 @@ function toRollView({ roll: r, stock, cameraId, cameraName, labId, labName, fram
 		exposures: r.exposures,
 		stock,
 		camera: cameraId && cameraName ? { id: cameraId, name: cameraName } : null,
-		lab: labId && labName ? { id: labId, name: labName } : null,
+		lab: labId && labName ? { id: labId, name: labName, home: !!labHome } : null,
+		lens: lensId && lensName ? { id: lensId, name: lensName } : null,
 		shotAtIso: r.shotAtIso,
 		exposureComp: r.exposureComp,
 		expires: r.expires,
@@ -78,6 +86,7 @@ function toRollView({ roll: r, stock, cameraId, cameraName, labId, labName, fram
 		printsIncluded: r.printsIncluded,
 		printsCostCents: r.printsCostCents,
 		devNotes: r.devNotes,
+		devRun: parseDevRun(r.devRun),
 		negativesAt: r.negativesAt,
 		publicRollId: r.publicRollId,
 		notes: r.notes,
@@ -145,6 +154,7 @@ export async function rollViews(d: LabDb, userId: string, ids?: string[]): Promi
 		.innerJoin(filmStock, eq(filmStock.id, roll.stockId))
 		.leftJoin(camera, eq(camera.id, roll.cameraId))
 		.leftJoin(lab, eq(lab.id, roll.labId))
+		.leftJoin(lens, eq(lens.id, roll.lensId))
 		.where(ids ? and(eq(roll.userId, userId), inArray(roll.id, ids)) : eq(roll.userId, userId))
 		.orderBy(desc(roll.code));
 	return rows.map(toRollView);
@@ -160,6 +170,7 @@ export async function rollByCode(d: LabDb, userId: string, code: string) {
 			.innerJoin(filmStock, eq(filmStock.id, roll.stockId))
 			.leftJoin(camera, eq(camera.id, roll.cameraId))
 			.leftJoin(lab, eq(lab.id, roll.labId))
+			.leftJoin(lens, eq(lens.id, roll.lensId))
 			.where(byCode),
 		d
 			.select({ id: rollEvent.id, status: rollEvent.status, on: rollEvent.on, note: rollEvent.note })
@@ -245,6 +256,11 @@ export async function listLabs(d: LabDb, userId: string): Promise<LabView[]> {
 	return rows.map(({ userId: _u, createdAt: _c, updatedAt: _m, ...l }) => l);
 }
 
+/** The battery box: spare cells by type. */
+export async function listBatteryStock(d: LabDb, userId: string): Promise<{ type: string; onHand: number }[]> {
+	return d.select({ type: batteryStock.type, onHand: batteryStock.onHand }).from(batteryStock).where(eq(batteryStock.userId, userId)).orderBy(asc(batteryStock.type));
+}
+
 export interface ServiceEntry {
 	id: string;
 	cameraId: string | null;
@@ -253,6 +269,7 @@ export interface ServiceEntry {
 	kind: string;
 	costCents: number | null;
 	note: string | null;
+	cellsFromStock: number | null;
 }
 
 export async function listService(d: LabDb, userId: string): Promise<ServiceEntry[]> {
@@ -265,6 +282,7 @@ export async function listService(d: LabDb, userId: string): Promise<ServiceEntr
 			kind: serviceLog.kind,
 			costCents: serviceLog.costCents,
 			note: serviceLog.note,
+			cellsFromStock: serviceLog.cellsFromStock,
 		})
 		.from(serviceLog)
 		.where(eq(serviceLog.userId, userId))
@@ -382,11 +400,34 @@ export async function deskRollStrip(id: string): Promise<{
 	};
 }
 
+/** camera id → the lens it last shot with (from its frames, else the lens a roll was loaded with). */
+export async function lastLensByCamera(d: LabDb, userId: string): Promise<Record<string, string>> {
+	const [frames, rolls] = await Promise.all([
+		d
+			.select({ cameraId: frame.cameraId, lensId: frame.lensId })
+			.from(frame)
+			.where(and(eq(frame.userId, userId), isNotNull(frame.lensId), isNotNull(frame.cameraId)))
+			.orderBy(asc(frame.shotAt)),
+		d
+			.select({ cameraId: roll.cameraId, lensId: roll.lensId })
+			.from(roll)
+			.where(and(eq(roll.userId, userId), isNotNull(roll.lensId), isNotNull(roll.cameraId)))
+			.orderBy(asc(roll.statusOn)),
+	]);
+	const out: Record<string, string> = {};
+	for (const u of [...rolls, ...frames]) if (u.cameraId && u.lensId) out[u.cameraId] = u.lensId;
+	return out;
+}
+
 /** Choices for the stage-change forms. Desk rolls to link are offered to the owner only. */
 export async function stepChoices(d: LabDb, userId: string, owner: boolean): Promise<StepChoices> {
-	const [cams, labs, linked, desk, sends] = await Promise.all([
-		d.select({ id: camera.id, name: camera.name, format: camera.format, status: camera.status }).from(camera).where(eq(camera.userId, userId)).orderBy(asc(camera.name)),
-		d.select({ id: lab.id, name: lab.name, costCents: lab.costCents }).from(lab).where(eq(lab.userId, userId)).orderBy(asc(lab.name)),
+	const [cams, labs, linked, desk, sends, lenses, lensUse] = await Promise.all([
+		d
+			.select({ id: camera.id, name: camera.name, format: camera.format, status: camera.status, mount: camera.mount })
+			.from(camera)
+			.where(eq(camera.userId, userId))
+			.orderBy(asc(camera.name)),
+		d.select({ id: lab.id, name: lab.name, costCents: lab.costCents, home: lab.home }).from(lab).where(eq(lab.userId, userId)).orderBy(asc(lab.name)),
 		owner ? d.select({ id: roll.publicRollId }).from(roll).where(eq(roll.userId, userId)) : Promise.resolve([]),
 		owner ? deskRolls() : Promise.resolve([]),
 		d
@@ -394,14 +435,23 @@ export async function stepChoices(d: LabDb, userId: string, owner: boolean): Pro
 			.from(roll)
 			.where(and(eq(roll.userId, userId), isNotNull(roll.labDelivery)))
 			.orderBy(asc(roll.statusOn)),
+		d
+			.select({ id: lens.id, name: lens.name, mount: lens.mount, focalMin: lens.focalMin, focalMax: lens.focalMax, maxAperture: lens.maxAperture, status: lens.status })
+			.from(lens)
+			.where(eq(lens.userId, userId))
+			.orderBy(asc(lens.focalMin)),
+		lastLensByCamera(d, userId),
 	]);
 	const taken = new Set(linked.map((l) => l.id).filter(Boolean));
 	// The latest send to each lab wins.
 	const lastDelivery = new Map<string | null, Delivery | null>(
 		sends.map((s) => [s.labId, s.delivery === 'mail' || s.delivery === 'dropoff' ? s.delivery : null])
 	);
+	const lastLens = lensUse;
 	return {
 		cameras: cams.filter((c) => c.status !== 'gone' && c.status !== 'wishlist'),
+		lenses: lenses.filter((l) => l.status !== 'gone' && l.status !== 'wishlist').map(({ status: _s, ...l }) => l),
+		lastLens,
 		labs: labs.map((l) => ({ ...l, delivery: lastDelivery.get(l.id) ?? null })),
 		deskRolls: desk.filter((r) => !taken.has(r.id)),
 	};

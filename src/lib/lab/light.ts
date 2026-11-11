@@ -129,6 +129,8 @@ export interface PickOptions {
 	/** Slowest hand-held time, seconds (default 1/30). */
 	handheld?: number;
 	prefer?: PickPrefer;
+	/** The speeds the camera's dial has (default: 1s to 1/4000). */
+	shutters?: string[];
 }
 
 /**
@@ -139,10 +141,16 @@ export const handheldLimit = (focal35: number | null | undefined) => (focal35 &&
 
 const DIAL = SHUTTERS.filter((s) => s !== 'B').map((s) => ({ s, t: shutterSeconds(s)! }));
 
+/** The camera's timed speeds (B left out), slowest first. */
+const dialOf = (shutters?: string[]) => {
+	const own = shutters ? DIAL.filter((d) => shutters.includes(d.s)) : DIAL;
+	return own.length ? own : DIAL;
+};
+
 /** The dial speed nearest an ideal time, and how far off it is. */
-function nearestShutter(ideal: number): { s: string; t: number; off: number } {
-	let best = DIAL[0];
-	for (const d of DIAL) if (Math.abs(Math.log2(d.t / ideal)) < Math.abs(Math.log2(best.t / ideal))) best = d;
+function nearestShutter(ideal: number, dial = DIAL): { s: string; t: number; off: number } {
+	let best = dial[0];
+	for (const d of dial) if (Math.abs(Math.log2(d.t / ideal)) < Math.abs(Math.log2(best.t / ideal))) best = d;
 	return { ...best, off: Math.log2(best.t / ideal) };
 }
 
@@ -155,9 +163,10 @@ function nearestShutter(ideal: number): { s: string; t: number; off: number } {
  */
 export function pickSettings(ev: number, apertures: number[], opts: PickOptions = {}): Picks {
 	const limit = opts.handheld ?? 1 / 30;
+	const dial = dialOf(opts.shutters);
 	const all: Setting[] = apertures.map((aperture) => {
 		const ideal = (aperture * aperture) / 2 ** ev;
-		const n = nearestShutter(ideal);
+		const n = nearestShutter(ideal, dial);
 		return { aperture, shutter: n.s, seconds: n.t, off: Math.round(n.off * 100) / 100 };
 	});
 	const fits = all.filter((s) => Math.abs(s.off) <= 0.55);
@@ -202,7 +211,7 @@ export function pickSettings(ev: number, apertures: number[], opts: PickOptions 
 	const widest = Math.min(...apertures);
 	const slowest = (widest * widest) / 2 ** ev;
 	const smallest = Math.max(...apertures);
-	const fastest = DIAL.at(-1)!.t;
+	const fastest = dial.at(-1)!.t;
 	return {
 		picks,
 		slow: handheld.length ? null : { aperture: widest, seconds: slowest },

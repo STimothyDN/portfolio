@@ -12,7 +12,7 @@
 					<span v-for="(part, i) in summary" :key="i">{{ part }}</span>
 				</p>
 				<div class="head-actions">
-					<span class="lab-chip stage-stamp" :class="{ 'lab-chip--warn': roll.status === 'lost' }">{{ stageLabel(roll.status, roll.labDelivery) }}</span>
+					<span class="lab-chip stage-stamp" :class="{ 'lab-chip--warn': roll.status === 'lost' }">{{ stageLabel(roll.status, roll.labDelivery, roll.lab?.home) }}</span>
 					<template v-if="!readOnly">
 					<button v-if="next" type="button" class="lab-btn" @click="openStep(next)">{{ stepVerb(next, roll.labDelivery) }}</button>
 					<button v-if="roll.status !== 'lost'" type="button" class="lab-btn lab-btn--quiet" @click="openStep('lost')">Mark lost or ruined</button>
@@ -29,7 +29,7 @@
 				<li v-for="stage in STAGES" :key="stage" class="step" :class="[stepState(stage), `st-${stage}`]">
 					<span class="pip" aria-hidden="true">{{ stepState(stage) === 'done' ? '✓' : STAGES.indexOf(stage) + 1 }}</span>
 					<div class="step-body">
-						<span class="step-t">{{ stageLabel(stage, roll.labDelivery) }}</span>
+						<span class="step-t">{{ stageLabel(stage, roll.labDelivery, roll.lab?.home) }}</span>
 						<template v-for="ev in eventsFor(stage)" :key="ev.id">
 							<form v-if="editing === ev.id" class="ev-edit" @submit.prevent="saveEvent(ev.id)">
 								<input :id="`ev-on-${ev.id}`" v-model="evOn" class="lab-input" type="date" required aria-label="Date" />
@@ -116,6 +116,7 @@
 			:roll-id="readOnly ? undefined : roll.id"
 			:read-only="readOnly"
 			@shift="shiftScans"
+			@aligned="onAligned"
 			@marked="(n: number) => (report.keepers = report.keepers ? { ...report.keepers, n } : report.keepers)"
 		/>
 
@@ -150,6 +151,8 @@
 						</template>
 					</form>
 				</section>
+				<!-- The roll's frames (their own island), beside the details instead of a long scroll below them. -->
+				<slot />
 			</div>
 
 			<!-- Details -->
@@ -204,6 +207,15 @@
 								<option v-for="c in allCameras" :key="c.id" :value="c.id">{{ c.name }}</option>
 							</select>
 						</label>
+						<LensPick
+							v-model="f.lensId"
+							id="d-lens"
+							label="Lens (frames without their own get this one)"
+							:lenses="choices.lenses ?? []"
+							:mount="allCameras.find((c) => c.id === f.cameraId)?.mount"
+							:last="choices.lastLens?.[f.cameraId] ?? null"
+							:autofill="false"
+						/>
 						<div class="lab-row2">
 							<label class="lab-field">
 								<span>Rated at ISO</span>
@@ -312,6 +324,7 @@ import LabDialog from './LabDialog.vue';
 import RollShare from './RollShare.vue';
 import RollStrip from './RollStrip.vue';
 import { alignScans } from '../../lib/lab/alignment';
+import LensPick from './LensPick.vue';
 import StepForm from './StepForm.vue';
 import TrackingNumber from './TrackingNumber.vue';
 import { useTracks } from '../../lib/lab/use-tracks';
@@ -334,7 +347,7 @@ const props = defineProps<{
 	events: RollEventView[];
 	choices: StepChoices;
 	stocks: StockView[];
-	allCameras: { id: string; name: string }[];
+	allCameras: { id: string; name: string; mount?: string | null }[];
 	desk: DeskPreview | null;
 	binderHints: string[];
 	today: string;
@@ -371,6 +384,13 @@ async function shiftScans(firstScanFrame: number) {
 	}
 }
 
+/** A suggested alignment was applied: the roll, the strip and the frames table all take it. */
+function onAligned({ roll: view, frames }: { roll: RollView; frames: FrameView[] }) {
+	roll.value = view;
+	framesList.value = frames;
+	window.dispatchEvent(new CustomEvent('lab:align', { detail: { rollId: view.id, firstScanFrame: view.firstScanFrame, frames } }));
+}
+
 /** The first frame that lines up with a scan, for the sharing preview. */
 const shareSample = computed(() => {
 	if (!props.strip) return null;
@@ -404,9 +424,21 @@ const summary = computed(() =>
 		roll.value.stock.process,
 		roll.value.shotAtIso || roll.value.exposureComp ? ratingLine(roll.value) : null,
 		roll.value.camera?.name,
+		lensLine.value,
 		roll.value.lab?.name,
 	].filter(Boolean)
 );
+/** The lens (or lenses) the roll was shot through: its frames' own, else the one it was loaded with. */
+const lensLine = computed(() => {
+	const counts = new Map<string, number>();
+	for (const fr of framesList.value) {
+		const name = (fr.lensId && props.lensNames[fr.lensId]) || roll.value.lens?.name;
+		if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+	}
+	if (!counts.size) return roll.value.lens?.name ?? null;
+	const list = [...counts].sort((a, b) => b[1] - a[1]);
+	return list.length === 1 ? list[0][0] : list.map(([n, c]) => `${n} ×${c}`).join(', ');
+});
 
 const stageDetail = computed(() => {
 	const r = roll.value;
@@ -463,6 +495,7 @@ function formFrom(r: RollView) {
 		price: dollars(r.priceCents) as string | number,
 		purchasedFrom: r.purchasedFrom ?? '',
 		cameraId: r.camera?.id ?? '',
+		lensId: (r.lens?.id ?? null) as string | null,
 		shotAtIso: (r.shotAtIso ?? '') as string | number,
 		exposureComp: (r.exposureComp ?? '') as string | number,
 		labId: r.lab?.id ?? '',
@@ -551,6 +584,7 @@ async function saveDetails() {
 				priceCents: toCents(f.price),
 				purchasedFrom: f.purchasedFrom,
 				cameraId: f.cameraId || null,
+				lensId: f.lensId || null,
 				shotAtIso: num(f.shotAtIso),
 				exposureComp: num(f.exposureComp),
 				labId: f.labId || null,
@@ -751,6 +785,8 @@ async function remove() {
 
 .col-main {
 	display: grid;
+	/* The frames table scrolls sideways inside the column rather than widening it. */
+	grid-template-columns: minmax(0, 1fr);
 	gap: 2.5rem;
 }
 

@@ -59,11 +59,12 @@ export default async function (h) {
 	check('keepers are ringed', (await evaluate(a, `document.querySelectorAll('.sleeve-page .mark').length`)) >= 1);
 	await evaluate(a, `document.querySelectorAll('.sleeve-page .frame')[1].click()`);
 	await waitFor(a, `!!document.querySelector('dialog[open] .focus')`, 3000);
-	check('a frame opens close up', /Frame 2/.test(await evaluate(a, `document.querySelector('dialog[open]').innerText`)));
+	// R-001's lab printed edge numbers into its file names: the second scan is frame 0 (the first is 00).
+	check('a frame opens close up, named by its edge number', /Frame 0 /.test(await evaluate(a, `document.querySelector('dialog[open]').innerText`)));
 	check('the close-up reads the negative’s density', await evaluate(a, `!!document.querySelector('dialog[open] .gauge')`));
 	await evaluate(a, `[...document.querySelectorAll('dialog[open] .focus-nav button')].find((b) => /Next/.test(b.innerText)).click()`);
 	await sleep(200);
-	check('next steps through the roll', /Frame 3/.test(await evaluate(a, `document.querySelector('dialog[open]').innerText`)));
+	check('next steps through the roll', /Frame 1 /.test(await evaluate(a, `document.querySelector('dialog[open]').innerText`)));
 	await shot(a, 'roll-focus', { width: 1440, height: 1000, light: true });
 	// ---------- grease pencil ----------
 	const key = (k) => send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, text: k, code: /\d/.test(k) ? `Digit${k}` : `Key${k.toUpperCase()}` }, a);

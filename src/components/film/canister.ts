@@ -7,7 +7,8 @@ const BRANDS: [RegExp, string, string][] = [
 	[/fuji|superia|velvia|provia/i, '#1d8a4c', '#f4f1e8'],
 	[/lucky/i, '#c4262e', '#fbf3e6'],
 	[/ilford|hp5|delta|fp4/i, '#ece9e2', '#151515'],
-	[/cinestill/i, '#1b1b1d', '#e8392c'],
+	// A brighter red than the box: the label has to read on a black can at canister size.
+	[/cinestill/i, '#1b1b1d', '#ff5a45'],
 	// Lomography's black-and-white Lady Grey comes in a gray can, not the color films' blue.
 	[/lady ?grey/i, '#a3a29e', '#151515'],
 	[/lomo/i, '#2f5fb3', '#f4f1e8'],

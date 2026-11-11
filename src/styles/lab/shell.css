@@ -72,6 +72,28 @@
 	}
 }
 
+/* Phones: the lab's own bar tucks up under the site header, so the page starts sooner. */
+@media (max-width: 50em) {
+	.lab-bar {
+		margin-top: -2.4rem;
+		padding-bottom: 0.4rem;
+	}
+
+	.lab-wordmark {
+		font-size: var(--text-xl);
+	}
+
+	.lab-avatar {
+		width: 1.85rem;
+		height: 1.85rem;
+	}
+
+	.lab-main,
+	.lab.lab--wide .lab-main {
+		padding-top: 0.9rem;
+	}
+}
+
 /*
  * The dock: a short strip of film floating at the bottom of every station,
  * one frame per place (the one you're in is lit, as if held up to a light

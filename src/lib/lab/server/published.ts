@@ -97,6 +97,7 @@ async function read(config: LabConfig, desk: { id: string; files: string[] }[]):
 				firstScanFrame: roll.firstScanFrame,
 				shotAtIso: roll.shotAtIso,
 				boxIso: filmStock.iso,
+				lensId: roll.lensId,
 			})
 			.from(roll)
 			.innerJoin(filmStock, eq(filmStock.id, roll.stockId))
@@ -137,7 +138,7 @@ async function read(config: LabConfig, desk: { id: string; files: string[] }[]):
 			const f = aligned.get(file);
 			// Scans with no logged frame still get the roll's place, if it shares one.
 			const e = f
-				? publicExposure(f, f.lensId ? (lenses.get(f.lensId) ?? null) : null, share)
+				? publicExposure(f, lenses.get(f.lensId ?? r.lensId ?? '') ?? null, share)
 				: publicExposure({ aperture: null, shutter: null, focalLength: null, note: null }, null, { ...share, shareExposure: false });
 			if (e) map.set(file, e);
 		}

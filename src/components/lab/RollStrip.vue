@@ -10,6 +10,18 @@
 				<button type="button" aria-label="Later frame" :disabled="firstScanFrame >= 10" @click="emit('shift', firstScanFrame + 1)">›</button>
 				<span class="matched">{{ matchedCount }} of {{ frames.length }} logged frames line up</span>
 			</div>
+			<!-- What the scans themselves say about the alignment (file names, or the light), one tap to apply. -->
+			<div v-if="suggestion && !readOnly" class="suggest" role="status">
+				<p>
+					<b>Suggested:</b> {{ suggestion.why }}
+					<template v-if="suggestion.pins.length"> {{ suggestion.pins.length === 1 ? 'One frame gets pinned' : `${suggestion.pins.length} frames get pinned` }} to its scan.</template>
+					{{ suggestion.matched }} of {{ frames.length }} would line up.
+				</p>
+				<button type="button" class="lab-btn lab-btn--quiet small" :disabled="applying" @click="applySuggestion">Line them up</button>
+				<button type="button" class="lab-link small" @click="dismissed = true">Not now</button>
+				<span v-if="applyError" class="lab-error">{{ applyError }}</span>
+			</div>
+			<a class="lab-btn lab-btn--quiet sheet-link" :href="`/photography/lab/rolls/${code}/sheet/`">Contact sheet</a>
 			<div v-if="scans" class="mode" role="group" aria-label="Show the frames as">
 				<button type="button" :aria-pressed="mode === 'negative'" @click="mode = 'negative'">Negative</button>
 				<button type="button" :aria-pressed="mode === 'positive'" @click="mode = 'positive'">Positive</button>
@@ -135,7 +147,7 @@
 import { actions } from 'astro:actions';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
-import { alignScans } from '../../lib/lab/alignment';
+import { alignScans, edgeFromFilename, suggestAlignment } from '../../lib/lab/alignment';
 import LabDialog from './LabDialog.vue';
 import { formatExposure, frameTime } from '../../lib/lab/inventory';
 import { negativeBaseVars, negativeFilter, negativeFilterId, type NegativeProfileKey } from '../film/negative';
@@ -159,19 +171,56 @@ const props = defineProps<{
 	stockName: string;
 	profile: NegativeProfileKey | null;
 	scans: Scan[] | null;
-	frames: { number: number; aperture: number | null; shutter: string | null; flash: boolean; scanFilename?: string | null; shotAt?: number; tzOffset?: number; note?: string | null }[];
+	frames: { id?: string; number: number; aperture: number | null; shutter: string | null; flash: boolean; scanFilename?: string | null; shotAt?: number; tzOffset?: number; note?: string | null }[];
 	exposures: number;
 	firstScanFrame: number;
 	rollId?: string;
 	readOnly?: boolean;
 }>();
-const emit = defineEmits<{ shift: [firstScanFrame: number]; marked: [keepers: number] }>();
+const emit = defineEmits<{
+	shift: [firstScanFrame: number];
+	marked: [keepers: number];
+	aligned: [result: { roll: import('../../lib/lab/inventory').RollView; frames: import('../../lib/lab/inventory').FrameView[] }];
+}>();
 
 const aligned = computed(() => (props.scans ? alignScans(props.scans.map((s) => s.file), props.frames, props.firstScanFrame) : new Map()));
+
+/* ---------- a suggested alignment ---------- */
+const dismissed = ref(false);
+const applying = ref(false);
+const applyError = ref('');
+const suggestion = computed(() => {
+	if (dismissed.value || !props.scans || !props.frames.length) return null;
+	const s = suggestAlignment(props.scans, props.frames, props.firstScanFrame);
+	// File names are the lab's own word, so they're offered whenever they change something (even
+	// if fewer frames then land on a scan: a frame the lab skipped has no scan). The light only
+	// when it lines up more than now.
+	return s && (s.basis === 'names' || s.matched > matchedCount.value) ? s : null;
+});
+async function applySuggestion() {
+	const s = suggestion.value;
+	if (!s || !props.rollId) return;
+	applying.value = true;
+	applyError.value = '';
+	try {
+		const { data, error } = await actions.lab.applyAlignment({
+			rollId: props.rollId,
+			firstScanFrame: s.firstScanFrame,
+			pins: s.pins.filter((p) => p.frameId).map((p) => ({ frameId: p.frameId!, scanFilename: p.file })),
+		});
+		if (error) throw new Error(error.message);
+		emit('aligned', data);
+	} catch (e) {
+		applyError.value = (e as Error).message || 'Couldn’t line them up.';
+	} finally {
+		applying.value = false;
+	}
+}
 const matchedCount = computed(() => aligned.value.size);
 /** Edge numbers are frame numbers: the lab's first scan is frame `firstScanFrame` (00 prints as 00). */
 const edgeNo = (file: string, i: number) => {
-	const n = aligned.value.get(file)?.number ?? props.firstScanFrame + i;
+	// No logged frame on it: what the lab printed into the file name, else the roll's shift.
+	const n = aligned.value.get(file)?.number ?? (props.frames.length ? null : edgeFromFilename(file)) ?? props.firstScanFrame + i;
 	return n === -1 ? '00' : String(n);
 };
 
@@ -294,6 +343,29 @@ onMounted(() => {
 	gap: 0.4rem;
 	font-size: var(--text-sm);
 	color: var(--gray-300);
+}
+
+/* The suggestion: a note clipped to the strip, in the light table's annotation ink. */
+.suggest {
+	flex-basis: 100%;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem 0.8rem;
+	padding: 0.55rem 0.8rem;
+	border-left: 3px solid var(--lab-note, var(--accent-regular));
+	border-radius: 0 0.4rem 0.4rem 0;
+	background: color-mix(in oklch, var(--lab-note, var(--accent-regular)) 9%, transparent);
+	font-size: var(--text-sm);
+}
+
+.suggest p {
+	flex: 1 1 22rem;
+	margin: 0;
+}
+
+.suggest .small {
+	font-size: var(--text-sm);
 }
 
 .align button {

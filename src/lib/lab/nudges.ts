@@ -8,6 +8,7 @@ import { daysHere } from './stats/pipeline';
 import { returnWindow } from './stats/labs';
 import type { Spread } from './stats/pipeline';
 import type { StockForecast } from './pace';
+import type { BoxRow } from './batteries';
 
 export type NudgeAction =
 	| { kind: 'step'; rollId: string; to: RollStatus }
@@ -34,6 +35,8 @@ export interface NudgeInput {
 	/** Owner only: scans can be linked from the film desk. */
 	canLink: boolean;
 	passkeys: number;
+	/** The battery box (batteryBox()), when the bench has it. */
+	box?: BoxRow[];
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -124,6 +127,24 @@ export function nudges(input: NudgeInput, limit = 3): Nudge[] {
 	}
 	if (input.forecast.monthsOfFilm != null && input.forecast.monthsOfFilm < 1 && storage.length < 3) {
 		out.push({ key: 'restock', tone: 'info', text: `About ${plural(storage.length, 'roll')} left in the fridge at the rate you shoot.`, label: 'Open the fridge', action: { kind: 'href', href: '/photography/lab/fridge/' }, score: 18 });
+	}
+	// Batteries: an old set in a camera with film in it, and nothing in the box to swap in.
+	const loadedIds = new Set(by('camera').map((r) => r.camera?.id).filter(Boolean));
+	for (const row of input.box ?? []) {
+		const due = row.cameras.filter((c) => c.old).sort((a, b) => Number(loadedIds.has(b.cameraId)) - Number(loadedIds.has(a.cameraId)) || (b.months ?? 0) - (a.months ?? 0))[0];
+		if (!due) continue;
+		const loaded = loadedIds.has(due.cameraId);
+		const short = row.onHand < due.cells;
+		out.push({
+			key: `battery-${due.cameraId}`,
+			tone: short ? 'warn' : 'info',
+			text: short
+				? `The ${due.name}’s batteries are ${due.months} months old and the box has ${row.onHand ? `only ${row.onHand}` : 'no'} ${row.type}.`
+				: `The ${due.name}’s batteries are ${due.months} months old; ${row.onHand} ${row.type} in the box.`,
+			label: short ? 'Battery box' : 'Swap them',
+			action: { kind: 'href', href: '/photography/lab/gear/#batteries' },
+			score: (loaded ? 22 : 9) + (short ? 4 : 0),
+		});
 	}
 	if (input.passkeys < 2) {
 		out.push({ key: 'passkey', tone: 'info', text: input.passkeys ? 'Only one passkey: add one from your other device.' : 'No passkey yet.', label: 'Passkeys', action: { kind: 'href', href: '/photography/lab/account/' }, score: 10 });

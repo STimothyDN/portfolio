@@ -18,7 +18,7 @@ interface Props {
 	door?: boolean;
 	/** Shooting mode: no site nav, footer or lab bar; the page draws its own. */
 	shoot?: boolean;
-	current?: 'home' | 'shoot' | 'rolls' | 'fridge' | 'gear' | 'labs' | 'account' | 'almanac';
+	current?: 'home' | 'shoot' | 'rolls' | 'fridge' | 'gear' | 'labs' | 'account' | 'almanac' | 'darkroom' | 'trip';
 	/** The bench and its close-ups: the page spends the full width on the mat. */
 	wide?: boolean;
 }
@@ -33,7 +33,7 @@ const missing = config.ok ? [] : config.missing;
  * that's done, the almanac what it all adds up to. Icons are 24-unit line
  * drawings (stroke only).
  */
-const place = current === 'home' || current === 'fridge' || current === 'gear' || current === 'labs' ? 'bench' : current === 'rolls' ? 'binder' : current;
+const place = current === 'home' || current === 'fridge' || current === 'gear' || current === 'labs' || current === 'darkroom' || current === 'trip' ? 'bench' : current === 'rolls' ? 'binder' : current;
 const places = [
 	['bench', 'Bench', '/photography/lab/', 'M2.5 15.5h19M4 15.5v4M20 15.5v4M6 15.5v-4.2h4.5v4.2M13 15.5V7.5h5.5v8'],
 	['binder', 'Binder', '/photography/lab/rolls/', 'M6 3.5h12v17H6zM9 3.5v17M12 7.5h3.5M12 11h3.5'],
@@ -247,7 +247,7 @@ const initials = (user?.name ?? '')
 			try {
 				if (!navigator.onLine || !document.querySelector('meta[name="lab-user"]') || sessionStorage.getItem('lab-offline-saved')) return;
 				navigator.serviceWorker.ready.then((reg) => {
-					reg.active?.postMessage({ type: 'save-for-offline', pages: ['/photography/lab/shoot/', '/photography/lab/'] });
+					reg.active?.postMessage({ type: 'save-for-offline', pages: ['/photography/lab/shoot/', '/photography/lab/', '/photography/lab/darkroom/'] });
 					sessionStorage.setItem('lab-offline-saved', '1');
 				});
 			} catch {
@@ -324,7 +324,7 @@ const initials = (user?.name ?? '')
 	 * the strip hold still (they're named for the transition only while it runs).
 	 */
 	// The bench and its close-ups are one place; the binder and its rolls another.
-	const STATION: Record<string, number> = { '': 0, fridge: 0, gear: 0, labs: 0, labels: 0.5, rolls: 1, r: 1, frames: 1, almanac: 2, account: 3, shoot: -1 };
+	const STATION: Record<string, number> = { '': 0, fridge: 0, gear: 0, labs: 0, darkroom: 0.3, trip: 0.4, labels: 0.5, rolls: 1, r: 1, frames: 1, almanac: 2, account: 3, shoot: -1 };
 	const BENCH = new Set(['', 'fridge', 'gear', 'labs']);
 	const stationOf = (url: URL) => {
 		if (!url.pathname.startsWith('/photography/lab')) return null;

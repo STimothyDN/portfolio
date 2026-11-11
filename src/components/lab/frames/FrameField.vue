@@ -13,7 +13,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { formatExposure, frameTime } from '../../../lib/lab/inventory';
 import { shutterSeconds } from '../../../lib/lab/almanac';
 import type { FrameRow, RollBrief } from '../../../lib/lab/server/frames';
-import { canisterColors } from '../../film/canister';
 
 const props = defineProps<{ rows: FrameRow[]; rolls: Record<string, RollBrief>; matched: Set<string> | null }>();
 
@@ -37,19 +36,41 @@ const TRAY = 26;
 
 /* ---------- colours ---------- */
 
-const CAMERA_HUES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
-const cameraOrder = computed(() => [...new Set(props.rows.map((r) => props.rolls[r.rollId]?.camera ?? '—'))]);
+/*
+ * The validated categorical order (dataviz palette), light and dark steps.
+ * Films and cameras each take slots by how many frames they have (most first),
+ * worked out over every frame so a search never repaints the survivors; past
+ * eight, the rest share "Other" grey. Canister colours can't do this job:
+ * half of Kodak's boxes are the same yellow.
+ */
+const HUES_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
+const HUES_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
+const OTHER = '#8a8a8a';
+const dark = ref(false);
+const hues = computed(() => (dark.value ? HUES_DARK : HUES_LIGHT));
+const byCount = (key: (r: FrameRow) => string) => {
+	const n = new Map<string, number>();
+	for (const r of props.rows) n.set(key(r), (n.get(key(r)) ?? 0) + 1);
+	return [...n].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k]) => k);
+};
+const cameraOrder = computed(() => byCount((r) => props.rolls[r.rollId]?.camera ?? '—'));
+const filmOrder = computed(() => byCount((r) => props.rolls[r.rollId]?.stock ?? '—'));
+const slot = (order: string[], key: string) => {
+	const i = order.indexOf(key);
+	return i >= 0 && i < hues.value.length ? hues.value[i] : OTHER;
+};
 function colorOf(r: FrameRow): string {
 	const b = props.rolls[r.rollId];
-	if (colorBy.value === 'camera') {
-		const i = cameraOrder.value.indexOf(b?.camera ?? '—');
-		return i < CAMERA_HUES.length ? CAMERA_HUES[i] : '#8a8a8a';
-	}
+	if (colorBy.value === 'camera') return slot(cameraOrder.value, b?.camera ?? '—');
 	if (colorBy.value === 'density') return r.lift == null ? '#9a948a' : r.thin ? '#e0862a' : r.lift <= -0.02 ? '#2a68b0' : '#7aa0c8';
-	return canisterColors({ stock: b?.token ?? b?.stock ?? '', stockLabel: b?.stock ?? '', stockBrand: b?.brand }).can;
+	return slot(filmOrder.value, b?.stock ?? '—');
 }
+const legendOf = (order: string[]) => {
+	const named = order.slice(0, hues.value.length).map((label, i) => ({ label, color: hues.value[i] }));
+	return order.length > hues.value.length ? [...named, { label: `Other (${order.length - hues.value.length})`, color: OTHER }] : named;
+};
 const legend = computed(() => {
-	if (colorBy.value === 'camera') return cameraOrder.value.map((c, i) => ({ label: c, color: i < CAMERA_HUES.length ? CAMERA_HUES[i] : '#8a8a8a' }));
+	if (colorBy.value === 'camera') return legendOf(cameraOrder.value);
 	if (colorBy.value === 'density')
 		return [
 			{ label: 'thin', color: '#e0862a' },
@@ -57,12 +78,7 @@ const legend = computed(() => {
 			{ label: 'dense', color: '#2a68b0' },
 			{ label: 'no scan', color: '#9a948a' },
 		];
-	const seen = new Map<string, string>();
-	for (const r of props.rows) {
-		const b = props.rolls[r.rollId];
-		if (b && !seen.has(b.stock)) seen.set(b.stock, colorOf(r));
-	}
-	return [...seen].map(([label, color]) => ({ label, color }));
+	return legendOf(filmOrder.value);
 });
 
 /* ---------- where each dot goes, per arrangement ---------- */
@@ -290,7 +306,7 @@ function rearrange() {
 	if (!raf) raf = requestAnimationFrame(drawFrame);
 }
 watch([arrangement, W], () => void nextTick(rearrange));
-watch([colorBy, () => props.matched], () => {
+watch([colorBy, () => props.matched, dark], () => {
 	if (!raf) raf = requestAnimationFrame(drawFrame);
 });
 
@@ -340,7 +356,13 @@ function size() {
 	c.style.width = `${W.value}px`;
 	c.style.height = `${H}px`;
 }
+let themeWatch: MutationObserver | null = null;
 onMounted(() => {
+	// Dark mode gets the palette's dark steps (the theme toggles a class on <html>).
+	const root = document.documentElement;
+	dark.value = root.classList.contains('theme-dark');
+	themeWatch = new MutationObserver(() => (dark.value = root.classList.contains('theme-dark')));
+	themeWatch.observe(root, { attributes: true, attributeFilter: ['class'] });
 	size();
 	// The first arrangement grows out of the tray.
 	for (const r of props.rows) pos.set(r.id, { x: PAD.l + Math.random() * (W.value - PAD.l - PAD.r), y: H - TRAY / 2 });
@@ -349,6 +371,7 @@ onMounted(() => {
 	if (host.value) ro.observe(host.value);
 });
 onBeforeUnmount(() => {
+	themeWatch?.disconnect();
 	ro?.disconnect();
 	cancelAnimationFrame(raf);
 });

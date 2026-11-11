@@ -123,6 +123,12 @@
 	cursor: pointer;
 }
 
+.lab-link:disabled {
+	opacity: 0.45;
+	text-decoration-style: dotted;
+	cursor: default;
+}
+
 /*
  * Fingers, not cursors: on touch screens the small text-style controls
  * (links, roll codes, Edit buttons, switches, checkboxes) get a hit area

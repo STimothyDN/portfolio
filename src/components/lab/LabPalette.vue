@@ -27,6 +27,8 @@ const PLACES: Item[] = [
 	['Binder', 'Every roll, filed', '/photography/lab/rolls/', 'rolls negatives archive line'],
 	['Frames', 'Every frame you logged', '/photography/lab/frames/', 'frames search map field'],
 	['Almanac', 'What your film says', '/photography/lab/almanac/', 'insight charts stats money'],
+	['Darkroom', 'Develop at home: timer, recipes, chemistry', '/photography/lab/darkroom/', 'develop home tank timer chemistry recipe c41 bw fixer'],
+	['Trip planner', 'How much film, which speeds, what to pack', '/photography/lab/trip/', 'trip travel pack plan forecast holiday'],
 	['Shoot', 'Log frames on the phone', '/photography/lab/shoot/', 'shoot log meter'],
 	['Labels', 'Print canister stickers', '/photography/lab/labels/', 'qr print sticker'],
 	['Account', 'Passkeys and invites', '/photography/lab/account/', 'passkey invite sign out'],
@@ -42,7 +44,7 @@ const rolls = ref<{ code: string; title: string | null; status: string; stock: s
 const loading = ref(false);
 
 const items = computed<Item[]>(() => {
-	const list: Item[] = props.guest ? PLACES.filter((p) => !/shoot|labels|account/.test(p.href)) : [...PLACES];
+	const list: Item[] = props.guest ? PLACES.filter((p) => !/shoot|labels|account|darkroom|trip/.test(p.href)) : [...PLACES];
 	for (const r of rolls.value ?? []) {
 		const label = r.title ?? r.stock;
 		const keys = `${r.code} ${r.code.replace('-', '')} ${label} ${r.stock} ${r.camera ?? ''} ${STATUS_LABEL[r.status as RollStatus] ?? ''}`.toLowerCase();

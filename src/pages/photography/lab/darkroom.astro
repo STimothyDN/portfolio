@@ -1,0 +1,52 @@
+---
+import LabLayout from '../../../components/lab/LabLayout.astro';
+import BenchCloseup from '../../../components/lab/bench/BenchCloseup.astro';
+import DarkroomDesk from '../../../components/lab/darkroom/DarkroomDesk.vue';
+import { todayInDurham } from '../../../lib/lab/inventory';
+import { stageCounts } from '../../../lib/lab/server/bench';
+import { labConfig } from '../../../lib/lab/server/config';
+import { developedAtHome, listChemistry, listRecipes } from '../../../lib/lab/server/darkroom';
+import { getDb } from '../../../lib/lab/server/db/client';
+import { rollViews } from '../../../lib/lab/server/inventory';
+import { parseDevRun } from '../../../lib/lab/darkroom';
+
+export const prerender = false;
+
+const { user } = Astro.locals;
+const config = labConfig();
+const countsP = user && config.ok ? stageCounts(config.config, user.id) : Promise.resolve({});
+const data =
+	user && config.ok
+		? await (async () => {
+				const d = await getDb(config.config);
+				const [rolls, recipes, chemistry, developed] = await Promise.all([
+					rollViews(d, user.id),
+					listRecipes(d, user.id),
+					listChemistry(d, user.id),
+					developedAtHome(d, user.id),
+				]);
+				return {
+					// Waiting for the tank: shot, or marked as gone to the home darkroom without a run recorded yet.
+					waiting: rolls.filter((r) => r.status === 'shot' || (r.status === 'lab' && r.lab?.home && !r.devRun)),
+					recipes,
+					chemistry,
+					developed: developed.flatMap((r) => {
+						const run = parseDevRun(r.devRun);
+						return run ? [{ code: r.code, on: r.statusOn, run }] : [];
+					}),
+				};
+			})()
+		: null;
+const counts = await countsP;
+const initial = Astro.url.searchParams.get('roll');
+---
+
+<LabLayout title="Darkroom" current="darkroom" wide>
+	{
+		data && (
+			<BenchCloseup zone="post" counts={counts} title="Darkroom" lede="Develop at home: a timer that follows the recipe, the chemistry on your shelf, and what each run did.">
+				<DarkroomDesk client:load waiting={data.waiting} recipes={data.recipes} chemistry={data.chemistry} developed={data.developed} today={todayInDurham()} initialRoll={initial} />
+			</BenchCloseup>
+		)
+	}
+</LabLayout>

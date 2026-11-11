@@ -198,8 +198,12 @@ export const camera = sqliteTable(
 		/** Lens mount; null for a fixed lens. */
 		mount: text('mount'),
 		fixedLens: text('fixed_lens'),
+		/** "2 × LR44": how many cells and which (parsed by batteryOf in inventory.ts). */
 		battery: text('battery'),
 		batteryChangedOn: text('battery_changed_on'),
+		/** The shutter's range ('1/1000', '4s'); null means it isn't known (every speed is offered). */
+		shutterFastest: text('shutter_fastest'),
+		shutterSlowest: text('shutter_slowest'),
 		serial: text('serial'),
 		acquiredOn: text('acquired_on'),
 		priceCents: integer('price_cents'),
@@ -250,6 +254,8 @@ export const serviceLog = sqliteTable(
 		kind: text('kind').notNull(),
 		costCents: integer('cost_cents'),
 		note: text('note'),
+		/** A battery swap taken from the battery box: how many cells came out of it (given back if the entry is deleted). */
+		cellsFromStock: integer('cells_from_stock'),
 		createdAt: createdAt(),
 	},
 	(t) => [index('service_log_camera_idx').on(t.cameraId), index('service_log_lens_idx').on(t.lensId)]
@@ -267,6 +273,8 @@ export const lab = sqliteTable(
 		url: text('url'),
 		/** Usual dev + scan price per roll. */
 		costCents: integer('cost_cents'),
+		/** Your own darkroom: no post, no tracking; rolls sent here are developed with a recipe. */
+		home: integer('home', { mode: 'boolean' }).notNull().default(false),
 		notes: text('notes'),
 		createdAt: createdAt(),
 		updatedAt: updatedAt(),
@@ -301,6 +309,8 @@ export const roll = sqliteTable(
 		storageSpot: text('storage_spot'),
 		// In camera
 		cameraId: text('camera_id').references(() => camera.id, { onDelete: 'set null' }),
+		/** The lens mounted when it was loaded (interchangeable-lens cameras); frames default to it. */
+		lensId: text('lens_id').references(() => lens.id, { onDelete: 'set null' }),
 		/** Exposure index it was shot at; differs from the box speed when pushed or pulled. */
 		shotAtIso: integer('shot_at_iso'),
 		/** Exposure compensation dialled in for the whole roll, in stops (+1, −2.3). */
@@ -318,6 +328,8 @@ export const roll = sqliteTable(
 		printsIncluded: integer('prints_included', { mode: 'boolean' }).notNull().default(false),
 		printsCostCents: integer('prints_cost_cents'),
 		devNotes: text('dev_notes'),
+		/** Developed at home: the recipe as run (DevRun JSON, see darkroom.ts). */
+		devRun: text('dev_run'),
 		// Home
 		negativesAt: text('negatives_at'),
 		/** The roll's id on the public film desk (src/content/film/<id>.json). */
@@ -461,6 +473,78 @@ export const scanMark = sqliteTable(
 		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 	},
 	(t) => [primaryKey({ columns: [t.userId, t.publicRollId, t.filename] })]
+);
+
+/* ---------- Kit extras, the darkroom, trips ---------- */
+
+/** Spare batteries on hand, by type ("LR44", "CR123A"): the battery box. */
+export const batteryStock = sqliteTable(
+	'battery_stock',
+	{
+		userId: owner(),
+		/** Normalized type, as batteryOf() returns it. */
+		type: text('type').notNull(),
+		onHand: integer('on_hand').notNull().default(0),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+	},
+	(t) => [primaryKey({ columns: [t.userId, t.type] })]
+);
+
+/** A developing recipe you've saved (built-in starting points live in darkroom.ts). */
+export const devRecipe = sqliteTable(
+	'dev_recipe',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		name: text('name').notNull(),
+		/** RecipeSpec JSON: process, developer, dilution, minutes, temperature, agitation, steps. */
+		spec: text('spec').notNull(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(t) => [index('dev_recipe_user_idx').on(t.userId)]
+);
+
+/** A batch of mixed chemistry: what's been through it, and when it goes off. */
+export const chemistry = sqliteTable(
+	'chemistry',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		name: text('name').notNull(),
+		/** developer, stop, fixer, c41, e6, bw-kit, wetting, other */
+		kind: text('kind').notNull(),
+		mixedOn: text('mixed_on').notNull(),
+		/** Rolls (135-36 or 120) it's good for; null when it's one-shot or not known. */
+		capacityRolls: integer('capacity_rolls'),
+		rollsUsed: integer('rolls_used').notNull().default(0),
+		/** Days it keeps once mixed. */
+		lifeDays: integer('life_days'),
+		retiredOn: text('retired_on'),
+		notes: text('notes'),
+		createdAt: createdAt(),
+	},
+	(t) => [index('chemistry_user_idx').on(t.userId)]
+);
+
+/** A trip planned on the trip planner: where, when, and what it packs. */
+export const trip = sqliteTable(
+	'trip',
+	{
+		id: text('id').primaryKey(),
+		userId: owner(),
+		name: text('name').notNull(),
+		place: text('place'),
+		lat: real('lat'),
+		lng: real('lng'),
+		startOn: text('start_on').notNull(),
+		endOn: text('end_on').notNull(),
+		/** TripPlan JSON: cameras, frames a day, rolls picked. */
+		plan: text('plan').notNull(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(t) => [index('trip_user_idx').on(t.userId)]
 );
 
 /** The tables Better Auth's adapter needs, keyed by its model names. */

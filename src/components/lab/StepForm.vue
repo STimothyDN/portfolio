@@ -16,6 +16,14 @@
 					No cameras yet. <a class="lab-link" href="/photography/lab/gear/">Add one on the Gear page</a>.
 				</small>
 			</label>
+			<LensPick
+				:key="cameraId"
+				v-model="lensId"
+				id="step-lens"
+				:lenses="choices.lenses ?? []"
+				:mount="choices.cameras.find((c) => c.id === cameraId)?.mount"
+				:last="choices.lastLens?.[cameraId] ?? null"
+			/>
 			<p v-if="roll.rewoundAtFrame" class="lab-notice">
 				Partly shot (rewound after frame {{ roll.rewoundAtFrame }}). Once it’s loaded, wind on to frame {{ roll.rewoundAtFrame + 2 }} with the
 				lens cap on before shooting.
@@ -61,7 +69,8 @@
 					<input id="step-cost" v-model="cost" class="lab-input" type="number" min="0" step="0.01" inputmode="decimal" />
 				</label>
 			</div>
-			<LabSendFields v-model="send" />
+			<LabSendFields v-if="!isHomeLab" v-model="send" />
+			<p v-else class="lab-hint">Your own darkroom: no post. The darkroom page times the run and records the recipe on the roll.</p>
 			<label class="lab-field">
 				<span>Notes for the lab</span>
 				<input id="step-dev-notes-lab" v-model="devNotes" class="lab-input" type="text" maxlength="300" :placeholder="push ?? 'Normal process'" />
@@ -115,7 +124,7 @@
 
 <script setup lang="ts">
 import { actions } from 'astro:actions';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import { dollars, num, run } from '../../lib/lab/client';
 import {
@@ -130,6 +139,7 @@ import {
 	type StepChoices,
 } from '../../lib/lab/inventory';
 import LabSendFields, { type SendDraft } from './LabSendFields.vue';
+import LensPick from './LensPick.vue';
 import { advanceOrQueue, deviceToday, type MaybeQueued } from '../../lib/lab/offline';
 
 const props = defineProps<{
@@ -146,8 +156,12 @@ const emit = defineEmits<{ done: [roll: RollView]; cancel: [] }>();
 // The device's day, not the day a saved page was rendered (pages open offline days later).
 const on = ref(typeof window === 'undefined' ? props.today : deviceToday());
 const cameraId = ref(props.preset?.cameraId ?? props.roll.camera?.id ?? '');
+const lensId = ref<string | null>(props.roll.lens?.id ?? null);
+// A different camera: its own lens (LensPick fills in the likely one).
+watch(cameraId, () => (lensId.value = null));
 const iso = ref<string | number>(props.roll.shotAtIso ?? props.roll.stock.iso ?? '');
 const labId = ref(props.preset?.labId ?? props.roll.lab?.id ?? '');
+const isHomeLab = computed(() => !!props.choices.labs.find((l) => l.id === labId.value)?.home);
 const labOrder = ref(props.roll.labOrder ?? '');
 const cost = ref<string | number>(dollars(props.roll.devCostCents ?? props.choices.labs.find((l) => l.id === props.roll.lab?.id)?.costCents));
 const devNotes = ref(props.roll.devNotes ?? '');
@@ -207,7 +221,7 @@ async function save() {
 	busy.value = true;
 	error.value = '';
 	const fields: Record<string, unknown> = {};
-	if (props.to === 'camera') Object.assign(fields, { cameraId: cameraId.value, shotAtIso: num(iso.value), exposureComp: num(comp.value) });
+	if (props.to === 'camera') Object.assign(fields, { cameraId: cameraId.value, lensId: lensId.value, shotAtIso: num(iso.value), exposureComp: num(comp.value) });
 	if (props.to === 'shot') fields.devNotes = devNotes.value || push.value || '';
 	if (props.to === 'lab')
 		Object.assign(fields, {
@@ -227,7 +241,11 @@ async function save() {
 		let view: MaybeQueued = await advanceOrQueue(
 			props.roll,
 			{ rollId: props.roll.id, to: props.to, on: on.value, note: note.value, ...fields },
-			{ cameras: Object.fromEntries(props.choices.cameras.map((c) => [c.id, { name: c.name }])), labs: Object.fromEntries(props.choices.labs.map((l) => [l.id, { name: l.name }])) }
+			{
+				cameras: Object.fromEntries(props.choices.cameras.map((c) => [c.id, { name: c.name }])),
+				labs: Object.fromEntries(props.choices.labs.map((l) => [l.id, { name: l.name, home: l.home }])),
+				lenses: Object.fromEntries((props.choices.lenses ?? []).map((l) => [l.id, { name: l.name }])),
+			}
 		);
 		// Linking scans has its own checks (one roll per desk roll), so it's a second call (online only).
 		if (props.to === 'scanned' && publicRollId.value && !view.queued) {

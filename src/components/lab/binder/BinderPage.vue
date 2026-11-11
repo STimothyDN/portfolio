@@ -8,7 +8,7 @@
 import { computed, nextTick, ref } from 'vue';
 
 import { matchesFacet, type Facet } from '../../../lib/lab/almanac';
-import { formatDay, STAGES, STATUS_LABEL, type RollStatus, type RollView, type StockView } from '../../../lib/lab/inventory';
+import { formatDay, formatExpiry, STAGES, STATUS_LABEL, type RollStatus, type RollView, type StockView } from '../../../lib/lab/inventory';
 import type { BinderData } from '../../../lib/lab/server/binder';
 import { segments } from '../../../lib/lab/stats/pipeline';
 import FilmCanister from '../../film/FilmCanister.vue';
@@ -54,6 +54,18 @@ const shown = computed(() => {
 		.filter((r) => !q || [r.code, r.title, r.stock.name, r.camera?.name, r.lab?.name, r.storageSpot, r.notes].filter(Boolean).some((v) => v!.toLowerCase().includes(q)))
 		.sort((a, b) => b.statusOn.localeCompare(a.statusOn) || b.code.localeCompare(a.code));
 });
+
+/*
+ * Unshot film has no frames to show through a sleeve: in the sheets view it
+ * sits in one compact tray of canisters (oldest dates first) instead of a page
+ * of identical black strips.
+ */
+const sheetRolls = computed(() => (view.value === 'sheets' ? shown.value.filter((r) => r.status !== 'storage') : shown.value));
+const unshot = computed(() =>
+	view.value === 'sheets'
+		? shown.value.filter((r) => r.status === 'storage').sort((a, b) => (a.expires ?? '9999').localeCompare(b.expires ?? '9999') || a.code.localeCompare(b.code))
+		: []
+);
 
 async function setWindow(w: [string, string] | null) {
 	window.value = w;
@@ -108,8 +120,8 @@ const filterNote = computed(() => [facet.value?.label, window.value ? `${formatD
 			<button type="button" class="lab-link" @click="(facet = null), (window = null)">Show all</button>
 		</p>
 
-		<TransitionGroup v-if="shown.length" tag="ul" name="sheet" class="list" :class="view">
-			<li v-for="r in shown" :key="r.id" :data-roll="r.id">
+		<TransitionGroup v-if="sheetRolls.length" tag="ul" name="sheet" class="list" :class="view">
+			<li v-for="r in sheetRolls" :key="r.id" :data-roll="r.id">
 				<a class="sheet-link" :href="`/photography/lab/rolls/${r.code}/`">
 					<SleeveCard v-if="view === 'sheets'" :roll="r" :strip="data.strips[r.id] ?? null" :count="r.publicRollId ? data.deskCounts[r.publicRollId] ?? null : null" />
 					<span v-else class="row">
@@ -128,7 +140,25 @@ const filterNote = computed(() => [facet.value?.label, window.value ? `${formatD
 				</a>
 			</li>
 		</TransitionGroup>
-		<p v-else class="lab-empty">{{ rolls.length ? 'No rolls match.' : 'No rolls yet. Add the film in your fridge to get started.' }}</p>
+		<p v-else-if="!unshot.length" class="lab-empty">{{ rolls.length ? 'No rolls match.' : 'No rolls yet. Add the film in your fridge to get started.' }}</p>
+
+		<section v-if="unshot.length" class="unshot" aria-labelledby="unshot-h">
+			<h3 id="unshot-h" class="lab-edge-print">Not shot yet · {{ unshot.length }} {{ unshot.length === 1 ? 'roll' : 'rolls' }}, oldest dates first</h3>
+			<ul>
+				<li v-for="r in unshot" :key="r.id" :data-roll="r.id">
+					<a class="can-chip" :href="`/photography/lab/rolls/${r.code}/`">
+						<span class="can" :style="{ '--can-h': '44px' }">
+							<FilmCanister :stock="r.stock.token ?? r.stock.id" :stock-label="r.stock.name" :stock-brand="r.stock.brand" />
+						</span>
+						<span class="chip-text">
+							<span class="lab-code">{{ r.code }}</span>
+							<span class="chip-stock">{{ r.stock.name }}</span>
+							<span class="chip-meta">{{ [r.expires ? `exp ${formatExpiry(r.expires)}` : null, r.storageSpot, r.rewoundAtFrame ? `partly shot (${r.rewoundAtFrame})` : null].filter(Boolean).join(' · ') }}</span>
+						</span>
+					</a>
+				</li>
+			</ul>
+		</section>
 
 		<aside v-if="data.importable > 0 && !readOnly" class="lab-notice desk-note">
 			<p>
@@ -283,6 +313,71 @@ const filterNote = computed(() => [facet.value?.label, window.value ? `${formatD
 
 .list.rows {
 	gap: 0;
+}
+
+/* Unshot film: a tray of canisters, not a page of blank sleeves. */
+.unshot {
+	display: grid;
+	gap: 0.7rem;
+}
+
+.unshot ul {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 13.5rem), 1fr));
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.can-chip {
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	padding: 0.45rem 0.8rem 0.45rem 0.55rem;
+	border-radius: 0.6rem;
+	background: var(--lab-card, var(--gray-999));
+	box-shadow: 0 0 0 1px var(--gray-800);
+	color: inherit;
+	text-decoration: none;
+	transition:
+		box-shadow 0.15s ease,
+		translate 0.15s ease;
+}
+
+.can-chip:hover,
+.can-chip:focus-visible {
+	box-shadow: 0 0 0 1px var(--gray-500), 0 6px 14px -10px rgb(0 0 0 / 0.5);
+	translate: 0 -1px;
+}
+
+.can-chip .can {
+	flex: none;
+	width: 1.5rem;
+	display: grid;
+	place-items: center;
+}
+
+.chip-text {
+	display: grid;
+	min-width: 0;
+	line-height: 1.25;
+}
+
+.chip-stock {
+	font-size: var(--text-sm);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.chip-meta {
+	font-family: var(--font-mono);
+	font-size: 0.66rem;
+	color: var(--gray-300);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .sheet-link {

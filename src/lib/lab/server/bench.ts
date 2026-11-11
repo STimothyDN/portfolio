@@ -18,7 +18,7 @@ import { isOwner, type LabConfig } from './config';
 import type { LabUser } from './auth';
 import { getDb } from './db/client';
 import { roll } from './db/schema';
-import { binderHints, labSettings, listCameras, listLabs, rollMilestones, rollViews, scanMarks, standing, stepChoices } from './inventory';
+import { binderHints, labSettings, listBatteryStock, listCameras, listLabs, rollMilestones, rollViews, scanMarks, standing, stepChoices } from './inventory';
 import { listPasskeys } from './plugin';
 import { rewind, type Rewind } from './rewind';
 
@@ -80,6 +80,8 @@ export interface BenchData {
 	shareLoaded: boolean | null;
 	passkeys: number;
 	rewind: Rewind | null;
+	/** The battery box: spare cells by type. */
+	batteries: { type: string; onHand: number }[];
 }
 
 const STRIP_FRAMES = 6;
@@ -118,7 +120,7 @@ export async function strips(rolls: RollView[], frames = STRIP_FRAMES, marks: Re
 export async function benchData(config: LabConfig, user: LabUser, today: string): Promise<BenchData> {
 	const d = await getDb(config);
 	const owner = isOwner(user);
-	const [all, cameras, labs, choices, milestones, hints, settings, passkeys, marks] = await Promise.all([
+	const [all, cameras, labs, choices, milestones, hints, settings, passkeys, marks, batteries] = await Promise.all([
 		rollViews(d, user.id),
 		listCameras(d, user.id),
 		listLabs(d, user.id),
@@ -128,6 +130,7 @@ export async function benchData(config: LabConfig, user: LabUser, today: string)
 		labSettings(d, user.id),
 		listPasskeys(config, user.id),
 		scanMarks(d, user.id),
+		listBatteryStock(d, user.id),
 	]);
 	const active = all.filter((r) => r.status !== 'negatives' && r.status !== 'lost');
 	const filed = all.filter((r) => r.status === 'negatives').sort((a, b) => b.statusOn.localeCompare(a.statusOn) || b.code.localeCompare(a.code));
@@ -178,6 +181,7 @@ export async function benchData(config: LabConfig, user: LabUser, today: string)
 		shareLoaded: owner ? settings.shareLoaded : null,
 		passkeys: passkeys.length,
 		rewind: rw,
+		batteries,
 	};
 }
 

@@ -44,7 +44,8 @@ export default async function (h) {
 		await clickSel(a, '.scene-btn');
 		await clickText(a, 'Bright sun');
 		const picks = await evaluate(a, `[...document.querySelectorAll('#light-drawer .pick')].map((b) => b.innerText.replace(/\\n/g, ' '))`);
-		check('bright sun at ISO 400 offers three settings', picks.length === 3 && picks.some((p) => /f\/16 · 1\/500/.test(p)), picks.join(' | '));
+		// The X-700 tops out at 1/1000, so there's no freeze-motion setting at 1/4000 any more.
+		check('bright sun at ISO 400 offers settings the X-700 can set', picks.length >= 2 && picks.some((p) => /f\/16 · 1\/500/.test(p)) && picks.every((p) => !/1\/(2000|4000)/.test(p)), picks.join(' | '));
 		await evaluate(a, `[...document.querySelectorAll('#light-drawer .pick')].find((b) => /Deep focus/.test(b.innerText)).click()`);
 		await sleep(300);
 		const dials = await evaluate(a, `[...document.querySelectorAll('.exposure [aria-pressed="true"], .exposure .selected, .exposure [aria-selected="true"]')].map((e) => e.textContent.trim()).join(' ')`);

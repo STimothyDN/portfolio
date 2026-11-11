@@ -17,12 +17,13 @@ export default async function (h) {
 	const mouse = (type, p, buttons = 1) => send('Input.dispatchMouseEvent', { type, x: p.x, y: p.y, button: 'left', buttons, clickCount: 1 }, a);
 	const at = (sel) => evaluate(a, `(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
 	async function drag(fromSel, toSel) {
-		// Bring both into view first, then measure them where they ended up.
+		// Bring both into view first (the bench can be taller than the screen), then measure them where they ended up.
 		if (!(await center(toSel))) return 'no target';
 		if (!(await center(fromSel))) return 'no source';
+		await evaluate(a, `(() => { const t = document.querySelector(${JSON.stringify(toSel)}).getBoundingClientRect(); const s = document.querySelector(${JSON.stringify(fromSel)}).getBoundingClientRect(); const mid = (Math.min(t.top, s.top) + Math.max(t.bottom, s.bottom)) / 2; document.body.scrollTop += mid - (innerHeight - 90) / 2; })()`);
 		const to = await at(toSel);
 		const src = await at(fromSel);
-		if (to.y < 0 || to.y > 900 || src.y < 0 || src.y > 900) return 'not both on screen';
+		if (to.y < 0 || to.y > 810 || src.y < 0 || src.y > 810) return 'not both on screen';
 		await mouse('mouseMoved', src, 0);
 		await mouse('mousePressed', src);
 		for (let i = 1; i <= 14; i++) {
@@ -46,7 +47,8 @@ export default async function (h) {
 	// ---------- what's on the bench ----------
 	const zones = await evaluate(a, `[...document.querySelectorAll('.bench .zone')].map((z) => z.className.match(/z-(\\w+)/)[1])`);
 	check('six stations on the bench', zones.length === 6, zones.join(','));
-	check('the stage fits one screen', await evaluate(a, `document.querySelector('.bench').getBoundingClientRect().bottom <= innerHeight + 1`));
+	// A full bench grows past the screen rather than cutting a station off (the page scrolls).
+	check('no station on the bench is cut off', await evaluate(a, `[...document.querySelectorAll('.zone:not(.z-today) .z-body')].every((b) => b.getBoundingClientRect().top + b.scrollHeight <= b.closest('.zone').getBoundingClientRect().bottom + 2)`));
 	check('no sideways scroll', await evaluate(a, `document.documentElement.scrollWidth <= innerWidth && document.body.scrollWidth <= innerWidth`));
 	check('loaded cameras show their frame counters', (await evaluate(a, `document.querySelectorAll('.z-cameras .cam-btn').length`)) === 3);
 	check('Today card has ranked notes', (await evaluate(a, `document.querySelectorAll('.today .list li').length`)) >= 1, await text(a, '.today'));

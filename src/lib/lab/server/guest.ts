@@ -14,7 +14,7 @@ import { getDb } from './db/client';
 import { user } from './db/schema';
 
 /** Pages a guest may read. Shooting mode, labels, the account and the doors are for people signed in. */
-export const GUEST_PAGES = /^\/photography\/lab(?:\/(?:fridge|gear|labs|frames|almanac|rolls(?:\/[^/]+)?|r\/[^/]+))?\/?$/;
+export const GUEST_PAGES = /^\/photography\/lab(?:\/(?:fridge|gear|labs|frames|almanac|rolls(?:\/[^/]+(?:\/sheet)?)?|r\/[^/]+))?\/?$/;
 
 let cached: { at: number; owner: LabUser | null } | null = null;
 

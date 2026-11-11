@@ -57,7 +57,7 @@ const data = visible(
 					...found,
 					choices,
 					stocks,
-					cameras: cameras.map((c) => ({ id: c.id, name: c.name })),
+					cameras: cameras.map((c) => ({ id: c.id, name: c.name, mount: c.mount })),
 					frames,
 					lensNames: Object.fromEntries(lenses.map((l) => [l.id, l.name])),
 					lastPublished: last ? last.at.toISOString() : null,
@@ -121,7 +121,7 @@ if (user && config.ok && !data) Astro.response.status = 404;
 				lensNames={data.lensNames}
 				lastPublished={data.lastPublished}
 				report={data.report}
-			/>
+			>
 			<RollFrames
 				client:load
 				readOnly={guest}
@@ -131,11 +131,13 @@ if (user && config.ok && !data) Astro.response.status = 404;
 				inCamera={data.roll.status === 'camera'}
 				cameraId={data.roll.camera?.id ?? null}
 				rewoundAtFrame={data.roll.rewoundAtFrame}
+				rollLens={data.roll.lens}
 				frames={data.frames}
 				lenses={data.lenses}
 				scanFiles={data.scanFiles}
 				firstScanFrame={data.roll.firstScanFrame}
 			/>
+			</RollDetail>
 			</>
 		) : (
 			user && (

@@ -33,7 +33,7 @@ const sub = computed(() => [props.roll.title ? props.roll.stock.name : null, pro
 			<NegStrip :code="roll.code" :stock="roll.stock.name" :profile="strip?.profile ?? null" :scans="strip?.scans ?? null" :frames="6" positive :tape="false" />
 		</span>
 		<span class="foot">
-			<span class="stamp">{{ stageLabel(roll.status, roll.labDelivery) }} · {{ formatDay(roll.statusOn, false) }}</span>
+			<span class="stamp">{{ stageLabel(roll.status, roll.labDelivery, roll.lab?.home) }} · {{ formatDay(roll.statusOn, false) }}</span>
 			<span class="meter" :aria-hidden="true"><i v-for="(s, k) in STAGES" :key="s" :class="{ on: k <= step }"></i></span>
 			<span v-if="count || strip || roll.frameCount" class="n">{{ count ? `${count} scans` : strip ? `${strip.count} scans` : `${roll.frameCount} frames` }}<template v-if="strip?.keepers"> · {{ strip.keepers }} ★</template></span>
 		</span>

@@ -194,9 +194,10 @@ export default async function (h) {
 
 	// ---------- Rolls list ----------
 	await goto(a, '/photography/lab/rolls/');
-	check('rolls list shows all 26', (await evaluate(a, `document.querySelectorAll('.list li').length`)) === 26);
+	// Unshot film sits in its own tray of canisters below the sleeves.
+	check('rolls list shows all 26', (await evaluate(a, `document.querySelectorAll('.list li, .unshot li').length`)) === 26);
 	await evaluate(a, `[...document.querySelectorAll('.filter')].find((b) => b.innerText.startsWith('In storage')).click()`);
-	check('storage filter narrows to 2', await waitFor(a, `document.querySelectorAll('.list li').length === 2`));
+	check('storage filter narrows to 2', await waitFor(a, `document.querySelectorAll('.list li, .unshot li').length === 2`));
 	await evaluate(a, `[...document.querySelectorAll('.filter')][0].click()`);
 	await fill(a, '#rolls-search', 'peru');
 	check('search finds the Peru rolls', await waitFor(a, `document.querySelectorAll('.list li').length === 4`));

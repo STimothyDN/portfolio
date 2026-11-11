@@ -99,6 +99,8 @@ const props = defineProps<{
 	lenses: LensView[];
 	scanFiles: string[];
 	firstScanFrame: number;
+	/** The lens the roll was loaded with: frames that don't name one were shot through it. */
+	rollLens?: { id: string; name: string } | null;
 	/** A guest: the frames, but no editing. */
 	readOnly?: boolean;
 }>();
@@ -125,8 +127,11 @@ const autoScan = (f: FrameView) => {
 
 // The strip above (another island) moves the alignment; frames saved here move the strip.
 function onAlign(e: Event) {
-	const d = (e as CustomEvent<{ rollId: string; firstScanFrame: number }>).detail;
-	if (d.rollId === props.rollId) firstScan.value = d.firstScanFrame;
+	const d = (e as CustomEvent<{ rollId: string; firstScanFrame: number; frames?: FrameView[] }>).detail;
+	if (d.rollId !== props.rollId) return;
+	firstScan.value = d.firstScanFrame;
+	// A suggested alignment pins frames too.
+	if (d.frames) list.value = [...d.frames];
 }
 onMounted(() => window.addEventListener('lab:align', onAlign));
 onBeforeUnmount(() => window.removeEventListener('lab:align', onAlign));
@@ -141,7 +146,8 @@ const error = ref('');
 const draft = ref<FrameDraft>({ number: 1, aperture: null, shutter: null, lensId: null, flash: false, note: '' });
 
 const lensById = computed(() => new Map(props.lenses.map((l) => [l.id, l.name])));
-const lensName = (f: FrameView) => (f.lensId ? lensById.value.get(f.lensId) ?? '' : f.focalLength ? `${f.focalLength}mm` : '');
+const lensName = (f: FrameView) =>
+	f.lensId ? lensById.value.get(f.lensId) ?? '' : props.rollLens ? `${props.rollLens.name} (roll’s lens)` : f.focalLength ? `${f.focalLength}mm` : '';
 const mapUrl = (f: FrameView) => `https://www.openstreetmap.org/?mlat=${f.lat}&mlon=${f.lng}#map=15/${f.lat}/${f.lng}`;
 
 function startEdit(f: FrameView) {
@@ -158,7 +164,7 @@ function startAdd() {
 		number: nextFrameNumber(list.value, props.rewoundAtFrame),
 		aperture: last?.aperture ?? null,
 		shutter: last?.shutter ?? null,
-		lensId: last?.lensId ?? null,
+		lensId: last?.lensId ?? props.rollLens?.id ?? null,
 		flash: false,
 		note: '',
 	};

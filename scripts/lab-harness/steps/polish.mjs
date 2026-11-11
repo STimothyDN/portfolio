@@ -45,8 +45,9 @@ export default async function (h) {
 	await phone('account', 390, 1400);
 	await goto(a, '/photography/lab/rolls/');
 	await sleep(800);
-	const calScroll = await evaluate(a, `document.querySelector('.cal')?.scrollLeft ?? -1`);
-	check('the calendar opens on recent months on a phone', calScroll > 0, String(calScroll));
+	// The binder's line (it replaced the calendar) opens on today, at the right.
+	const line = await evaluate(a, `(() => { const s = document.querySelector('.roll-line .scroller'); return s ? s.scrollWidth - s.clientWidth - s.scrollLeft : -1; })()`);
+	check('the binder’s line opens on today on a phone', line >= 0 && line <= 2, String(line));
 	// Touch screens: small text controls answer a finger just outside them.
 	await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }, a);
 	await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 }, a);

@@ -6,7 +6,7 @@ import { stageCounts } from '../../../lib/lab/server/bench';
 import { todayInDurham } from '../../../lib/lab/inventory';
 import { labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
-import { listCameras, listLenses, listService, rollViews } from '../../../lib/lab/server/inventory';
+import { listBatteryStock, listCameras, listLenses, listService, rollViews } from '../../../lib/lab/server/inventory';
 import { viewerOf, visible } from '../../../lib/lab/server/guest';
 
 export const prerender = false;
@@ -20,11 +20,12 @@ const data = visible(
 	user && config.ok
 		? await (async () => {
 				const d = await getDb(config.config);
-				const [cameras, lenses, service, rolls] = await Promise.all([
+				const [cameras, lenses, service, rolls, batteries] = await Promise.all([
 					listCameras(d, user.id),
 					listLenses(d, user.id),
 					listService(d, user.id),
 					rollViews(d, user.id),
+					listBatteryStock(d, user.id),
 				]);
 				const usage: Record<string, { total: number; loaded: { code: string; stock: string } | null }> = {};
 				for (const r of rolls) {
@@ -33,7 +34,7 @@ const data = visible(
 					u.total++;
 					if (r.status === 'camera') u.loaded = { code: r.code, stock: r.stock.name };
 				}
-				return { cameras, lenses, service, usage };
+				return { cameras, lenses, service, usage, batteries };
 			})()
 		: null,
 	guest
@@ -52,6 +53,7 @@ const counts = await countsP;
 					lenses={data.lenses}
 					service={data.service}
 					usage={data.usage}
+					batteries={data.batteries}
 					today={todayInDurham()}
 				/>
 			</BenchCloseup>

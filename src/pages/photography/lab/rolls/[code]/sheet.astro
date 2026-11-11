@@ -1,0 +1,108 @@
+---
+import LabLayout from '../../../../../components/lab/LabLayout.astro';
+import ContactSheet from '../../../../../components/lab/ContactSheet.vue';
+import { alignScans, edgeFromFilename } from '../../../../../lib/lab/alignment';
+import type { SheetData } from '../../../../../lib/lab/contact-sheet';
+import { formatDay, formatExposure, ratingLine } from '../../../../../lib/lab/inventory';
+import { devRunLine } from '../../../../../lib/lab/darkroom';
+import { evOf, shutterSeconds } from '../../../../../lib/lab/almanac';
+import { labConfig } from '../../../../../lib/lab/server/config';
+import { getDb } from '../../../../../lib/lab/server/db/client';
+import { viewerOf } from '../../../../../lib/lab/server/guest';
+import { deskRollStrip, listFrames, listLenses, rollByCode, scanMarks } from '../../../../../lib/lab/server/inventory';
+import { bunnyUrl } from '../../../../../utils/bunny';
+
+export const prerender = false;
+
+const { user } = viewerOf(Astro.locals);
+const config = labConfig();
+const code = (Astro.params.code ?? '').toUpperCase();
+
+const sheet: SheetData | null =
+	user && config.ok
+		? await (async () => {
+				const d = await getDb(config.config);
+				const found = await rollByCode(d, user.id, code);
+				if (!found) return null;
+				const r = found.roll;
+				const [frames, lenses, strip, marksAll] = await Promise.all([
+					listFrames(d, user.id, [r.id]),
+					listLenses(d, user.id),
+					r.publicRollId ? deskRollStrip(r.publicRollId) : Promise.resolve(null),
+					r.publicRollId ? scanMarks(d, user.id, [r.publicRollId]) : Promise.resolve({}),
+				]);
+				const lensName = new Map(lenses.map((l) => [l.id, l.name]));
+				const marks: Record<string, number> = (r.publicRollId && marksAll[r.publicRollId]) || {};
+				const iso = r.shotAtIso ?? r.stock.iso;
+				const lineOf = (f: (typeof frames)[number] | undefined) => {
+					if (!f) return null;
+					const lens = lensName.get(f.lensId ?? r.lens?.id ?? '');
+					const focal = f.focalLength ? `${f.focalLength}mm` : null;
+					return [formatExposure(f), lens ?? focal].filter(Boolean).join(' · ') || null;
+				};
+				const litOf = (f: (typeof frames)[number] | undefined) => {
+					const t = shutterSeconds(f?.shutter ?? null);
+					if (!f?.aperture || !t || !iso || f.flash) return null;
+					const ev100 = evOf(f.aperture, t) - Math.log2(iso / 100);
+					return Math.round(Math.min(1, Math.max(0, (ev100 - 3) / 13)) * 100) / 100;
+				};
+				const sheetFrames = strip
+					? (() => {
+							const files = strip.scans.map((s) => s.path.split('/').at(-1)!);
+							const aligned = alignScans(files, frames, r.firstScanFrame);
+							return strip.scans.map((s, i) => {
+								const file = files[i];
+								const f = aligned.get(file);
+								return {
+									// The frame's number, else what the lab printed into the file name, else the roll's shift.
+									edge: f?.number ?? edgeFromFilename(file) ?? r.firstScanFrame + i,
+									src: bunnyUrl(s.path, { width: 700, format: 'jpg', quality: 80 }),
+									line: lineOf(f),
+									note: f?.note ?? null,
+									mark: marks[file] ?? (s.priority >= 4 ? s.priority : null),
+									lit: null,
+								};
+							});
+						})()
+					: Array.from({ length: r.exposures }, (_, i) => {
+							const f = frames.find((x) => x.number === i + 1);
+							return { edge: i + 1, src: null, line: lineOf(f), note: f?.note ?? null, mark: null, lit: litOf(f) };
+						});
+				const lensNames = [...new Set(frames.map((f) => lensName.get(f.lensId ?? '') ?? null).filter(Boolean))];
+				return {
+					code: r.code,
+					title: r.title || r.stock.name,
+					stock: r.stock.name,
+					edgePrint: r.stock.name.toUpperCase().replace(/^(KODAK|ILFORD|FUJIFILM|FUJICOLOR|FUJI)\s+/, ''),
+					details: [
+						r.title ? r.stock.name : null,
+						`${r.exposures} exp`,
+						r.stock.process,
+						r.shotAtIso || r.exposureComp ? ratingLine(r) : iso ? `ISO ${iso}` : null,
+						r.camera?.name,
+						lensNames.length ? lensNames.join(', ') : r.lens?.name,
+						r.lab?.name,
+						r.devRun ? devRunLine(r.devRun) : null,
+						found.events.find((e) => e.status === 'camera') ? `loaded ${formatDay(found.events.find((e) => e.status === 'camera')!.on)}` : null,
+						found.events.find((e) => e.status === 'shot') ? `finished ${formatDay(found.events.find((e) => e.status === 'shot')!.on)}` : null,
+					].filter((x): x is string => !!x),
+					frames: sheetFrames,
+				};
+			})()
+		: null;
+if (user && config.ok && !sheet) Astro.response.status = 404;
+---
+
+<LabLayout title={sheet ? `${sheet.code} contact sheet` : 'Roll not found'} current="rolls" wide>
+	{
+		sheet ? (
+			<ContactSheet client:load sheet={sheet} hasScans={sheet.frames.some((f) => f.src)} />
+		) : (
+			user && (
+				<section class="lab-hello">
+					<h1 class="lab-title">No roll {code}</h1>
+				</section>
+			)
+		)
+	}
+</LabLayout>

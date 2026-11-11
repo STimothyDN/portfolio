@@ -89,6 +89,8 @@ export interface AdviseInput {
 	/** The lens on the camera, as a 35mm focal length. */
 	focal35: number | null;
 	manual: boolean;
+	/** The speeds the camera's dial has (default: all of them). */
+	shutters?: string[];
 	/** "2019-06": when the film expires. */
 	expires: string | null;
 	today: string;
@@ -223,7 +225,7 @@ export function advise(i: AdviseInput): Advice {
 	const e100 = base.ev - steps.reduce((s, x) => s + x.stops, 0);
 	const evIso = evAtIso(e100, i.iso);
 	const limit = handheldLimit(i.focal35);
-	let picks = pickSettings(evIso, i.apertures, { handheld: limit, prefer: scene.prefer });
+	let picks = pickSettings(evIso, i.apertures, { handheld: limit, prefer: scene.prefer, shutters: i.shutters });
 	let fixed: Fixed | null = null;
 	if (scene.rule === 'fireworks') {
 		// f/8 at ISO 100, a stop smaller for each doubling of speed, on bulb.
@@ -388,7 +390,8 @@ export function advise(i: AdviseInput): Advice {
 	let bracket: Bracket[] | null = null;
 	const first = picks.picks[0]?.setting;
 	if (doubt && first && i.manual) {
-		const idx = DIAL.indexOf(first.shutter);
+		const dialHere = i.shutters ? DIAL.filter((s) => i.shutters!.includes(s)) : DIAL;
+		const idx = dialHere.indexOf(first.shutter);
 		const dial = `${formatAperture(first.aperture)} · ${first.shutter}`;
 		if (film.kind === 'slide') {
 			// Slide: half a stop either way, on the aperture ring's half clicks.
@@ -401,9 +404,9 @@ export function advise(i: AdviseInput): Advice {
 			// Negative film: never under; one and two stops over.
 			bracket = [0, 1, 2].map((k) => ({
 				label: k ? `+${k}` : 'Metered',
-				text: `${formatAperture(first.aperture)} · ${DIAL[idx - k]}`,
+				text: `${formatAperture(first.aperture)} · ${dialHere[idx - k]}`,
 				aperture: first.aperture,
-				shutter: DIAL[idx - k],
+				shutter: dialHere[idx - k],
 			}));
 		}
 	}

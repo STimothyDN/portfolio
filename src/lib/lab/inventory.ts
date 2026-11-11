@@ -36,7 +36,11 @@ export type Delivery = keyof typeof DELIVERY;
  * A stage's name for this roll, by how it went to the lab: "Dropped off at
  * the lab" or "Mailed to the lab"; "Negatives picked up" or "Negatives back".
  */
-export function stageLabel(status: RollStatus, delivery: Delivery | null | undefined): string {
+export function stageLabel(status: RollStatus, delivery: Delivery | null | undefined, home = false): string {
+	// Developed in your own darkroom: no lab, no post.
+	if (home && status === 'lab') return 'Developed at home';
+	if (home && status === 'scanned') return 'Scanned';
+	if (home && status === 'negatives') return 'Negatives filed';
 	if (status === 'lab' && delivery) return delivery === 'mail' ? 'Mailed to the lab' : 'Dropped off at the lab';
 	if (status === 'negatives' && delivery) return delivery === 'mail' ? 'Negatives back' : 'Negatives picked up';
 	return STATUS_LABEL[status];
@@ -117,6 +121,9 @@ export interface CameraView {
 	fixedLens: string | null;
 	battery: string | null;
 	batteryChangedOn: string | null;
+	/** The shutter's range; null when not known. */
+	shutterFastest: string | null;
+	shutterSlowest: string | null;
 	serial: string | null;
 	acquiredOn: string | null;
 	priceCents: number | null;
@@ -148,6 +155,8 @@ export interface LabView {
 	location: string | null;
 	url: string | null;
 	costCents: number | null;
+	/** Your own darkroom. */
+	home: boolean;
 	notes: string | null;
 }
 
@@ -160,7 +169,9 @@ export interface RollView {
 	exposures: number;
 	stock: Pick<StockView, 'id' | 'token' | 'brand' | 'name' | 'iso' | 'process' | 'format'>;
 	camera: { id: string; name: string } | null;
-	lab: { id: string; name: string } | null;
+	lab: { id: string; name: string; home: boolean } | null;
+	/** The lens mounted when it was loaded. */
+	lens: { id: string; name: string } | null;
 	shotAtIso: number | null;
 	/** Exposure compensation for the whole roll, in stops. */
 	exposureComp: number | null;
@@ -178,6 +189,8 @@ export interface RollView {
 	printsIncluded: boolean;
 	printsCostCents: number | null;
 	devNotes: string | null;
+	/** Developed at home: the recipe as run. */
+	devRun: import('./darkroom').DevRun | null;
 	negativesAt: string | null;
 	publicRollId: string | null;
 	notes: string | null;
@@ -223,6 +236,101 @@ export type FrameInput = Omit<FrameView, 'id' | 'scanFilename'> & { deleted?: bo
 /** Full stops plus the common widest apertures of real lenses. */
 export const APERTURES = [1, 1.2, 1.4, 1.7, 1.8, 2, 2.8, 3.5, 4, 4.5, 5.6, 8, 11, 16, 22, 32];
 export const SHUTTERS = ['B', '1s', '1/2', '1/4', '1/8', '1/15', '1/30', '1/60', '1/125', '1/250', '1/500', '1/1000', '1/2000', '1/4000'];
+
+/**
+ * Shutter ranges worth knowing for cameras on the film desk, by label token:
+ * used until the camera's own range is filled in on the Kit page.
+ */
+export const KNOWN_SHUTTERS: Record<string, { fastest: string; slowest: string }> = {
+	minoltax700: { fastest: '1/1000', slowest: '1s' },
+	ricohxrm: { fastest: '1/2000', slowest: '1s' },
+	canonae1: { fastest: '1/1000', slowest: '1s' },
+	canonae1p: { fastest: '1/1000', slowest: '1s' },
+	canont70: { fastest: '1/1000', slowest: '1s' },
+};
+
+/** The camera's shutter range: its own, else what's known for its model, else null (every speed). */
+export function shutterRange(c: Pick<CameraView, 'shutterFastest' | 'shutterSlowest' | 'token'> | null | undefined): { fastest: string; slowest: string } | null {
+	if (!c) return null;
+	const known = c.token ? KNOWN_SHUTTERS[c.token] : undefined;
+	const fastest = c.shutterFastest ?? known?.fastest ?? null;
+	const slowest = c.shutterSlowest ?? known?.slowest ?? null;
+	return fastest || slowest ? { fastest: fastest ?? '1/4000', slowest: slowest ?? '1s' } : null;
+}
+
+/** The speeds this camera's dial has (B included), fastest last, as SHUTTERS orders them. */
+export function shuttersFor(c: Parameters<typeof shutterRange>[0]): string[] {
+	const r = shutterRange(c);
+	if (!r) return SHUTTERS;
+	const lo = SHUTTERS.indexOf(r.slowest);
+	const hi = SHUTTERS.indexOf(r.fastest);
+	return SHUTTERS.filter((s, i) => s === 'B' || ((lo < 0 || i >= lo) && (hi < 0 || i <= hi)));
+}
+
+/* ---------- batteries ---------- */
+
+/**
+ * Battery sizes that stand in for each other, by the name the box is kept
+ * under. Silver-oxide SR44 is the better cell for a meter (flat voltage), but
+ * any of these fits the same compartment.
+ */
+export const BATTERY_FAMILIES: Record<string, string[]> = {
+	LR44: ['LR44', 'SR44', 'SR44W', '357', '303', 'A76', 'AG13', 'L1154', 'EPX76'],
+	'4LR44': ['4LR44', '4SR44', 'PX28A', 'PX28', 'A544', '28L', '476A'],
+	CR123A: ['CR123A', 'CR123', 'DL123A', 'CR17345', '123'],
+	CR2: ['CR2', 'DLCR2', 'CR15270'],
+	'2CR5': ['2CR5', 'DL245', 'EL2CR5'],
+	'CR-P2': ['CRP2', 'CR-P2', 'DL223A', '223'],
+	CR2025: ['CR2025'],
+	CR2032: ['CR2032'],
+	CR1220: ['CR1220'],
+	LR43: ['LR43', 'SR43', '186', 'AG12'],
+	PX625: ['PX625', 'MR9', 'LR9', '625', 'PX625A'],
+	PX675: ['PX675', '675', 'MRB625'],
+	AA: ['AA', 'LR6', 'MN1500', 'FR6', 'HR6'],
+	AAA: ['AAA', 'LR03', 'MN2400', 'FR03'],
+};
+const ALIAS = new Map(Object.entries(BATTERY_FAMILIES).flatMap(([key, names]) => names.map((n) => [n.replace(/[\s-]/g, ''), key])));
+
+/** The battery box key for a battery name ("sr44" → "LR44"); unknown names keep their own (tidied). */
+export function batteryKey(name: string): string {
+	const tidy = name.toUpperCase().replace(/[\s-]/g, '');
+	return ALIAS.get(tidy) ?? name.trim().toUpperCase();
+}
+
+/** "LR44 / SR44": what the box is labelled. */
+export function batteryLabel(key: string): string {
+	const f = BATTERY_FAMILIES[key];
+	return f && f.length > 1 ? `${key} / ${f[1]}` : key;
+}
+
+/**
+ * "2 × LR44" → { count: 2, key: 'LR44' }. Takes "2x LR44", "LR44 ×2",
+ * "4LR44 (6 V)", "CR123A". Null when nothing's written down.
+ */
+export function batteryOf(text: string | null | undefined): { count: number; key: string; name: string } | null {
+	const t = text?.trim();
+	if (!t) return null;
+	const clean = t.replace(/\(.*?\)/g, '').trim();
+	let count = 1;
+	let name = clean;
+	const lead = clean.match(/^(\d+)\s*[×x*]\s*(.+)$/i);
+	const trail = clean.match(/^(.+?)\s*[×x*]\s*(\d+)$/i);
+	if (lead) [count, name] = [Number(lead[1]), lead[2]];
+	else if (trail) [name, count] = [trail[1], Number(trail[2])];
+	name = name.trim();
+	if (!name) return null;
+	return { count: Math.max(1, Math.min(12, count || 1)), key: batteryKey(name), name };
+}
+
+/** "2 × LR44" from a count and a name. */
+export const batteryText = (count: number, name: string) => (name.trim() ? (count > 1 ? `${count} × ${name.trim()}` : name.trim()) : '');
+
+/** Lenses that fit a mount (case and spacing don't matter). */
+export const lensesFor = <L extends { mount: string; status?: string }>(lenses: L[], mount: string | null | undefined): L[] => {
+	const m = mount?.trim().toLowerCase();
+	return m ? lenses.filter((l) => l.mount.trim().toLowerCase() === m && l.status !== 'gone' && l.status !== 'wishlist') : [];
+};
 
 /** The apertures a lens can set: from its widest (f/1.7) to f/22. */
 export function aperturesFor(widest: number | null | undefined): number[] {
@@ -276,9 +384,13 @@ export interface RollEventView {
 
 /** Everything a step form may need to pick from. */
 export interface StepChoices {
-	cameras: Pick<CameraView, 'id' | 'name' | 'format' | 'status'>[];
+	cameras: Pick<CameraView, 'id' | 'name' | 'format' | 'status' | 'mount'>[];
+	/** Lenses you own (to say which one is on the camera when a roll goes in). */
+	lenses?: Pick<LensView, 'id' | 'name' | 'mount' | 'focalMin' | 'focalMax' | 'maxAperture'>[];
+	/** camera id → the lens last used on it. */
+	lastLens?: Record<string, string>;
 	/** With how film last went to each one, so the next send starts the same way. */
-	labs: (Pick<LabView, 'id' | 'name' | 'costCents'> & { delivery: Delivery | null })[];
+	labs: (Pick<LabView, 'id' | 'name' | 'costCents' | 'home'> & { delivery: Delivery | null })[];
 	/** Desk rolls not yet linked to a logbook roll, best matches first per roll (computed client-side). */
 	deskRolls: DeskRollOption[];
 }

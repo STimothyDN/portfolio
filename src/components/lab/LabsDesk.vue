@@ -41,13 +41,16 @@
 					<label class="lab-field"><span>Order number</span><input id="batch-order" v-model="order" class="lab-input" type="text" maxlength="60" /></label>
 					<label class="lab-field"><span>Dev + scans per roll ($)</span><input id="batch-cost" v-model="cost" class="lab-input" type="number" min="0" step="0.01" /></label>
 					<div class="send-fields">
-						<LabSendFields v-model="sendDraft" />
+						<LabSendFields v-if="!isHomeLab" v-model="sendDraft" />
+			<p v-else class="lab-hint">Your own darkroom: no post. The darkroom page times the run and records the recipe on the roll.</p>
 					</div>
 					<div class="lab-actions batch-actions">
 						<button type="submit" class="lab-btn" :disabled="busy || !picked.length || !labId">
 							Mark {{ picked.length }} {{ picked.length === 1 ? 'roll' : 'rolls' }} as sent
 						</button>
 						<button type="button" class="lab-btn lab-btn--quiet" :disabled="!picked.length" @click="print">Print a slip</button>
+						<!-- Say why the button is waiting, rather than leaving it grey. -->
+						<span v-if="!picked.length || !labId" class="lab-hint send-why">{{ !picked.length ? 'Tick the rolls going in this batch.' : 'Choose the lab first.' }}</span>
 					</div>
 				</form>
 			</div>
@@ -195,6 +198,7 @@ const { tracks } = useTracks(() => [...atLab.value.map((r) => r.trackingOut), ..
 const shot = ref<RollView[]>([...props.shot]);
 const atLab = ref<RollView[]>([...props.atLab]);
 const labs = ref<LabView[]>([...props.labs]);
+const isHomeLab = computed(() => !!labs.value.find((l) => l.id === labId.value)?.home);
 const picked = ref<string[]>(props.shot.map((r) => r.id));
 const labId = ref('');
 const on = ref(props.today);

@@ -56,7 +56,7 @@
 						<b>{{ loupe.latent.exp }}</b>
 					</span>
 				</div>
-				<button v-if="visible.length > limit" type="button" class="lab-btn lab-btn--quiet more" @click="limit += 48">Show {{ Math.min(48, visible.length - limit) }} more</button>
+				<button v-if="visible.length > shown.length" type="button" class="lab-btn lab-btn--quiet more" @click="limit = shown.length + 48">Show more rolls ({{ visible.length - shown.length }} more {{ visible.length - shown.length === 1 ? 'frame' : 'frames' }})</button>
 			</div>
 			<aside v-if="located.length" class="side">
 				<FrameMap :points="located" :filtered="!!q" :height="mapHeight" @pick="pickedIds = $event" />
@@ -91,7 +91,27 @@ const visible = computed(() => (pickedIds.value ? results.value.filter((r) => pi
 /** What the field dims: null when nothing narrows the frames. */
 const matched = computed(() => (isEmpty(query.value) && !pickedIds.value ? null : new Set(visible.value.map((r) => r.id))));
 const limit = ref(36);
-const shown = computed(() => visible.value.slice(0, limit.value));
+/**
+ * Whole rolls at a time: a contact sheet never shows part of a roll (cutting at
+ * a frame count left sheets with frames 5, 6, 12, 13 and nothing between).
+ * Rolls are added, most recent first, until at least `limit` frames are out.
+ */
+const shown = computed(() => {
+	const keep = new Set<string>();
+	let n = 0;
+	for (const r of visible.value) {
+		if (keep.has(r.rollId)) continue;
+		if (n >= limit.value) break;
+		keep.add(r.rollId);
+		n += perRoll.value.get(r.rollId) ?? 0;
+	}
+	return visible.value.filter((r) => keep.has(r.rollId));
+});
+const perRoll = computed(() => {
+	const m = new Map<string, number>();
+	for (const r of visible.value) m.set(r.rollId, (m.get(r.rollId) ?? 0) + 1);
+	return m;
+});
 /** The shown frames, roll by roll (a contact sheet per roll), most recent roll first. */
 const groups = computed(() => {
 	const out: { rollId: string; code: string; title: string | null; stock: string; camera: string | null; rows: Row[] }[] = [];

@@ -33,6 +33,7 @@ import { ghostOf, land, type Snapshot } from '../../../lib/lab/motion/carry';
 import { applyPending, flush, labUserId, pending, type MaybeQueued } from '../../../lib/lab/offline';
 import { createDrag, type DragItem, type DropTarget, type Dropped } from '../../../lib/lab/motion/drag';
 import { nudges as rankNudges, type Nudge } from '../../../lib/lab/nudges';
+import { batteryBox } from '../../../lib/lab/batteries';
 import { formatMonths, rollPace } from '../../../lib/lab/pace';
 import type { BenchData } from '../../../lib/lab/server/bench';
 import { returnWindow } from '../../../lib/lab/stats/labs';
@@ -174,6 +175,7 @@ const nudges = computed(() =>
 		forecast: props.data.forecast,
 		canLink: !props.readOnly && props.data.owner && props.data.choices.deskRolls.length > 0,
 		passkeys: props.readOnly ? 2 : props.data.passkeys,
+		box: props.readOnly ? [] : batteryBox(props.data.cameras, props.data.batteries ?? [], today),
 	})
 );
 const fridgeValue = computed(() => storage.value.reduce((s, r) => s + (r.priceCents ?? 0), 0));
@@ -619,6 +621,16 @@ const ticker = computed(() => [
 						<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="3.2" /><path d="M9.5 9.5 15 15M15 15h5M7 5.8v2.4" /></svg>
 						Annotate
 					</button>
+					<template v-if="!readOnly">
+						<a class="tool" href="/photography/lab/darkroom/" title="Develop at home: a timer that follows the recipe, your chemistry and what’s been through it">
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3.5h8M9.5 3.5v3L6 9v11.5h12V9l-3.5-2.5v-3M6 13h12" /></svg>
+							Darkroom
+						</a>
+						<a class="tool" href="/photography/lab/trip/" title="Plan a trip: how much film, which speeds and what to pack">
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h16v11H4zM9 8.5v-3h6v3M4 13h16" /></svg>
+							Trip
+						</a>
+					</template>
 					<button v-if="storage.length && !readOnly" type="button" class="tool" @click="openLoad()">
 						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 3.5h5v2h-5zM7 5.5h8v15H7zM15 12h6m-3-3 3 3-3 3" /></svg>
 						Load a roll
@@ -1040,6 +1052,7 @@ const ticker = computed(() => [
 	color: var(--gray-0);
 	font: inherit;
 	font-size: var(--text-sm);
+	text-decoration: none;
 	cursor: pointer;
 }
 
@@ -1829,10 +1842,6 @@ const ticker = computed(() => [
 	display: grid;
 	align-content: start;
 	gap: 0.3rem;
-	max-height: min(10.5rem, 52%);
-	overflow: auto;
-	overscroll-behavior: contain;
-	scrollbar-width: thin;
 	padding: 0.55rem 0.7rem 0.6rem;
 	border: 1px solid color-mix(in oklch, var(--lab-note) 35%, transparent);
 	border-radius: 0.45rem;
@@ -2146,14 +2155,20 @@ const ticker = computed(() => [
 	.bench {
 		--bench-flow: grid;
 		grid-template-columns: minmax(12rem, 1fr) minmax(0, 2.05fr) minmax(12rem, 1fr) minmax(15rem, 1.05fr);
-		grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+		/* Each row at least as tall as what's on it: nothing on the bench is ever cut off. */
+		grid-template-rows: max-content auto auto;
+		/* Spare height (on a roomy screen) goes to the two rows of stations. */
+		align-content: stretch;
 		grid-template-areas:
 			'head head head head'
 			'fridge cameras shot today'
 			'binder table post today';
 		gap: calc(var(--gap) * 0.75) var(--gap);
-		/* One screen: from where the mat starts to the bottom edge (measured on mount), above the dock. */
-		height: max(36rem, calc(100dvh - var(--bench-top, 15rem) - 0.9rem));
+		/*
+		 * One screen where it fits: from where the mat starts to the bottom edge (measured on mount),
+		 * above the dock. A fuller bench grows past it (the page scrolls) rather than clipping a station.
+		 */
+		min-height: max(36rem, calc(100dvh - var(--bench-top, 15rem) - 0.9rem));
 		padding: calc(var(--gap) * 0.75) calc(var(--gap) * 0.8) calc(var(--gap) * 0.5 + 4.4rem);
 	}
 
@@ -2161,9 +2176,32 @@ const ticker = computed(() => [
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 
+	.zone:not(.z-today) {
+		grid-template-rows: auto minmax(min-content, 1fr) auto;
+	}
+
+	.zone:not(.z-today) > .z-body {
+		overflow: visible;
+	}
+
+	/* Cameras wrap onto a second row instead of running off the side of their station. */
+	.cam-row {
+		grid-auto-flow: row;
+		grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+		overflow: visible;
+	}
+
+	.empties ul {
+		flex-wrap: wrap;
+		overflow: visible;
+	}
+
 	.z-today {
 		align-self: stretch;
 		align-content: start;
+		/* The card scrolls within the column; it never makes the bench taller. */
+		contain: size;
+		min-height: 0;
 		width: auto;
 		/* Pinned to the side of the mat, a little apart. */
 		padding-left: calc(var(--gap) * 0.6);

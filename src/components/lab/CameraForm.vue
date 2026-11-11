@@ -41,14 +41,35 @@
 					<input id="cam-fixed" v-model="f.fixedLens" class="lab-input" type="text" maxlength="80" placeholder="35mm f/2.8" :disabled="!!f.mount" />
 				</label>
 			</div>
-			<div class="lab-row2">
+			<div class="batt-grid">
 				<label class="lab-field">
-					<span>Battery</span>
-					<input id="cam-battery" v-model="f.battery" class="lab-input" type="text" maxlength="60" placeholder="2 × LR44" />
+					<span>Cells</span>
+					<input id="cam-battery-n" v-model.number="f.cells" class="lab-input" type="number" min="1" max="12" inputmode="numeric" />
 				</label>
 				<label class="lab-field">
-					<span>Battery changed</span>
+					<span>Battery</span>
+					<input id="cam-battery" v-model="f.cellType" class="lab-input" type="text" maxlength="40" list="battery-types" placeholder="LR44, CR123A, AA…" />
+				</label>
+				<label class="lab-field">
+					<span>Fresh set went in</span>
 					<input id="cam-battery-on" v-model="f.batteryChangedOn" class="lab-input" type="date" />
+				</label>
+			</div>
+			<!-- The meter and the shutter dial in shooting mode only offer what the camera has. -->
+			<div v-if="f.kind !== 'point-and-shoot'" class="lab-row2">
+				<label class="lab-field">
+					<span>Fastest shutter</span>
+					<select id="cam-fastest" v-model="f.shutterFastest" class="lab-input lab-select">
+						<option value="">{{ known ? `${known.fastest} (the ${f.name || 'model'}’s spec)` : 'Not known' }}</option>
+						<option v-for="s in TIMED" :key="s" :value="s">{{ s }}</option>
+					</select>
+				</label>
+				<label class="lab-field">
+					<span>Slowest timed speed</span>
+					<select id="cam-slowest" v-model="f.shutterSlowest" class="lab-input lab-select">
+						<option value="">{{ known ? `${known.slowest} (spec)` : 'Not known' }}</option>
+						<option v-for="s in TIMED" :key="s" :value="s">{{ s }}</option>
+					</select>
 				</label>
 			</div>
 			<details class="more" :open="!!(camera?.serial || camera?.acquiredOn || camera?.priceCents)">
@@ -94,6 +115,10 @@
 				<input id="svc-on" v-model="svc.on" class="lab-input" type="date" required aria-label="Date" />
 				<input id="svc-cost" v-model="svc.cost" class="lab-input" type="number" min="0" step="0.01" placeholder="$" aria-label="Cost in dollars" />
 				<input id="svc-note" v-model="svc.note" class="lab-input wide" type="text" maxlength="300" placeholder="Note" aria-label="Note" />
+				<label v-if="svc.kind === 'battery' && cell" class="wide from-box">
+					<input id="svc-from-box" v-model="svc.fromStock" type="checkbox" :disabled="boxHas < cell.count" />
+					<span>Take {{ cell.count }} {{ cell.key }} from the battery box ({{ boxHas }} in it)</span>
+				</label>
 				<button type="submit" class="lab-btn lab-btn--quiet" :disabled="busy">Add to log</button>
 			</form>
 		</section>
@@ -102,7 +127,7 @@
 
 <script setup lang="ts">
 import { actions } from 'astro:actions';
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 import { dollars, run } from '../../lib/lab/client';
 import {
@@ -110,17 +135,25 @@ import {
 	FORMATS,
 	formatDay,
 	formatMoney,
+	batteryKey,
+	batteryOf,
+	batteryText,
 	GEAR_STATUS,
+	KNOWN_SHUTTERS,
 	SERVICE_KINDS,
+	SHUTTERS,
 	toCents,
 	type CameraView,
 } from '../../lib/lab/inventory';
 import type { ServiceEntry } from '../../lib/lab/server/inventory';
 
-const props = defineProps<{ camera: CameraView | null; service: ServiceEntry[]; today: string }>();
-const emit = defineEmits<{ saved: [camera: CameraView]; deleted: [id: string]; service: [entries: ServiceEntry[]]; cancel: [] }>();
+const props = defineProps<{ camera: CameraView | null; service: ServiceEntry[]; today: string; batteries?: { type: string; onHand: number }[] }>();
+const emit = defineEmits<{ saved: [camera: CameraView]; deleted: [id: string]; service: [entries: ServiceEntry[]]; stock: [rows: { type: string; onHand: number }[]]; cancel: [] }>();
 
 const c = props.camera;
+const TIMED = SHUTTERS.filter((s) => s !== 'B');
+const known = c?.token ? KNOWN_SHUTTERS[c.token] : undefined;
+const parsed = batteryOf(c?.battery);
 const f = reactive({
 	brand: c?.brand ?? '',
 	name: c?.name ?? '',
@@ -128,8 +161,11 @@ const f = reactive({
 	format: c?.format ?? '35mm',
 	mount: c?.mount ?? '',
 	fixedLens: c?.fixedLens ?? '',
-	battery: c?.battery ?? '',
+	cells: parsed?.count ?? 1,
+	cellType: parsed?.name ?? '',
 	batteryChangedOn: c?.batteryChangedOn ?? '',
+	shutterFastest: c?.shutterFastest ?? '',
+	shutterSlowest: c?.shutterSlowest ?? '',
 	serial: c?.serial ?? '',
 	acquiredOn: c?.acquiredOn ?? '',
 	price: dollars(c?.priceCents) as string | number,
@@ -138,7 +174,11 @@ const f = reactive({
 	notes: c?.notes ?? '',
 });
 const log = ref<ServiceEntry[]>(props.service.filter((e) => e.cameraId === c?.id));
-const svc = reactive({ kind: 'battery', on: props.today, cost: '' as string | number, note: '' });
+const svc = reactive({ kind: 'battery', on: props.today, cost: '' as string | number, note: '', fromStock: false });
+/** The saved camera's battery, for taking a set from the box. */
+const cell = computed(() => batteryOf(c?.battery));
+const boxHas = computed(() => (cell.value ? props.batteries?.find((b) => b.type === batteryKey(cell.value!.name))?.onHand ?? 0 : 0));
+svc.fromStock = boxHas.value >= (cell.value?.count ?? 99);
 const busy = ref(false);
 const error = ref('');
 const confirmDelete = ref(false);
@@ -156,6 +196,12 @@ async function act(fn: () => Promise<void>) {
 	}
 }
 
+/** "2 × LR44" from the two fields (or as typed, when the count was written into the name). */
+function batteryField() {
+	const typed = /\d\s*[×x*]|[×x*]\s*\d/i.test(f.cellType) ? batteryOf(f.cellType) : null;
+	return typed ? batteryText(typed.count, typed.name) : batteryText(Number(f.cells) || 1, f.cellType);
+}
+
 const save = () =>
 	act(async () => {
 		const saved = await run(
@@ -167,8 +213,10 @@ const save = () =>
 				format: f.format,
 				mount: f.mount,
 				fixedLens: f.mount ? '' : f.fixedLens,
-				battery: f.battery,
+				battery: batteryField(),
 				batteryChangedOn: f.batteryChangedOn || null,
+				shutterFastest: f.shutterFastest || null,
+				shutterSlowest: f.shutterSlowest || null,
 				serial: f.serial,
 				acquiredOn: f.acquiredOn || null,
 				priceCents: toCents(f.price),
@@ -194,9 +242,18 @@ const remove = () =>
 const addEntry = () =>
 	act(async () => {
 		if (!c) return;
-		const entry = await run(
-			actions.lab.addService({ cameraId: c.id, lensId: null, on: svc.on, kind: svc.kind, costCents: toCents(svc.cost), note: svc.note })
+		const { stock, ...entry } = await run(
+			actions.lab.addService({
+				cameraId: c.id,
+				lensId: null,
+				on: svc.on,
+				kind: svc.kind,
+				costCents: toCents(svc.cost),
+				note: svc.note,
+				fromStock: svc.kind === 'battery' && svc.fromStock,
+			})
 		);
+		emit('stock', stock);
 		log.value = [entry, ...log.value].sort((a, b) => b.on.localeCompare(a.on));
 		if (svc.kind === 'battery') f.batteryChangedOn = svc.on;
 		svc.cost = '';
@@ -206,7 +263,8 @@ const addEntry = () =>
 
 const removeEntry = (id: string) =>
 	act(async () => {
-		await run(actions.lab.deleteService({ id }));
+		const { stock } = await run(actions.lab.deleteService({ id }));
+		emit('stock', stock);
 		log.value = log.value.filter((e) => e.id !== id);
 		emit('service', log.value);
 	});
@@ -253,6 +311,29 @@ textarea.lab-input {
 
 .svc-form .wide {
 	grid-column: 1 / -1;
+}
+
+.batt-grid {
+	display: grid;
+	grid-template-columns: 5rem minmax(0, 1fr) minmax(0, 1fr);
+	gap: 0.75rem;
+}
+
+@media (max-width: 30em) {
+	.batt-grid {
+		grid-template-columns: 5rem minmax(0, 1fr);
+	}
+
+	.batt-grid > :last-child {
+		grid-column: 1 / -1;
+	}
+}
+
+.from-box {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: var(--text-sm);
 }
 
 .svc-form .lab-input {

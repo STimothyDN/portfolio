@@ -34,6 +34,16 @@
 					<input id="shoot-load-comp" v-model.number="loadForm.comp" class="field num" type="number" inputmode="decimal" step="0.1" min="-5" max="5" placeholder="0" />
 				</label>
 			</div>
+			<LensPick
+				:key="loadForm.cameraId"
+				v-model="loadForm.lensId"
+				id="shoot-load-lens"
+				class="lp-field"
+				select-class="field"
+				:lenses="lenses"
+				:mount="cameras[loadForm.cameraId]?.mount"
+				:last="lastLens?.[loadForm.cameraId] ?? null"
+			/>
 			<p v-if="loadRoll?.rewoundAtFrame" class="hint">Partly shot to frame {{ loadRoll.rewoundAtFrame }}: wind on to frame {{ loadRoll.rewoundAtFrame + 2 }} with the lens cap on.</p>
 			<p v-if="!freeCameras.length" class="hint">Every camera has film in it.</p>
 			<div class="end-actions">
@@ -104,6 +114,7 @@
 				:shutter="shutter"
 				:coords="lightCoords"
 				:lift="preflight?.[roll.id]?.lift ?? null"
+				:shutters="cameraShutters"
 				@set="setFromLight"
 				@note="addNote"
 			/>
@@ -145,7 +156,7 @@
 				<input id="shoot-note" v-model="note" class="field" type="text" maxlength="500" placeholder="Add a note…" enterkeyhint="done" @keydown.enter.prevent="logFrame" />
 			</label>
 
-			<button type="button" class="log" :disabled="busy" @click="logFrame">Log frame {{ next }}</button>
+			<button type="button" class="log pinned" :disabled="busy" @click="logFrame">Log frame {{ next }}</button>
 
 			<!-- Recent frames -->
 			<section v-if="frames.length" class="recent" aria-label="Frames on this roll">
@@ -235,7 +246,7 @@ import {
 	nextFrameNumber,
 	ratingLine,
 	roughCoord,
-	SHUTTERS,
+	shuttersFor,
 	widestFromText,
 	type FrameInput,
 	type FrameView,
@@ -244,6 +255,7 @@ import {
 } from '../../lib/lab/inventory';
 import { applyPending, deviceToday, flush, pending, queueCall, queueFrame, type OutboxItem } from '../../lib/lab/offline';
 import { formatExpiry, upsertRoll } from '../../lib/lab/inventory';
+import LensPick from './LensPick.vue';
 import ShootDial from './ShootDial.vue';
 import ShootLight from './ShootLight.vue';
 
@@ -254,6 +266,9 @@ interface CameraInfo {
 	fixedLens: string | null;
 	format?: string;
 	status?: string;
+	token?: string | null;
+	shutterFastest?: string | null;
+	shutterSlowest?: string | null;
 }
 
 const props = defineProps<{
@@ -271,6 +286,8 @@ const props = defineProps<{
 	nextUp?: { code: string; stock: string; expires: string | null }[];
 	/** Rolls in the fridge, so one can be loaded here with no signal. */
 	fridge?: RollView[];
+	/** camera id → the lens it last shot with. */
+	lastLens?: Record<string, string>;
 }>();
 
 /* ---------- rolls and frames ---------- */
@@ -282,7 +299,9 @@ const props = defineProps<{
  */
 const serverRolls = ref<RollView[]>([...props.rolls, ...(props.fridge ?? [])]);
 const queued = ref<OutboxItem[]>([]);
-const allRolls = computed(() => applyPending(serverRolls.value, queued.value, { cameras: props.cameras }));
+const allRolls = computed(() =>
+	applyPending(serverRolls.value, queued.value, { cameras: props.cameras, lenses: Object.fromEntries(props.lenses.map((l) => [l.id, { name: l.name }])) })
+);
 const rolls = computed(() => allRolls.value.filter((r) => r.status === 'camera'));
 const fridge = computed(() =>
 	allRolls.value.filter((r) => r.status === 'storage').sort((a, b) => (a.expires ?? '9999').localeCompare(b.expires ?? '9999') || a.code.localeCompare(b.code))
@@ -366,7 +385,11 @@ const apertureOptions = computed(() => [
 	{ value: null, label: 'A' },
 	...aperturesFor(widest.value).map((a) => ({ value: a, label: formatAperture(a)!.slice(2) })),
 ]);
-const shutterOptions = computed(() => [{ value: null, label: 'A' }, ...SHUTTERS.map((s) => ({ value: s, label: s }))]);
+/** Only the speeds this camera's dial has (its own range, or its model's). */
+const cameraShutters = computed(() =>
+	shuttersFor(camera.value ? { token: camera.value.token ?? null, shutterFastest: camera.value.shutterFastest ?? null, shutterSlowest: camera.value.shutterSlowest ?? null } : null)
+);
+const shutterOptions = computed(() => [{ value: null, label: 'A' }, ...cameraShutters.value.map((s) => ({ value: s, label: s }))]);
 const isoText = computed(() => (roll.value ? ratingLine(roll.value) : ''));
 
 function restoreSettings() {
@@ -375,7 +398,13 @@ function restoreSettings() {
 	aperture.value = last?.aperture ?? null;
 	shutter.value = last?.shutter ?? null;
 	manual.value = !auto || last?.aperture != null || last?.shutter != null;
-	lensId.value = last?.lensId ?? (mountLenses.value.length === 1 ? mountLenses.value[0].id : null);
+	// The lens from the roll's last frame, else the one it was loaded with, else the camera's usual, else the only one that fits.
+	const usual = camera.value && roll.value?.camera ? props.lastLens?.[roll.value.camera.id] : undefined;
+	lensId.value =
+		last?.lensId ??
+		roll.value?.lens?.id ??
+		(usual && mountLenses.value.some((l) => l.id === usual) ? usual : null) ??
+		(mountLenses.value.length === 1 ? mountLenses.value[0].id : null);
 	focal.value = last?.focalLength ?? '';
 	flash.value = last?.flash ?? false;
 	override.value = null;
@@ -530,7 +559,11 @@ async function endRoll(action: 'advanceRoll' | 'rewindRoll', payload: Record<str
 /* ---------- loading a roll (works with no signal; syncs later) ---------- */
 
 const loadOpen = ref(false);
-const loadForm = reactive({ rollId: '', cameraId: '', iso: '' as number | '', comp: '' as number | '' });
+const loadForm = reactive({ rollId: '', cameraId: '', lensId: null as string | null, iso: '' as number | '', comp: '' as number | '' });
+watch(
+	() => loadForm.cameraId,
+	() => (loadForm.lensId = null)
+);
 /** Cameras free to take film: in use, nothing in them now. */
 const freeCameras = computed(() =>
 	Object.entries(props.cameras)
@@ -562,6 +595,7 @@ async function confirmLoad() {
 		to: 'camera',
 		on: deviceToday(),
 		cameraId: loadForm.cameraId,
+		lensId: loadForm.lensId,
 		shotAtIso: loadForm.iso === '' ? null : Number(loadForm.iso),
 		exposureComp: loadForm.comp === '' ? null : Number(loadForm.comp),
 	});
@@ -1076,6 +1110,8 @@ onBeforeUnmount(() => {
 	width: 5.5rem;
 }
 
+/* The lens picker is its own component: its select gets the same look. */
+.lp-field :deep(select),
 .field {
 	width: 100%;
 	min-width: 0;
@@ -1176,6 +1212,22 @@ onBeforeUnmount(() => {
 }
 
 /*
+ * The release stays under the thumb: pinned to the bottom of the screen until
+ * the page scrolls down to where it sits, so a frame is always one tap away
+ * (the dials, the meter and the note scroll beneath it).
+ */
+.log.pinned,
+.shoot:not(.safelight) .log.pinned:not(.as-link) {
+	position: sticky;
+	z-index: 20;
+	bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+.log.pinned {
+	box-shadow: 0 0 0 0.5rem color-mix(in oklch, var(--shoot-bg) 86%, transparent);
+}
+
+/*
  * Out of the safelight, the counter sits in the camera's top plate: brushed
  * chrome by day, black paint at night, with knurled wind knobs either side;
  * and logging a frame is the shutter release.
@@ -1235,7 +1287,8 @@ onBeforeUnmount(() => {
 	box-shadow:
 		inset 0 1px 0 oklch(100% 0 0 / 0.18),
 		inset 0 -3px 0 rgb(0 0 0 / 0.25),
-		0 10px 22px -12px rgb(0 0 0 / 0.6);
+		0 10px 22px -12px rgb(0 0 0 / 0.6),
+		0 0 0 0.5rem color-mix(in oklch, var(--shoot-bg) 86%, transparent);
 	transition:
 		scale 0.12s ease,
 		box-shadow 0.12s ease;
@@ -1544,7 +1597,8 @@ onBeforeUnmount(() => {
 	position: fixed;
 	z-index: 50;
 	left: 50%;
-	bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+	/* Above the pinned release, never over it. */
+	bottom: calc(5.6rem + env(safe-area-inset-bottom, 0px));
 	translate: -50% 0;
 	display: flex;
 	align-items: center;

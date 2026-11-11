@@ -27,7 +27,7 @@
 							<rect x="2" y="2" :width="14.5 * batteryLevel(c).fill" height="6" rx="0.6" class="charge" />
 						</svg>
 						<span>
-							{{ c.battery ?? 'Battery not recorded' }}<template v-if="c.batteryChangedOn"> · changed {{ batteryLevel(c).age }}</template>
+							{{ c.battery ?? 'Battery not recorded' }}<template v-if="c.batteryChangedOn"> · changed {{ batteryLevel(c).age }}</template><template v-if="swaps(c.id)"> · {{ swaps(c.id) }} {{ swaps(c.id) === 1 ? 'swap' : 'swaps' }} logged</template>
 						</span>
 					</span>
 					<span class="card-foot">
@@ -57,6 +57,44 @@
 			</details>
 		</section>
 
+		<!-- The battery box: spares by type, the cameras that take them, and which sets are getting old. -->
+		<section id="batteries" class="lab-section" aria-labelledby="batt-h">
+			<header class="sec-head">
+				<h2 id="batt-h" class="lab-h2">Battery box</h2>
+			</header>
+			<p class="lab-meta">Sets older than {{ OLD_MONTHS }} months are worth swapping before anything important. A swap from here takes the cells out of the box.</p>
+			<p v-if="!box.length" class="lab-empty">No batteries written down yet. Edit a camera and say what it takes.</p>
+			<ul v-else class="box">
+				<li v-for="row in box" :key="row.type" class="cell-row" :class="{ short: row.short, empty: row.onHand === 0 && row.cameras.length }">
+					<div class="cell-type">
+						<span class="cell-glyph" aria-hidden="true"><i v-for="n in Math.min(row.onHand, 8)" :key="n"></i></span>
+						<strong>{{ row.label }}</strong>
+					</div>
+					<div class="cell-count" role="group" :aria-label="`${row.label} on hand`">
+						<button v-if="!readOnly" type="button" class="step" :aria-label="`One fewer ${row.type}`" :disabled="busyBox || row.onHand === 0" @click="addCells(row.type, -1)">−</button>
+						<b>{{ row.onHand }}</b>
+						<button v-if="!readOnly" type="button" class="step" :aria-label="`One more ${row.type}`" :disabled="busyBox" @click="addCells(row.type, 1)">+</button>
+						<span class="lab-meta">{{ row.cameras.length ? (row.sets ? `${row.sets} ${row.sets === 1 ? 'set' : 'sets'}` : 'not a full set') : 'spare' }}</span>
+					</div>
+					<ul class="takers">
+						<li v-for="c in row.cameras" :key="c.cameraId" :class="{ old: c.old }">
+							<span>{{ c.name }} <span class="lab-meta">· {{ c.cells }} each · {{ c.months == null ? 'age not known' : c.months < 1 ? 'fresh this month' : `${c.months} mo old` }}</span></span>
+							<button v-if="!readOnly" type="button" class="lab-link" :disabled="busyBox || row.onHand < c.cells" :title="row.onHand < c.cells ? `The box has ${row.onHand}` : ''" @click="swap(c.cameraId)">
+								Swap in fresh
+							</button>
+						</li>
+					</ul>
+				</li>
+			</ul>
+			<form v-if="!readOnly" class="box-add" @submit.prevent="buyCells">
+				<input id="batt-type" v-model="buy.type" class="lab-input" type="text" maxlength="30" list="battery-types" placeholder="LR44" aria-label="Battery type" required />
+				<input id="batt-n" v-model.number="buy.n" class="lab-input num" type="number" min="1" max="200" aria-label="How many" required />
+				<button type="submit" class="lab-btn lab-btn--quiet" :disabled="busyBox">Add to the box</button>
+				<span v-if="shopping.length" class="lab-meta">To cover what’s due: {{ shopping.map((s) => `${s.need} ${s.type}`).join(', ') }}.</span>
+			</form>
+			<p v-if="boxError" class="lab-error" role="alert">{{ boxError }}</p>
+		</section>
+
 		<!-- Lenses -->
 		<section class="lab-section" aria-labelledby="lens-h">
 			<header class="sec-head">
@@ -84,6 +122,9 @@
 			</div>
 		</section>
 
+		<datalist id="battery-types">
+			<option v-for="t in Object.keys(BATTERY_FAMILIES)" :key="t" :value="t" />
+		</datalist>
 		<datalist id="gear-mounts">
 			<option v-for="m in allMounts" :key="m" :value="m" />
 		</datalist>
@@ -95,7 +136,9 @@
 				:camera="editingCamera"
 				:service="service"
 				:today="today"
+				:batteries="stock"
 				@saved="cameraSaved"
+				@stock="stock = $event"
 				@deleted="cameraDeleted"
 				@service="serviceChanged"
 				@cancel="editCamera = null"
@@ -108,10 +151,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { actions } from 'astro:actions';
+import { computed, reactive, ref } from 'vue';
 
-import { upsert } from '../../lib/lab/client';
-import { CAMERA_KINDS, formatDay, GEAR_STATUS, type CameraView, type LensView } from '../../lib/lab/inventory';
+import { batteryBox, OLD_MONTHS, shoppingList, type BatteryStockRow } from '../../lib/lab/batteries';
+import { run, upsert } from '../../lib/lab/client';
+import { BATTERY_FAMILIES, CAMERA_KINDS, formatDay, GEAR_STATUS, type CameraView, type LensView } from '../../lib/lab/inventory';
 import type { ServiceEntry } from '../../lib/lab/server/inventory';
 import CameraForm from './CameraForm.vue';
 import CameraGlyph from './CameraGlyph.vue';
@@ -125,6 +170,7 @@ const props = defineProps<{
 	lenses: LensView[];
 	service: ServiceEntry[];
 	usage: Record<string, { total: number; loaded: { code: string; stock: string } | null }>;
+	batteries?: BatteryStockRow[];
 	today: string;
 	/** A guest looking round the owner's lab: nothing can be changed. */
 	readOnly?: boolean;
@@ -135,6 +181,42 @@ const lenses = ref<LensView[]>([...props.lenses]);
 const service = ref<ServiceEntry[]>([...props.service]);
 const editCamera = ref<string | null>(null);
 const editLens = ref<string | null>(null);
+
+/* ---------- the battery box ---------- */
+const stock = ref<BatteryStockRow[]>([...(props.batteries ?? [])]);
+const box = computed(() => batteryBox(cameras.value, stock.value, props.today));
+const shopping = computed(() => shoppingList(box.value));
+const swaps = (id: string) => service.value.filter((e) => e.cameraId === id && e.kind === 'battery').length;
+const busyBox = ref(false);
+const boxError = ref('');
+const buy = reactive({ type: '', n: 2 as number });
+async function boxAct(fn: () => Promise<void>) {
+	busyBox.value = true;
+	boxError.value = '';
+	try {
+		await fn();
+	} catch (e) {
+		boxError.value = (e as Error).message;
+	} finally {
+		busyBox.value = false;
+	}
+}
+const addCells = (type: string, add: number) => boxAct(async () => void (stock.value = await run(actions.lab.setBatteryStock({ type, add }))));
+const buyCells = () =>
+	boxAct(async () => {
+		stock.value = await run(actions.lab.setBatteryStock({ type: buy.type, add: buy.n }));
+		buy.type = '';
+	});
+/** A fresh set from the box, logged today. */
+const swap = (cameraId: string) =>
+	boxAct(async () => {
+		const { stock: left, ...entry } = await run(
+			actions.lab.addService({ cameraId, lensId: null, on: props.today, kind: 'battery', costCents: null, note: 'From the battery box', fromStock: true })
+		);
+		stock.value = left;
+		service.value = [entry, ...service.value];
+		cameras.value = cameras.value.map((c) => (c.id === cameraId ? { ...c, batteryChangedOn: props.today } : c));
+	});
 
 const ORDER = ['active', 'repair', 'shelf'];
 /** The canister seen through a camera's film window, from the stock's name. */
@@ -226,6 +308,140 @@ function lensDeleted(id: string) {
 .gear {
 	display: grid;
 	gap: clamp(2rem, 5vw, 3rem);
+}
+
+/* ---- The battery box: a drawer of cells, one compartment per type ---- */
+.box {
+	list-style: none;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+	gap: 0.75rem;
+}
+
+.cell-row {
+	display: grid;
+	gap: 0.6rem;
+	align-content: start;
+	padding: 0.9rem 1rem 1rem;
+	border-radius: 0.6rem;
+	background: var(--lab-card, var(--gray-999));
+	box-shadow: 0 0 0 1px var(--gray-800), inset 0 2px 6px rgb(0 0 0 / 0.06);
+}
+
+.cell-row.short {
+	box-shadow: 0 0 0 1.5px var(--lab-stage-camera, oklch(58% 0.19 28)), inset 0 2px 6px rgb(0 0 0 / 0.06);
+}
+
+.cell-type {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.cell-type strong {
+	font-family: var(--font-mono);
+	font-size: 0.86rem;
+	letter-spacing: 0.04em;
+}
+
+/* Button cells, seen from above. */
+.cell-glyph {
+	display: inline-flex;
+	gap: 2px;
+	min-width: 1rem;
+}
+
+.cell-glyph i {
+	width: 0.7rem;
+	height: 0.7rem;
+	border-radius: 50%;
+	background: radial-gradient(circle at 35% 30%, oklch(96% 0.004 80), oklch(70% 0.006 80) 70%);
+	box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25);
+}
+
+.cell-row.empty .cell-glyph::after {
+	content: '';
+	width: 0.7rem;
+	height: 0.7rem;
+	border-radius: 50%;
+	border: 1px dashed var(--gray-500);
+}
+
+.cell-count {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.cell-count b {
+	min-width: 2ch;
+	text-align: center;
+	font-family: var(--font-mono);
+	font-size: 1.4rem;
+	font-weight: 500;
+}
+
+.cell-count .step {
+	display: grid;
+	place-items: center;
+	width: 2rem;
+	height: 2rem;
+	border: 1px solid var(--gray-700);
+	border-radius: 50%;
+	background: none;
+	color: var(--gray-100);
+	font: inherit;
+	cursor: pointer;
+}
+
+.cell-count .step:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.takers {
+	list-style: none;
+	padding: 0;
+	display: grid;
+	gap: 0.35rem;
+	font-size: var(--text-sm);
+}
+
+.takers li {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 0.25rem 0.75rem;
+	padding-top: 0.35rem;
+	border-top: 1px dashed var(--gray-800);
+}
+
+.takers li.old > span:first-child::before {
+	content: '';
+	display: inline-block;
+	width: 0.45rem;
+	height: 0.45rem;
+	margin-right: 0.4rem;
+	border-radius: 50%;
+	background: var(--lab-stage-camera, oklch(58% 0.19 28));
+	vertical-align: 0.1em;
+}
+
+.box-add {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.box-add .lab-input {
+	width: 8rem;
+	min-height: 2.5rem;
+}
+
+.box-add .num {
+	width: 5rem;
 }
 
 .sec-head {

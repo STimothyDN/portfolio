@@ -6,13 +6,14 @@
  */
 import { ActionError, defineAction } from 'astro:actions';
 import { z } from 'astro/zod';
-import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import labels from '../data/film-labels.json';
-import { nextCode, STAGES, type RollStatus } from '../lib/lab/inventory';
+import { batteryKey, batteryOf, nextCode, SHUTTERS, STAGES, type RollStatus } from '../lib/lab/inventory';
 import { isOwner, labConfig } from '../lib/lab/server/config';
 import { getDb, type LabDb } from '../lib/lab/server/db/client';
-import { camera, filmStock, frame, lab, labSetting, lens, publish, roll, rollEvent, scanMark, serviceLog } from '../lib/lab/server/db/schema';
+import { batteryStock, camera, chemistry, devRecipe, filmStock, frame, lab, labSetting, lens, publish, roll, rollEvent, scanMark, serviceLog, trip } from '../lib/lab/server/db/schema';
+import { homeLabId, listChemistry, listRecipes, listTrips } from '../lib/lab/server/darkroom';
 import {
 	deskRolls,
 	guessCamera,
@@ -20,6 +21,7 @@ import {
 	listCameras,
 	listFrames,
 	listLabs,
+	listBatteryStock,
 	listLenses,
 	listStocks,
 	rollViews,
@@ -84,6 +86,52 @@ const id = z.string().min(1).max(64);
 const defined = <T extends Record<string, unknown>>(o: T) =>
 	Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
 
+/** Add (or take) cells from the battery box, never below zero. */
+const stockDelta = (d: LabDb, userId: string, type: string, delta: number) =>
+	d
+		.insert(batteryStock)
+		.values({ userId, type, onHand: Math.max(0, delta), updatedAt: new Date() })
+		.onConflictDoUpdate({
+			target: [batteryStock.userId, batteryStock.type],
+			set: { onHand: sql`max(0, ${batteryStock.onHand} + ${delta})`, updatedAt: new Date() },
+		});
+
+/* ---------- the darkroom ---------- */
+
+const step = z.object({
+	key: z.string().min(1).max(30),
+	label: z.string().trim().min(1).max(60),
+	seconds: z.number().int().min(0).max(36_000),
+	agitation: z.string().max(20).nullable().optional(),
+	develop: z.boolean().optional(),
+	note: z.string().max(300).optional(),
+});
+const recipeSpec = z.object({
+	process: z.enum(['bw', 'c41', 'e6']),
+	film: z.string().trim().max(120),
+	developer: z.string().trim().min(1).max(80),
+	dilution: z.string().trim().max(30),
+	ei: z.number().int().min(0).max(25_600),
+	devSeconds: z.number().int().min(10).max(36_000),
+	tempC: z.number().min(10).max(45),
+	agitation: z.string().max(20),
+	steps: z.array(step).min(1).max(12),
+	reusePct: z.number().min(0).max(20).optional(),
+	source: z.string().max(200).optional(),
+	notes: z.string().max(500).optional(),
+});
+const devRunInput = z.object({
+	recipe: z.string().trim().min(1).max(160),
+	process: z.enum(['bw', 'c41', 'e6']),
+	developer: z.string().trim().min(1).max(80),
+	dilution: z.string().trim().max(30),
+	ei: z.number().int().min(0).max(25_600).nullable(),
+	tempC: z.number().min(10).max(45),
+	devSeconds: z.number().int().min(10).max(36_000),
+	chemistry: z.array(id).max(6),
+	note: z.string().trim().max(300).nullable().optional(),
+});
+
 /* ---------- rolls ---------- */
 
 const rollFields = {
@@ -95,6 +143,7 @@ const rollFields = {
 	purchasedFrom: text(120).optional(),
 	storageSpot: text(60).optional(),
 	cameraId: id.nullable().optional(),
+	lensId: id.nullable().optional(),
 	shotAtIso: z.number().int().min(1).max(12800).nullable().optional(),
 	exposureComp: z
 		.number()
@@ -116,8 +165,9 @@ const rollFields = {
 	notes: text(2000).optional(),
 };
 
-async function checkRefs(d: LabDb, userId: string, f: { cameraId?: string | null; labId?: string | null; stockId?: string | null }) {
+async function checkRefs(d: LabDb, userId: string, f: { cameraId?: string | null; labId?: string | null; stockId?: string | null; lensId?: string | null }) {
 	await mine(d, camera, userId, f.cameraId, 'camera');
+	await mine(d, lens, userId, f.lensId, 'lens');
 	await mine(d, lab, userId, f.labId, 'lab');
 	await mine(d, filmStock, userId, f.stockId, 'film stock');
 }
@@ -503,6 +553,34 @@ export const server = {
 			},
 		}),
 
+		/** A suggested alignment in one go: the first scan's frame number, and pins where the lab skipped a frame. */
+		applyAlignment: defineAction({
+			input: z.object({
+				rollId: id,
+				firstScanFrame: z.number().int().min(-1).max(10),
+				pins: z.array(z.object({ frameId: id, scanFilename: z.string().min(1).max(300) })).max(100),
+			}),
+			handler: async ({ rollId, firstScanFrame, pins }, context) => {
+				const { d, userId } = await session(context);
+				await loadRoll(d, userId, rollId);
+				const own = pins.length
+					? await d
+							.select({ id: frame.id })
+							.from(frame)
+							.where(and(eq(frame.userId, userId), eq(frame.rollId, rollId), inArray(frame.id, pins.map((p) => p.frameId))))
+					: [];
+				if (own.length !== pins.length) throw notFound('frame');
+				const writes = [
+					d.update(roll).set({ firstScanFrame }).where(eq(roll.id, rollId)),
+					// One frame per scan: clear these scans from any other frame first.
+					...(pins.length ? [d.update(frame).set({ scanFilename: null }).where(and(eq(frame.rollId, rollId), inArray(frame.scanFilename, pins.map((p) => p.scanFilename))))] : []),
+					...pins.map((p) => d.update(frame).set({ scanFilename: p.scanFilename }).where(eq(frame.id, p.frameId))),
+				];
+				await d.batch(writes as [(typeof writes)[number], ...(typeof writes)[number][]]);
+				return { roll: await oneView(d, userId, rollId), frames: await listFrames(d, userId, [rollId]) };
+			},
+		}),
+
 		/** Pin a frame to a specific scan (or unpin it with null). */
 		pinFrameScan: defineAction({
 			input: z.object({ frameId: id, scanFilename: z.string().min(1).max(300).nullable() }),
@@ -674,6 +752,8 @@ export const server = {
 				fixedLens: text(80),
 				battery: text(60),
 				batteryChangedOn: day.nullable(),
+				shutterFastest: z.enum(SHUTTERS as [string, ...string[]]).nullable().optional(),
+				shutterSlowest: z.enum(SHUTTERS as [string, ...string[]]).nullable().optional(),
 				serial: text(60),
 				acquiredOn: day.nullable(),
 				priceCents: cents,
@@ -758,20 +838,42 @@ export const server = {
 				kind: z.string().trim().min(1).max(20),
 				costCents: cents,
 				note: text(300),
+				/** A battery swap: take the cells out of the battery box. */
+				fromStock: z.boolean().optional(),
 			}),
-			handler: async (input, context) => {
+			handler: async ({ fromStock, ...input }, context) => {
 				const { d, userId } = await session(context);
 				if (!input.cameraId && !input.lensId) throw bad('Pick a camera or lens.');
 				await mine(d, camera, userId, input.cameraId, 'camera');
 				await mine(d, lens, userId, input.lensId, 'lens');
-				const entry = { id: uid(), userId, ...input };
-				await d.insert(serviceLog).values(entry);
-				// A battery swap also updates the camera's "last battery" date.
+				let cellsFromStock: number | null = null;
+				const writes: unknown[] = [];
 				if (input.kind === 'battery' && input.cameraId) {
-					await d.update(camera).set({ batteryChangedOn: input.on }).where(eq(camera.id, input.cameraId));
+					// A battery swap also updates the camera's "last battery" date.
+					writes.push(d.update(camera).set({ batteryChangedOn: input.on }).where(eq(camera.id, input.cameraId)));
+					if (fromStock) {
+						const [cam] = await d.select({ battery: camera.battery, name: camera.name }).from(camera).where(eq(camera.id, input.cameraId));
+						const b = batteryOf(cam?.battery);
+						if (!b) throw bad(`Write down which battery the ${cam?.name ?? 'camera'} takes first.`);
+						const [row] = await d
+							.select({ onHand: batteryStock.onHand })
+							.from(batteryStock)
+							.where(and(eq(batteryStock.userId, userId), eq(batteryStock.type, b.key)));
+						const have = row?.onHand ?? 0;
+						if (have < b.count) throw bad(`The box has ${have} ${b.key}; the ${cam?.name ?? 'camera'} takes ${b.count}.`);
+						cellsFromStock = b.count;
+						writes.push(
+							d
+								.update(batteryStock)
+								.set({ onHand: have - b.count, updatedAt: new Date() })
+								.where(and(eq(batteryStock.userId, userId), eq(batteryStock.type, b.key)))
+						);
+					}
 				}
+				const entry = { id: uid(), userId, ...input, cellsFromStock };
+				await d.batch([d.insert(serviceLog).values(entry), ...(writes as [])]);
 				const { userId: _u, ...view } = entry;
-				return view;
+				return { ...view, stock: await listBatteryStock(d, userId) };
 			},
 		}),
 
@@ -779,8 +881,183 @@ export const server = {
 			input: z.object({ id }),
 			handler: async ({ id: entryId }, context) => {
 				const { d, userId } = await session(context);
-				await d.delete(serviceLog).where(and(eq(serviceLog.id, entryId), eq(serviceLog.userId, userId)));
-				return { ok: true };
+				const [e] = await d
+					.select({ cells: serviceLog.cellsFromStock, cameraId: serviceLog.cameraId })
+					.from(serviceLog)
+					.where(and(eq(serviceLog.id, entryId), eq(serviceLog.userId, userId)));
+				const writes: unknown[] = [d.delete(serviceLog).where(and(eq(serviceLog.id, entryId), eq(serviceLog.userId, userId)))];
+				// Cells that came out of the box go back in.
+				if (e?.cells && e.cameraId) {
+					const [cam] = await d.select({ battery: camera.battery }).from(camera).where(eq(camera.id, e.cameraId));
+					const b = batteryOf(cam?.battery);
+					if (b) writes.push(stockDelta(d, userId, b.key, e.cells));
+				}
+				await d.batch(writes as [never]);
+				return { ok: true, stock: await listBatteryStock(d, userId) };
+			},
+		}),
+
+		/** Set how many of a battery type are in the box (or add to it, with `add`). */
+		setBatteryStock: defineAction({
+			input: z.object({ type: z.string().trim().min(1).max(30), onHand: z.number().int().min(0).max(999).optional(), add: z.number().int().min(-999).max(999).optional() }),
+			handler: async ({ type, onHand, add }, context) => {
+				const { d, userId } = await session(context);
+				const key = batteryKey(type);
+				if (onHand != null) {
+					await d
+						.insert(batteryStock)
+						.values({ userId, type: key, onHand, updatedAt: new Date() })
+						.onConflictDoUpdate({ target: [batteryStock.userId, batteryStock.type], set: { onHand, updatedAt: new Date() } });
+				} else if (add) {
+					await stockDelta(d, userId, key, add);
+				}
+				return listBatteryStock(d, userId);
+			},
+		}),
+
+		/* ---------- the darkroom ---------- */
+
+		/** Save a developing recipe of your own (or update one). */
+		saveRecipe: defineAction({
+			input: z.object({ id: id.optional(), name: z.string().trim().min(1).max(120), spec: recipeSpec }),
+			handler: async ({ id: recipeId, name, spec }, context) => {
+				const { d, userId } = await session(context);
+				const json = JSON.stringify(spec);
+				if (recipeId) {
+					const [row] = await d.select({ id: devRecipe.id }).from(devRecipe).where(and(eq(devRecipe.id, recipeId), eq(devRecipe.userId, userId)));
+					if (!row) throw notFound('recipe');
+					await d.update(devRecipe).set({ name, spec: json }).where(eq(devRecipe.id, recipeId));
+				} else {
+					await d.insert(devRecipe).values({ id: uid(), userId, name, spec: json });
+				}
+				return listRecipes(d, userId);
+			},
+		}),
+
+		deleteRecipe: defineAction({
+			input: z.object({ id }),
+			handler: async ({ id: recipeId }, context) => {
+				const { d, userId } = await session(context);
+				await d.delete(devRecipe).where(and(eq(devRecipe.id, recipeId), eq(devRecipe.userId, userId)));
+				return listRecipes(d, userId);
+			},
+		}),
+
+		/** Mix a batch of chemistry (or edit one). */
+		saveChemistry: defineAction({
+			input: z.object({
+				id: id.optional(),
+				name: z.string().trim().min(1).max(120),
+				kind: z.enum(['developer', 'stop', 'fixer', 'c41', 'e6', 'wetting', 'other']),
+				mixedOn: day,
+				capacityRolls: z.number().int().min(1).max(500).nullable(),
+				rollsUsed: z.number().int().min(0).max(500).optional(),
+				lifeDays: z.number().int().min(1).max(3650).nullable(),
+				retiredOn: day.nullable().optional(),
+				notes: text(500),
+			}),
+			handler: async ({ id: chemId, ...fields }, context) => {
+				const { d, userId } = await session(context);
+				if (chemId) {
+					const [row] = await d.select({ id: chemistry.id }).from(chemistry).where(and(eq(chemistry.id, chemId), eq(chemistry.userId, userId)));
+					if (!row) throw notFound('batch');
+					await d.update(chemistry).set(defined(fields)).where(eq(chemistry.id, chemId));
+				} else {
+					await d.insert(chemistry).values({ id: uid(), userId, ...fields, rollsUsed: fields.rollsUsed ?? 0 });
+				}
+				return listChemistry(d, userId);
+			},
+		}),
+
+		deleteChemistry: defineAction({
+			input: z.object({ id }),
+			handler: async ({ id: chemId }, context) => {
+				const { d, userId } = await session(context);
+				await d.delete(chemistry).where(and(eq(chemistry.id, chemId), eq(chemistry.userId, userId)));
+				return listChemistry(d, userId);
+			},
+		}),
+
+		/**
+		 * A development run: the recipe as run goes on each roll in the tank,
+		 * every batch used counts the rolls, and rolls not yet past the lab
+		 * stage move to "developed at home" (the home darkroom, made the first
+		 * time).
+		 */
+		logDevRun: defineAction({
+			input: z.object({ rollIds: z.array(id).min(1).max(12), run: devRunInput, on: day }),
+			handler: async ({ rollIds, run, on }, context) => {
+				const { d, userId } = await session(context);
+				const rolls = await d
+					.select({ id: roll.id, status: roll.status })
+					.from(roll)
+					.where(and(eq(roll.userId, userId), inArray(roll.id, rollIds)));
+				if (rolls.length !== rollIds.length) throw notFound('roll');
+				const batches = run.chemistry.length
+					? await d.select({ id: chemistry.id, used: chemistry.rollsUsed }).from(chemistry).where(and(eq(chemistry.userId, userId), inArray(chemistry.id, run.chemistry)))
+					: [];
+				if (batches.length !== run.chemistry.length) throw notFound('chemistry batch');
+				const home = await homeLabId(d, userId);
+				const json = JSON.stringify({ ...run, tank: rollIds.length });
+				const writes: unknown[] = [];
+				for (const r of rolls) {
+					const moving = stageIndex(r.status) < stageIndex('lab') && r.status !== 'storage';
+					writes.push(
+						d
+							.update(roll)
+							.set({ devRun: json, ...(moving ? { status: 'lab', statusOn: on, labId: home, labDelivery: null } : {}) })
+							.where(eq(roll.id, r.id))
+					);
+					if (moving) writes.push(d.insert(rollEvent).values({ id: uid(), userId, rollId: r.id, status: 'lab', on, note: 'Developed at home' }));
+				}
+				for (const b of batches) writes.push(d.update(chemistry).set({ rollsUsed: b.used + rollIds.length }).where(eq(chemistry.id, b.id)));
+				await d.batch(writes as [never]);
+				return { rolls: await rollViews(d, userId, rollIds), chemistry: await listChemistry(d, userId) };
+			},
+		}),
+
+		/* ---------- trips ---------- */
+
+		saveTrip: defineAction({
+			input: z.object({
+				id: id.optional(),
+				name: z.string().trim().min(1).max(120),
+				place: text(160),
+				lat: z.number().min(-90).max(90).nullable(),
+				lng: z.number().min(-180).max(180).nullable(),
+				startOn: day,
+				endOn: day,
+				plan: z.object({
+					cameras: z.array(id).max(20),
+					intensity: z.enum(['light', 'usual', 'heavy']),
+					evenings: z.boolean(),
+					flying: z.boolean(),
+					rolls: z.array(id).max(100),
+				}),
+			}),
+			handler: async ({ id: tripId, plan, ...fields }, context) => {
+				const { d, userId } = await session(context);
+				if (fields.endOn < fields.startOn) throw bad('The trip ends before it starts.');
+				const row = { ...fields, plan: JSON.stringify(plan) };
+				let savedId = tripId;
+				if (tripId) {
+					const [t] = await d.select({ id: trip.id }).from(trip).where(and(eq(trip.id, tripId), eq(trip.userId, userId)));
+					if (!t) throw notFound('trip');
+					await d.update(trip).set(row).where(eq(trip.id, tripId));
+				} else {
+					savedId = uid();
+					await d.insert(trip).values({ id: savedId, userId, ...row });
+				}
+				return { id: savedId!, trips: await listTrips(d, userId) };
+			},
+		}),
+
+		deleteTrip: defineAction({
+			input: z.object({ id }),
+			handler: async ({ id: tripId }, context) => {
+				const { d, userId } = await session(context);
+				await d.delete(trip).where(and(eq(trip.id, tripId), eq(trip.userId, userId)));
+				return listTrips(d, userId);
 			},
 		}),
 

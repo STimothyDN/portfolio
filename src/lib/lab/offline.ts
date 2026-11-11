@@ -75,7 +75,8 @@ export const deviceToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'A
 
 export interface MoveLookups {
 	cameras: Record<string, { name: string }>;
-	labs?: Record<string, { name: string }>;
+	labs?: Record<string, { name: string; home?: boolean }>;
+	lenses?: Record<string, { name: string }>;
 }
 
 /**
@@ -91,7 +92,9 @@ export function applyMove(r: RollView, action: CallAction, p: Record<string, unk
 	const cam = p.cameraId as string | undefined;
 	if (cam) next.camera = { id: cam, name: look.cameras[cam]?.name ?? r.camera?.name ?? 'Camera' };
 	const lab = p.labId as string | undefined;
-	if (lab) next.lab = { id: lab, name: look.labs?.[lab]?.name ?? r.lab?.name ?? 'Lab' };
+	if (lab) next.lab = { id: lab, name: look.labs?.[lab]?.name ?? r.lab?.name ?? 'Lab', home: look.labs?.[lab]?.home ?? false };
+	const lensId = p.lensId as string | null | undefined;
+	if (lensId !== undefined) next.lens = lensId ? { id: lensId, name: look.lenses?.[lensId]?.name ?? r.lens?.name ?? 'Lens' } : null;
 	for (const k of ['shotAtIso', 'exposureComp', 'labOrder', 'labDelivery', 'trackingOut', 'trackingBack', 'devCostCents', 'printsIncluded', 'printsCostCents', 'devNotes', 'negativesAt'] as const) {
 		if (k in p && p[k] !== undefined) (next as unknown as Record<string, unknown>)[k] = p[k];
 	}

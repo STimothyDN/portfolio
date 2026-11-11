@@ -113,7 +113,7 @@
 				</p>
 				<p v-if="!manual" class="note" :class="autoNote.tone">{{ autoNote.text }}</p>
 				<p v-if="manual && picks.over > 0.5" class="note">
-					Even {{ formatAperture(Math.max(...apertures)) }} at 1/4000 is {{ formatEv(picks.over) }} {{ picks.over > 1.2 ? 'stops' : 'stop' }} over. Negative film takes about three; slide film won’t.
+					Even {{ formatAperture(Math.max(...apertures)) }} at {{ fastestShutter }} is {{ formatEv(picks.over) }} {{ picks.over > 1.2 ? 'stops' : 'stop' }} over. Negative film takes about three; slide film won’t.
 				</p>
 				<p v-if="manual && check" class="check" :class="check.tone">
 					Your {{ formatAperture(aperture) }} · {{ shutter }}: {{ check.text }}
@@ -302,6 +302,8 @@ const props = defineProps<{
 	today?: string;
 	/** How this camera's negatives come back against the same film elsewhere (+ thin). */
 	lift?: number | null;
+	/** The speeds the camera's dial has. */
+	shutters?: string[];
 }>();
 const emit = defineEmits<{ set: [aperture: number, shutter: string]; note: [text: string] }>();
 
@@ -468,6 +470,7 @@ const advice = computed(() =>
 		widest: props.widest,
 		focal35: lens35.value,
 		manual: props.manual,
+		shutters: props.shutters,
 		expires: props.expires ?? null,
 		today: props.today ?? new Date().toISOString().slice(0, 10),
 		focal: props.focal,
@@ -488,6 +491,8 @@ function noteIt() {
 	setTimeout(() => (noted.value = false), 2500);
 }
 const picks = computed(() => advice.value.picks);
+/** The camera's fastest speed, for "even f/16 at 1/1000 is over". */
+const fastestShutter = computed(() => [...(props.shutters ?? ['1/4000'])].filter((s) => s !== 'B').at(-1) ?? '1/4000');
 const autoNote = computed(() => autoExposureNote(advice.value.evIso, iso.value, props.widest ?? 3.5));
 const check = computed(() => dialCheck(advice.value.evIso, props.aperture, props.shutter, advice.value.film.kind === 'slide'));
 const caveat = computed(() => (sceneKey.value === 'auto' && !photo.value ? reading.value.caveat : null));

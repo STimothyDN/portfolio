@@ -8,7 +8,7 @@ import { formatExpiry } from '../../../lib/lab/inventory';
 import { rollPace } from '../../../lib/lab/pace';
 import { getFilmRolls } from '../../../utils/film';
 import { getDb } from '../../../lib/lab/server/db/client';
-import { listCameras, listFrames, listLenses, rollViews } from '../../../lib/lab/server/inventory';
+import { lastLensByCamera, listCameras, listFrames, listLenses, rollViews } from '../../../lib/lab/server/inventory';
 
 export const prerender = false;
 
@@ -18,7 +18,7 @@ const data =
 	user && config.ok
 		? await (async () => {
 				const d = await getDb(config.config);
-				const [all, cameras, lenses] = await Promise.all([rollViews(d, user.id), listCameras(d, user.id), listLenses(d, user.id)]);
+				const [all, cameras, lenses, lastLens] = await Promise.all([rollViews(d, user.id), listCameras(d, user.id), listLenses(d, user.id), lastLensByCamera(d, user.id)]);
 				const loaded = all.filter((r) => r.status === 'camera');
 				const today = todayInDurham();
 				// The owner's scans say how each camera's negatives tend to come back (on the same film).
@@ -50,13 +50,17 @@ const data =
 				return {
 					rolls: loaded,
 					cameras: Object.fromEntries(
-						cameras.map((c) => [c.id, { name: c.name, kind: c.kind, mount: c.mount, fixedLens: c.fixedLens, format: c.format, status: c.status }])
+						cameras.map((c) => [
+							c.id,
+							{ name: c.name, kind: c.kind, mount: c.mount, fixedLens: c.fixedLens, format: c.format, status: c.status, token: c.token, shutterFastest: c.shutterFastest, shutterSlowest: c.shutterSlowest },
+						])
 					),
 					lenses: lenses.filter((l) => l.status !== 'gone' && l.status !== 'wishlist'),
 					frames: await listFrames(d, user.id, loaded.map((r) => r.id)),
 					spots: [...new Set(all.map((r) => r.storageSpot).filter((v): v is string => !!v))].sort(),
 					preflight,
 					nextUp,
+					lastLens,
 					// The fridge too: with no signal, a roll can still be loaded here (it syncs later).
 					fridge: all.filter((r) => r.status === 'storage'),
 				};
@@ -79,6 +83,7 @@ const data =
 				preflight={data.preflight}
 				nextUp={data.nextUp}
 				fridge={data.fridge}
+				lastLens={data.lastLens}
 				today={todayInDurham()}
 			/>
 		)
