@@ -130,6 +130,7 @@ import {
 	type StepChoices,
 } from '../../lib/lab/inventory';
 import LabSendFields, { type SendDraft } from './LabSendFields.vue';
+import { advanceOrQueue, deviceToday, type MaybeQueued } from '../../lib/lab/offline';
 
 const props = defineProps<{
 	roll: RollView;
@@ -142,7 +143,8 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ done: [roll: RollView]; cancel: [] }>();
 
-const on = ref(props.today);
+// The device's day, not the day a saved page was rendered (pages open offline days later).
+const on = ref(typeof window === 'undefined' ? props.today : deviceToday());
 const cameraId = ref(props.preset?.cameraId ?? props.roll.camera?.id ?? '');
 const iso = ref<string | number>(props.roll.shotAtIso ?? props.roll.stock.iso ?? '');
 const labId = ref(props.preset?.labId ?? props.roll.lab?.id ?? '');
@@ -221,17 +223,14 @@ async function save() {
 	if (props.to === 'scanned' && props.roll.labDelivery === 'mail') fields.trackingBack = trackingBack.value;
 	if (props.to === 'negatives') fields.negativesAt = negativesAt.value;
 	try {
-		let view = await run(
-			actions.lab.advanceRoll({
-				rollId: props.roll.id,
-				to: props.to as never,
-				on: on.value,
-				note: note.value,
-				...(fields as object),
-			})
+		// With no signal the move is queued on this device and syncs later (the shooting workflow works offline).
+		let view: MaybeQueued = await advanceOrQueue(
+			props.roll,
+			{ rollId: props.roll.id, to: props.to, on: on.value, note: note.value, ...fields },
+			{ cameras: Object.fromEntries(props.choices.cameras.map((c) => [c.id, { name: c.name }])), labs: Object.fromEntries(props.choices.labs.map((l) => [l.id, { name: l.name }])) }
 		);
-		// Linking scans has its own checks (one roll per desk roll), so it's a second call.
-		if (props.to === 'scanned' && publicRollId.value) {
+		// Linking scans has its own checks (one roll per desk roll), so it's a second call (online only).
+		if (props.to === 'scanned' && publicRollId.value && !view.queued) {
 			view = await run(actions.lab.linkDeskRoll({ rollId: props.roll.id, publicRollId: publicRollId.value }));
 		}
 		emit('done', view);

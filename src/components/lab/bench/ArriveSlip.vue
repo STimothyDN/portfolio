@@ -4,17 +4,16 @@
  * mailed film, the tracking number of the negatives coming back). Linking
  * each roll to its scans on the film desk happens on the roll's page.
  */
-import { actions } from 'astro:actions';
 import { ref } from 'vue';
 
-import { run } from '../../../lib/lab/client';
+import { advanceOrQueue, deviceToday } from '../../../lib/lab/offline';
 import type { RollView } from '../../../lib/lab/inventory';
 
 const props = defineProps<{ rolls: RollView[]; today: string }>();
 const emit = defineEmits<{ done: [views: RollView[]]; cancel: [] }>();
 
 const picked = ref<string[]>(props.rolls.map((r) => r.id));
-const on = ref(props.today);
+const on = ref(typeof window === 'undefined' ? props.today : deviceToday());
 const trackingBack = ref('');
 const mailed = props.rolls.some((r) => r.labDelivery === 'mail');
 const busy = ref(false);
@@ -27,13 +26,10 @@ async function save() {
 		const views: RollView[] = [];
 		for (const r of props.rolls.filter((x) => picked.value.includes(x.id))) {
 			views.push(
-				await run(
-					actions.lab.advanceRoll({
-						rollId: r.id,
-						to: 'scanned',
-						on: on.value,
-						...(r.labDelivery === 'mail' && trackingBack.value ? { trackingBack: trackingBack.value } : {}),
-					})
+				await advanceOrQueue(
+					r,
+					{ rollId: r.id, to: 'scanned', on: on.value, ...(r.labDelivery === 'mail' && trackingBack.value ? { trackingBack: trackingBack.value } : {}) },
+					{ cameras: {} }
 				)
 			);
 		}

@@ -12,6 +12,7 @@ import { formatMoney, pushPull, toCents, type RollView, type StepChoices } from 
 import { returnWindow } from '../../../lib/lab/stats/labs';
 import type { Spread } from '../../../lib/lab/stats/pipeline';
 import LabSendFields, { type SendDraft } from '../LabSendFields.vue';
+import { advanceOrQueue, deviceToday, type MaybeQueued } from '../../../lib/lab/offline';
 
 const props = defineProps<{
 	shot: RollView[];
@@ -25,7 +26,7 @@ const emit = defineEmits<{ done: [views: RollView[]]; cancel: [] }>();
 const picked = ref<string[]>(props.preset?.rollIds?.length ? [...props.preset.rollIds] : props.shot.map((r) => r.id));
 const firstLab = props.preset?.labId ?? props.labs.find((l) => l.delivery)?.id ?? props.labs[0]?.id ?? '';
 const labId = ref(firstLab);
-const on = ref(props.today);
+const on = ref(typeof window === 'undefined' ? props.today : deviceToday());
 const order = ref('');
 const lab = computed(() => props.labs.find((l) => l.id === labId.value));
 const cost = ref<string | number>(dollars(lab.value?.costCents));
@@ -45,7 +46,18 @@ const back = (id: string) => returnWindow(on.value, props.turnaround[id], on.val
 async function send() {
 	busy.value = true;
 	error.value = '';
+	const fields = {
+		labId: labId.value,
+		on: on.value,
+		labOrder: order.value,
+		devCostCents: toCents(cost.value),
+		labDelivery: draft.value.delivery,
+		trackingOut: draft.value.delivery === 'mail' ? draft.value.tracking : null,
+		printsIncluded: draft.value.printsIncluded,
+		printsCostCents: draft.value.printsIncluded ? null : toCents(draft.value.printsCost),
+	};
 	try {
+		if (!navigator.onLine) throw new TypeError('offline');
 		const sent = await run(
 			actions.lab.sendBatch({
 				rollIds: picked.value,
@@ -61,6 +73,21 @@ async function send() {
 		);
 		emit('done', sent);
 	} catch (e) {
+		// No signal: each roll goes into this device's outbox as its own move (same result once synced).
+		if (e instanceof TypeError) {
+			try {
+				const look = { cameras: {}, labs: Object.fromEntries(props.labs.map((l) => [l.id, { name: l.name }])) };
+				const views: MaybeQueued[] = [];
+				for (const id of picked.value) {
+					const r = props.shot.find((x) => x.id === id);
+					if (r) views.push(await advanceOrQueue(r, { rollId: id, to: 'lab', ...fields }, look));
+				}
+				emit('done', views);
+			} catch (err) {
+				error.value = (err as Error).message;
+			}
+			return;
+		}
 		error.value = (e as Error).message;
 	} finally {
 		busy.value = false;

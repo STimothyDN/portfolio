@@ -14,8 +14,8 @@
  *
  * Signing out deletes these caches (they hold the logbook).
  */
-const PAGES = 'film-lab-pages-v2';
-const ASSETS = 'film-lab-assets-v2';
+const PAGES = 'film-lab-pages-v3';
+const ASSETS = 'film-lab-assets-v3';
 const KEEP = [PAGES, ASSETS];
 const MAX_ASSETS = 400;
 
@@ -39,6 +39,71 @@ const keyOf = (href) => {
 	const u = new URL(href);
 	return u.pathname + u.search;
 };
+
+/*
+ * Saving the shooting workflow for offline use (the page asks, with signal):
+ * fetch the bench and shooting mode, keep them, and keep every script and
+ * stylesheet they load, so they open with no signal even if this phone has
+ * never opened them before.
+ */
+self.addEventListener('message', (event) => {
+	if (event.data?.type !== 'save-for-offline') return;
+	event.waitUntil(saveForOffline(event.data.pages ?? []));
+});
+
+async function saveForOffline(pages) {
+	const pageCache = await caches.open(PAGES);
+	const assetCache = await caches.open(ASSETS);
+	for (const path of pages) {
+		try {
+			const res = await fetch(new Request(path, { credentials: 'same-origin', headers: { Accept: 'text/html' } }));
+			if (!storable(res)) continue;
+			const html = await res.clone().text();
+			await pageCache.put(path, res);
+			// Built assets (and, in development, the module graph's entry points).
+			const urls = new Set([...html.matchAll(/(?:src|href)="(\/(?:_astro|@vite|@id|src|node_modules)\/[^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, '&')));
+			for (const m of html.matchAll(/component-url="([^"]+)"|renderer-url="([^"]+)"/g)) urls.add((m[1] || m[2]).replace(/&amp;/g, '&'));
+			// Follow each script's own imports (island chunks import the runtime and shared chunks).
+			const queue = [...urls];
+			const seen = new Set(queue);
+			while (queue.length && seen.size < 400) {
+				const url = queue.shift();
+				let a = await assetCache.match(url);
+				if (!a) {
+					a = await fetch(url).catch(() => null);
+					if (!storable(a)) continue;
+					await assetCache.put(url, a.clone());
+				}
+				// Stylesheets: the fonts and images they use.
+				if (/\.css(\?|$)/.test(url)) {
+					const css = await a.text();
+					for (const m of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) {
+						if (m[1].startsWith('data:')) continue;
+						const next = new URL(m[1], self.location.origin + url).pathname;
+						if (next.startsWith('/') && !seen.has(next)) {
+							seen.add(next);
+							queue.push(next);
+						}
+					}
+					continue;
+				}
+				if (!/\.(m?js|ts|vue)(\?|$)|\/@id\/|\/@vite\//.test(url)) continue;
+				const code = await a.text();
+				for (const m of code.matchAll(/(?:from\s*|import\s*\(?\s*)["']([^"']+)["']/g)) {
+					const spec = m[1];
+					if (!/^(\.{1,2}\/|\/)/.test(spec)) continue;
+					const next = new URL(spec, self.location.origin + url).pathname + new URL(spec, self.location.origin + url).search;
+					if (!seen.has(next)) {
+						seen.add(next);
+						queue.push(next);
+					}
+				}
+			}
+		} catch {
+			// No signal after all: try again next time.
+		}
+	}
+}
 
 self.addEventListener('fetch', (event) => {
 	const req = event.request;

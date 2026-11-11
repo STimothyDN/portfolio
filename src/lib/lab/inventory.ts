@@ -366,6 +366,15 @@ export function pushPull(boxIso: number | null, shotAt: number | null): string |
 	return stops > 0 ? `push +${label}` : `pull −${label}`;
 }
 
+/** A list of rolls with one replaced (or added) by id. */
+export function upsertRoll(list: RollView[], r: RollView): RollView[] {
+	const i = list.findIndex((x) => x.id === r.id);
+	if (i === -1) return [...list, r];
+	const copy = list.slice();
+	copy[i] = r;
+	return copy;
+}
+
 /** The next R-### code after the highest one in use. */
 export function nextCode(codes: string[], offset = 0): string {
 	const max = codes.reduce((m, c) => Math.max(m, Number(c.replace(/\D/g, '')) || 0), 0);

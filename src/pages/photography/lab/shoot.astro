@@ -50,13 +50,15 @@ const data =
 				return {
 					rolls: loaded,
 					cameras: Object.fromEntries(
-						cameras.map((c) => [c.id, { name: c.name, kind: c.kind, mount: c.mount, fixedLens: c.fixedLens }])
+						cameras.map((c) => [c.id, { name: c.name, kind: c.kind, mount: c.mount, fixedLens: c.fixedLens, format: c.format, status: c.status }])
 					),
 					lenses: lenses.filter((l) => l.status !== 'gone' && l.status !== 'wishlist'),
 					frames: await listFrames(d, user.id, loaded.map((r) => r.id)),
 					spots: [...new Set(all.map((r) => r.storageSpot).filter((v): v is string => !!v))].sort(),
 					preflight,
 					nextUp,
+					// The fridge too: with no signal, a roll can still be loaded here (it syncs later).
+					fridge: all.filter((r) => r.status === 'storage'),
 				};
 			})()
 		: null;
@@ -76,6 +78,7 @@ const data =
 				spots={data.spots}
 				preflight={data.preflight}
 				nextUp={data.nextUp}
+				fridge={data.fridge}
 				today={todayInDurham()}
 			/>
 		)

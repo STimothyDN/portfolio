@@ -30,6 +30,7 @@ import {
 	type RollView,
 } from '../../../lib/lab/inventory';
 import { ghostOf, land, type Snapshot } from '../../../lib/lab/motion/carry';
+import { applyPending, flush, labUserId, pending, type MaybeQueued } from '../../../lib/lab/offline';
 import { createDrag, type DragItem, type DropTarget, type Dropped } from '../../../lib/lab/motion/drag';
 import { nudges as rankNudges, type Nudge } from '../../../lib/lab/nudges';
 import { formatMonths, rollPace } from '../../../lib/lab/pace';
@@ -265,9 +266,13 @@ function place(view: RollView) {
 async function moved(views: RollView[], undoable = true) {
 	const snaps = new Map(views.map((v) => [v.id, snap(v.id)]));
 	for (const v of views) place(v);
-	// Say what happened at once (with its undo); the roll travels while you read it.
-	if (views.length === 1) showToast(movedLine(views[0]), undoable ? views[0].id : undefined);
-	else if (views.length) showToast(`${plural(views.length, 'roll')}: ${movedLine(views[0]).replace(/^R-\d+:? ?/, '')}`);
+	// Say what happened at once (with its undo); the roll travels while you read it. With no signal
+	// the move waits on this device (no undo until it has synced).
+	const queued = views.some((v) => (v as MaybeQueued).queued);
+	const tail = queued ? ' Saved on this phone; it syncs when there’s signal.' : '';
+	if (queued) waitingMoves.value += views.length;
+	if (views.length === 1) showToast(movedLine(views[0]) + tail, undoable && !queued ? views[0].id : undefined);
+	else if (views.length) showToast(`${plural(views.length, 'roll')}: ${movedLine(views[0]).replace(/^R-\d+:? ?/, '')}${tail}`);
 	await nextTick();
 	await Promise.all(
 		views.map((v, i) => {
@@ -381,6 +386,46 @@ function onDrop({ item, target, clone }: Dropped) {
 
 let stopDrag: (() => void) | null = null;
 
+/* ---------- no signal: moves wait on this device and sync when it's back ---------- */
+
+const waitingMoves = ref(0);
+const lookups = () => ({
+	cameras: Object.fromEntries(props.data.cameras.map((c) => [c.id, { name: c.name }])),
+	labs: Object.fromEntries(props.data.labs.map((l) => [l.id, { name: l.name }])),
+});
+/** Opened from this device's saved copy: lay the moves still waiting over it. */
+async function applyOutbox() {
+	const uid = labUserId();
+	if (!uid || props.readOnly) return;
+	const items = await pending(uid).catch(() => []);
+	waitingMoves.value = items.length;
+	const calls = items.filter((i) => i.kind === 'call');
+	if (!calls.length) return;
+	const before = [...rolls.value, ...recentFiled.value];
+	for (const v of applyPending(before, calls, lookups())) {
+		const was = before.find((r) => r.id === v.id);
+		if (was && (was.status !== v.status || was.statusOn !== v.statusOn)) place(v);
+	}
+}
+let syncing = false;
+async function syncOutbox() {
+	const uid = labUserId();
+	if (!uid || props.readOnly || syncing || !waitingMoves.value) return;
+	syncing = true;
+	try {
+		const r = await flush(uid);
+		for (const v of r.rolls) place(v);
+		waitingMoves.value = r.left;
+		if (r.refused.length) error.value = `Not saved: ${r.refused[0]}`;
+		else if (r.sent && !r.left) showToast('Synced: every move made offline is saved.');
+	} catch {
+		// Still no signal.
+	} finally {
+		syncing = false;
+	}
+}
+let syncTimer: ReturnType<typeof setInterval> | undefined;
+
 /* ---------- the Today card ---------- */
 
 function act(n: Nudge) {
@@ -474,6 +519,9 @@ onMounted(() => {
 		ro.observe(stage.value);
 	}
 	measure();
+	void applyOutbox().then(syncOutbox);
+	addEventListener('online', syncOutbox);
+	syncTimer = setInterval(() => void syncOutbox(), 30_000);
 	document.addEventListener('pointerdown', onDocDown, true);
 	addEventListener('keydown', onKey);
 	// Arriving from a link that names a move (?move=R-031): open its slip.
@@ -488,6 +536,8 @@ onMounted(() => {
 	}
 });
 onBeforeUnmount(() => {
+	removeEventListener('online', syncOutbox);
+	clearInterval(syncTimer);
 	stopDrag?.();
 	ro?.disconnect();
 	document.removeEventListener('pointerdown', onDocDown, true);
@@ -562,6 +612,7 @@ const ticker = computed(() => [
 				<p class="ticker" aria-label="Where your film is">
 					<span class="mat-name">The bench</span>
 					<span v-for="[n, label] in ticker" :key="label" :class="{ zero: !n }">▸ {{ n }} {{ label }}</span>
+					<span v-if="waitingMoves" class="waiting" role="status">● {{ waitingMoves }} waiting to sync</span>
 				</p>
 				<div class="tools">
 					<button type="button" class="tool" :aria-pressed="annotate" aria-keyshortcuts="A" title="Annotate (A): numbers and readouts for everything on the bench" @click="annotate = !annotate">
@@ -965,6 +1016,10 @@ const ticker = computed(() => [
 
 .ticker .zero {
 	opacity: 0.45;
+}
+
+.ticker .waiting {
+	color: var(--lab-warn);
 }
 
 .tools {

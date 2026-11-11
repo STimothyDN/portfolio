@@ -9,11 +9,45 @@
 			</button>
 		</header>
 
+		<!-- Loading a roll: works with no signal (it syncs when there's a bar). -->
+		<section v-if="loadOpen" class="load-panel" aria-labelledby="load-h">
+			<h2 id="load-h">Load a roll</h2>
+			<label class="lp-field">
+				<span>Film</span>
+				<select id="shoot-load-roll" v-model="loadForm.rollId" class="field">
+					<option v-for="r in fridge" :key="r.id" :value="r.id">{{ r.code }} · {{ r.stock.name }}{{ r.expires ? ` · exp ${formatExpiry(r.expires)}` : '' }}{{ r.rewoundAtFrame ? ' · partly shot' : '' }}</option>
+				</select>
+			</label>
+			<label class="lp-field">
+				<span>Camera</span>
+				<select id="shoot-load-camera" v-model="loadForm.cameraId" class="field">
+					<option v-for="c in freeCameras" :key="c.id" :value="c.id">{{ c.name }}</option>
+				</select>
+			</label>
+			<div class="lp-row">
+				<label class="lp-field">
+					<span>Rated at ISO</span>
+					<input id="shoot-load-iso" v-model.number="loadForm.iso" class="field num" type="number" inputmode="numeric" min="1" max="12800" />
+				</label>
+				<label class="lp-field">
+					<span>Comp (EV)</span>
+					<input id="shoot-load-comp" v-model.number="loadForm.comp" class="field num" type="number" inputmode="decimal" step="0.1" min="-5" max="5" placeholder="0" />
+				</label>
+			</div>
+			<p v-if="loadRoll?.rewoundAtFrame" class="hint">Partly shot to frame {{ loadRoll.rewoundAtFrame }}: wind on to frame {{ loadRoll.rewoundAtFrame + 2 }} with the lens cap on.</p>
+			<p v-if="!freeCameras.length" class="hint">Every camera has film in it.</p>
+			<div class="end-actions">
+				<button type="button" class="small-btn strong" :disabled="busy || !loadForm.rollId || !loadForm.cameraId" @click="confirmLoad">Load {{ loadRoll?.code ?? '' }}</button>
+				<button type="button" class="small-btn" @click="loadOpen = false">Cancel</button>
+			</div>
+		</section>
+
 		<template v-if="roll">
-			<div v-if="rolls.length > 1" class="switcher" role="group" aria-label="Loaded cameras">
+			<div v-if="rolls.length > 1 || (fridge.length && freeCameras.length)" class="switcher" role="group" aria-label="Loaded cameras">
 				<button v-for="r in rolls" :key="r.id" type="button" class="chip" :aria-pressed="r.id === roll.id" @click="select(r.id)">
 					{{ r.camera?.name ?? r.code }}
 				</button>
+				<button v-if="fridge.length && freeCameras.length && !loadOpen" type="button" class="chip load-chip" @click="openLoad()">＋ Load</button>
 			</div>
 
 			<section class="head">
@@ -158,16 +192,17 @@
 
 		<section v-else class="empty">
 			<h1>Nothing’s loaded</h1>
-			<template v-if="nextUp?.length">
-				<p>Next out of the fridge (oldest dates first):</p>
+			<template v-if="fridge.length && !loadOpen">
+				<p>Next out of the fridge (oldest dates first), loaded here even with no signal:</p>
 				<ul class="next-up">
-					<li v-for="n in nextUp" :key="n.code">
-						<a :href="`/photography/lab/?move=${n.code}`"><b>{{ n.code }}</b> {{ n.stock }}<small v-if="n.expires"> · exp {{ n.expires }}</small><span aria-hidden="true">Load →</span></a>
+					<li v-for="n in fridge.slice(0, 3)" :key="n.id">
+						<button type="button" @click="openLoad(n.id)"><b>{{ n.code }}</b> {{ n.stock.name }}<small v-if="n.expires"> · exp {{ formatExpiry(n.expires) }}</small><span aria-hidden="true">Load →</span></button>
 					</li>
 				</ul>
+				<button type="button" class="log" @click="openLoad()">Load a roll</button>
 			</template>
-			<p v-else>Load a roll on the bench and it shows up here, ready to log frames.</p>
-			<a class="log as-link" href="/photography/lab/">Open the bench</a>
+			<p v-else-if="!fridge.length">The fridge is empty. Add film on the bench and it shows up here.</p>
+			<a class="as-link link" href="/photography/lab/">Open the bench</a>
 		</section>
 
 		<footer class="foot">
@@ -184,7 +219,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 
 import {
 	aperturesFor,
@@ -201,7 +236,8 @@ import {
 	type LensView,
 	type RollView,
 } from '../../lib/lab/inventory';
-import { flush, pending, queueCall, queueFrame } from '../../lib/lab/offline';
+import { applyPending, deviceToday, flush, pending, queueCall, queueFrame, type OutboxItem } from '../../lib/lab/offline';
+import { formatExpiry, upsertRoll } from '../../lib/lab/inventory';
 import ShootDial from './ShootDial.vue';
 import ShootLight from './ShootLight.vue';
 
@@ -210,6 +246,8 @@ interface CameraInfo {
 	kind: string;
 	mount: string | null;
 	fixedLens: string | null;
+	format?: string;
+	status?: string;
 }
 
 const props = defineProps<{
@@ -225,11 +263,24 @@ const props = defineProps<{
 	preflight?: Record<string, { pace: string | null; hint: string | null }>;
 	/** The oldest-dated rolls in the fridge, offered when a roll comes out. */
 	nextUp?: { code: string; stock: string; expires: string | null }[];
+	/** Rolls in the fridge, so one can be loaded here with no signal. */
+	fridge?: RollView[];
 }>();
 
 /* ---------- rolls and frames ---------- */
 
-const rolls = ref<RollView[]>([...props.rolls]);
+/*
+ * Rolls as the server last said (loaded and in the fridge), with every move
+ * still queued on this phone laid over them: load, finish or rewind with no
+ * signal and the page shows it straight away, even reopened offline.
+ */
+const serverRolls = ref<RollView[]>([...props.rolls, ...(props.fridge ?? [])]);
+const queued = ref<OutboxItem[]>([]);
+const allRolls = computed(() => applyPending(serverRolls.value, queued.value, { cameras: props.cameras }));
+const rolls = computed(() => allRolls.value.filter((r) => r.status === 'camera'));
+const fridge = computed(() =>
+	allRolls.value.filter((r) => r.status === 'storage').sort((a, b) => (a.expires ?? '9999').localeCompare(b.expires ?? '9999') || a.code.localeCompare(b.code))
+);
 const serverFrames = ref<FrameView[]>([...props.frames]);
 /** Queued on this phone, by client id (a deleted frame stays here until it syncs). */
 const local = ref<Map<string, FrameInput>>(new Map());
@@ -457,12 +508,60 @@ async function endRoll(action: 'advanceRoll' | 'rewindRoll', payload: Record<str
 	const r = roll.value;
 	if (!r) return;
 	busy.value = true;
-	await queueCall(props.userId, action, { rollId: r.id, on: props.today, ...payload });
-	rolls.value = rolls.value.filter((x) => x.id !== r.id);
+	await queueCall(props.userId, action, { rollId: r.id, on: deviceToday(), ...payload });
+	await loadPending();
 	currentId.value = rolls.value[0]?.id ?? null;
 	ending.value = null;
 	busy.value = false;
 	showToast(message);
+	void sync();
+}
+
+/* ---------- loading a roll (works with no signal; syncs later) ---------- */
+
+const loadOpen = ref(false);
+const loadForm = reactive({ rollId: '', cameraId: '', iso: '' as number | '', comp: '' as number | '' });
+/** Cameras free to take film: in use, nothing in them now. */
+const freeCameras = computed(() =>
+	Object.entries(props.cameras)
+		.filter(([id, c]) => c.status !== 'gone' && c.status !== 'wishlist' && !rolls.value.some((r) => r.camera?.id === id))
+		.map(([id, c]) => ({ id, ...c }))
+		.sort((a, b) => Number(b.status === 'active') - Number(a.status === 'active') || a.name.localeCompare(b.name))
+);
+const loadRoll = computed(() => fridge.value.find((r) => r.id === loadForm.rollId) ?? null);
+function openLoad(rollId?: string) {
+	const r = fridge.value.find((x) => x.id === rollId) ?? fridge.value[0];
+	loadForm.rollId = r?.id ?? '';
+	const fits = freeCameras.value.filter((c) => !c.format || c.format === r?.stock.format);
+	loadForm.cameraId = (fits[0] ?? freeCameras.value[0])?.id ?? '';
+	loadForm.iso = r?.stock.iso ?? '';
+	loadForm.comp = '';
+	ending.value = null;
+	loadOpen.value = true;
+}
+watch(
+	() => loadForm.rollId,
+	() => (loadForm.iso = loadRoll.value?.stock.iso ?? '')
+);
+async function confirmLoad() {
+	const r = loadRoll.value;
+	if (!r || !loadForm.cameraId) return;
+	busy.value = true;
+	await queueCall(props.userId, 'advanceRoll', {
+		rollId: r.id,
+		to: 'camera',
+		on: deviceToday(),
+		cameraId: loadForm.cameraId,
+		shotAtIso: loadForm.iso === '' ? null : Number(loadForm.iso),
+		exposureComp: loadForm.comp === '' ? null : Number(loadForm.comp),
+	});
+	await loadPending();
+	currentId.value = r.id;
+	override.value = null;
+	loadOpen.value = false;
+	busy.value = false;
+	restoreSettings();
+	showToast(`${r.code} loaded into the ${props.cameras[loadForm.cameraId]?.name ?? 'camera'}.`);
 	void sync();
 }
 
@@ -490,13 +589,11 @@ async function loadPending() {
 	let calls = 0;
 	for (const i of items) {
 		if (i.kind === 'frame') map.set(i.payload.clientId, i.payload);
-		else {
-			calls++;
-			// A finish or rewind queued offline: that roll is no longer in a camera.
-			rolls.value = rolls.value.filter((r) => r.id !== i.payload.rollId);
-		}
+		else calls++;
 	}
 	local.value = map;
+	// Loads, finishes and rewinds still waiting to sync (applied over the server's rolls).
+	queued.value = items.filter((i) => i.kind === 'call');
 	pendingCalls.value = calls;
 	if (!rolls.value.some((r) => r.id === currentId.value)) currentId.value = rolls.value[0]?.id ?? null;
 }
@@ -507,6 +604,8 @@ async function sync() {
 		const r = await flush(props.userId);
 		offline.value = r.offline;
 		refused.value = r.refused.length ? `Not saved: ${r.refused[0]}` : '';
+		// Moves that reached the server: its copy of each roll is the truth now.
+		for (const v of r.rolls) serverRolls.value = upsertRoll(serverRolls.value, v);
 		if (r.syncedRolls.length) {
 			// The server's list is now the whole truth for these rolls, even when it's empty.
 			const synced = new Set(r.syncedRolls);
@@ -569,6 +668,14 @@ const onOnline = () => void sync();
 
 onMounted(async () => {
 	await loadPending();
+	// Opened for a roll that was loaded on this phone with no signal: select it.
+	const wanted = rolls.value.find((r) => r.code === props.initialCode?.toUpperCase());
+	if (wanted) currentId.value = wanted.id;
+	// Otherwise the camera loaded most recently, including one loaded here offline: it's what you were shooting.
+	else if (!props.initialCode) {
+		const latest = [...rolls.value].sort((a, b) => b.statusOn.localeCompare(a.statusOn))[0];
+		if (latest && latest.statusOn > (roll.value?.statusOn ?? '')) currentId.value = latest.id;
+	}
 	restoreSettings();
 	void sync();
 	refreshFix();
@@ -1307,6 +1414,39 @@ onBeforeUnmount(() => {
 	padding-top: 2rem;
 }
 
+/* Loading a roll, right here (with or without signal). */
+.load-panel {
+	display: grid;
+	gap: 0.75rem;
+	padding: 1rem;
+	border-radius: 0.9rem;
+	background: var(--shoot-panel);
+}
+
+.load-panel h2 {
+	font-family: var(--font-brand);
+	font-style: italic;
+	font-weight: 420;
+	font-size: 1.4rem;
+}
+
+.lp-field {
+	display: grid;
+	gap: 0.3rem;
+	font-size: var(--text-sm);
+	color: var(--shoot-meta);
+}
+
+.lp-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.75rem;
+}
+
+.load-chip {
+	border-style: dashed;
+}
+
 /* Pre-flight: what's left, the pace, one thing worth knowing. */
 .preflight {
 	display: flex;
@@ -1347,7 +1487,13 @@ onBeforeUnmount(() => {
 	list-style: none;
 }
 
-.next-up a {
+.next-up a,
+.next-up button {
+	width: 100%;
+	border: 0;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
 	display: flex;
 	align-items: baseline;
 	gap: 0.5rem;

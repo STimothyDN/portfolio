@@ -86,6 +86,8 @@ const initials = (user?.name ?? '')
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 		<meta name="theme-color" content="#000000" />
+		{/* Who's signed in, for queueing moves made with no signal (src/lib/lab/offline.ts). */}
+		{user && <meta name="lab-user" content={user.id} />}
 	</Fragment>
 	<div class:list={['lab', { 'lab--wide': wide }]} data-lab>
 		{
@@ -239,6 +241,26 @@ const initials = (user?.name ?? '')
 	// no signal. Scoped to /photography/lab/, so the public site never sees it.
 	if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 		navigator.serviceWorker.register('/photography/lab/sw.js', { scope: '/photography/lab/' }).catch(() => {});
+		// With signal, keep the bench and shooting mode (and everything they load) saved on
+		// this device, so the whole shooting workflow opens in the woods. Once a visit.
+		const saveForOffline = () => {
+			try {
+				if (!navigator.onLine || !document.querySelector('meta[name="lab-user"]') || sessionStorage.getItem('lab-offline-saved')) return;
+				navigator.serviceWorker.ready.then((reg) => {
+					reg.active?.postMessage({ type: 'save-for-offline', pages: ['/photography/lab/shoot/', '/photography/lab/'] });
+					sessionStorage.setItem('lab-offline-saved', '1');
+				});
+			} catch {
+				// Private mode: pages still save as they're opened.
+			}
+		};
+		saveForOffline();
+		window.addEventListener('online', () => {
+			try {
+				sessionStorage.removeItem('lab-offline-saved');
+			} catch {}
+			saveForOffline();
+		});
 	}
 
 	/*

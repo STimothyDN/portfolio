@@ -150,6 +150,25 @@ The rest of the site is unchanged and still fully prerendered. Only the lab's pa
 `/api/auth/*` run as a Vercel function (through `@astrojs/vercel`), so visitors never touch
 the database.
 
+
+### With no signal
+
+The whole shooting workflow works offline and syncs when there's a bar again:
+
+- **Load a roll** right in shooting mode (＋ Load, or the fridge's next rolls when nothing's
+  loaded): film, camera, rated speed, comp. Log frames, finish or rewind, load the next.
+- **The bench** works too: a load, finish, send, scans-in or filing slip with no signal
+  queues the move ("Saved on this phone; it syncs when there's signal") and the bench
+  shows a "waiting to sync" count. (Linking scans and undo need signal.)
+- Every move and frame goes into one outbox (`src/lib/lab/offline.ts`, IndexedDB), and
+  replays **in the order it happened** (a roll loaded offline is loaded before its frames
+  arrive, finished after them). Pages opened offline lay queued moves over the copy the
+  phone saved (`applyPending`), so they always show the truth. A move replayed after it
+  had already landed is accepted as done.
+- Dates come from the device, not the saved page.
+- With signal, the bench asks the service worker to save the bench and shooting mode with
+  every script, stylesheet and font they load (`save-for-offline` in `sw.js`), so they open
+  offline even if this phone never opened them. Tests: `offline`, `offline-cold`.
 ## Insight
 
 The **almanac** (`src/lib/lab/server/almanac.ts`, pure maths in `src/lib/lab/stats/`,

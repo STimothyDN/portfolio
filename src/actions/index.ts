@@ -241,6 +241,8 @@ export const server = {
 			handler: async ({ rollId, to, on, note, ...fields }, context) => {
 				const { d, userId } = await session(context);
 				const r = await loadRoll(d, userId, rollId);
+				// A move replayed from a phone's outbox that already landed (the answer was lost on the way back): nothing to do.
+				if (r.status === to && r.statusOn === on) return oneView(d, userId, rollId);
 				if (r.status === 'lost') throw bad('This roll is marked lost. Undo that first.');
 				if (stageIndex(to) <= stageIndex(r.status)) throw bad('Rolls only move forward. Use “Undo last step” to go back.');
 				if (to === 'camera' && !fields.cameraId) throw bad('Pick the camera it’s going into.');
@@ -463,6 +465,8 @@ export const server = {
 			handler: async ({ rollId, afterFrame, on, storageSpot }, context) => {
 				const { d, userId } = await session(context);
 				const r = await loadRoll(d, userId, rollId);
+				// Replayed after it already landed: nothing to do.
+				if (r.status === 'storage' && r.rewoundAtFrame === afterFrame && r.statusOn === on) return oneView(d, userId, rollId);
 				if (r.status !== 'camera') throw bad('Only a roll that’s in a camera can be rewound.');
 				await d.batch([
 					d
