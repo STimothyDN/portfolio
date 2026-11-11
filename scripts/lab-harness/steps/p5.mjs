@@ -41,6 +41,7 @@ export default async function (h) {
 		check('light summary reads the sky and sun', /·/.test(sum) && /(Golden|Blue) hour|stays down/.test(sum), sum.replace(/\n/g, ' | '));
 		await clickSel(a, '.light .summary');
 		await waitFor(a, `!!document.querySelector('#light-drawer')`);
+		await clickSel(a, '.scene-btn');
 		await clickText(a, 'Bright sun');
 		const picks = await evaluate(a, `[...document.querySelectorAll('#light-drawer .pick')].map((b) => b.innerText.replace(/\\n/g, ' '))`);
 		check('bright sun at ISO 400 offers three settings', picks.length === 3 && picks.some((p) => /f\/16 · 1\/500/.test(p)), picks.join(' | '));
@@ -56,9 +57,10 @@ export default async function (h) {
 		await clickSel(a, '[data-tab=sun]');
 		check('sun tab lists today’s light', /Sunset/.test(await text(a, '#light-drawer')));
 		await clickSel(a, '[data-tab=meter]');
+		await clickSel(a, '.scene-btn');
 		await clickText(a, 'Candlelight');
 		const slow = await text(a, '#light-drawer .meter');
-		check('candlelight at 400: hand-held wide open, marked half a stop under', /Hand-held/.test(slow) && /f\/1.7 · 1\/30−½/.test(slow), slow.replace(/\n/g, ' | ').slice(0, 160));
+		check('candlelight at 400 on a 50mm: too slow to hand-hold, braced wide open', /Braced/.test(slow) && /f\/1.7 · 1\/15/.test(slow) && /brace it/.test(slow), slow.replace(/\n/g, ' | ').slice(0, 200));
 		await clickSel(a, '[data-tab=long]');
 		check('long exposure tab', !!(await waitFor(a, `!!document.querySelector('#light-drawer .long')`, 3000)));
 		const longText = await text(a, '#light-drawer .long');
@@ -66,7 +68,7 @@ export default async function (h) {
 		await shot(a, 'p5-shoot-light', { width: 390, height: 1700, mobile: true, light: true });
 		await shot(a, 'p5-shoot-light-dark', { width: 390, height: 1700, mobile: true });
 		await fitsPhone('shooting mode with the drawer open');
-		await clickText(a, 'Auto · Night');
+		await clickText(a, 'Auto');
 		await clickSel(a, '.icon-btn[aria-pressed]');
 		await sleep(300);
 		await shot(a, 'p5-shoot-safelight', { width: 390, height: 1400, mobile: true });

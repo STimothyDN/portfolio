@@ -4,7 +4,7 @@
  * depth of field, and the sun's day. Pure arithmetic, shared by shooting
  * mode and the insight pages (the sun math is the observatory's own).
  */
-import { sunAltitudeAt, sunDay } from '../../scripts/sky/astro';
+import { altitudeDeg, DEG, julian, lstHours, moon, moonPhase, sunAltitudeAt, sunDay, toHorizon } from '../../scripts/sky/astro';
 import { shutterSeconds } from './almanac';
 import { SHUTTERS } from './inventory';
 
@@ -25,38 +25,17 @@ export function formatEv(ev: number): string {
 	return `${Math.floor(thirds / 3)}${rest === 1 ? '⅓' : rest === 2 ? '⅔' : ''}`;
 }
 
-/* ---------- conditions (Sunny 16 and the night table) ---------- */
-
-export type LightKey = 'snow' | 'sun' | 'hazy' | 'cloudy' | 'overcast' | 'shade' | 'neon' | 'streets' | 'indoors' | 'candle';
-
-export interface LightCondition {
-	key: LightKey;
-	label: string;
-	/** EV at ISO 100. */
-	ev: number;
-	/** The Sunny 16 way of saying it, where there is one. */
-	rule?: string;
-	night?: boolean;
+/**
+ * Sunny 16 in words for a daylight EV: "f/8" (at 1/ISO), or null when the
+ * light isn't within a sixth of a whole stop of one of the classic steps.
+ */
+export function sunnyRule(ev: number): string | null {
+	if (ev < 9.8 || ev > 17.2 || Math.abs(ev - Math.round(ev)) > 0.17) return null;
+	const n = [2, 2.8, 4, 5.6, 8, 11, 16, 22, 32][Math.round(ev) - 10 + 1];
+	return n ? `f/${n}` : null;
 }
 
-/**
- * The classic table: f/16 at 1/ISO in bright sun, a stop wider for each step
- * down. Negative film forgives overexposure far more than under, so where
- * sources disagree these lean towards more light.
- */
-export const CONDITIONS: LightCondition[] = [
-	{ key: 'snow', label: 'Sun on snow or sand', ev: 16, rule: 'f/22' },
-	{ key: 'sun', label: 'Bright sun', ev: 15, rule: 'f/16' },
-	{ key: 'hazy', label: 'Hazy or soft shadows', ev: 14, rule: 'f/11' },
-	{ key: 'cloudy', label: 'Overcast', ev: 13, rule: 'f/8' },
-	{ key: 'overcast', label: 'Heavy overcast', ev: 12, rule: 'f/5.6' },
-	{ key: 'shade', label: 'Open shade', ev: 11, rule: 'f/4' },
-	{ key: 'neon', label: 'Neon and shop windows', ev: 9, night: true },
-	{ key: 'streets', label: 'Lit streets', ev: 7, night: true },
-	{ key: 'indoors', label: 'Indoors', ev: 6, night: true },
-	{ key: 'candle', label: 'Candlelight', ev: 4, night: true },
-];
-export const conditionBy = (key: LightKey) => CONDITIONS.find((c) => c.key === key)!;
+/* ---------- the sky ---------- */
 
 /** What the weather service reports, enough to guess the light. */
 export interface SkyConditions {
@@ -69,14 +48,14 @@ export interface SkyConditions {
 export interface SkyReading {
 	/** EV at ISO 100. */
 	ev: number;
-	/** The closest condition in the table (for the chips); none in twilight. */
-	key: LightKey | null;
 	label: string;
 	/** Why: "Overcast · sun 12° up". */
 	why: string;
 	/** A second opinion when the sky can change under you. */
 	caveat: string | null;
 	daylight: boolean;
+	/** The sun is up and not behind cloud: there are shadows, shade and backlight. */
+	sunOut: boolean;
 }
 
 const FOG = new Set([45, 48]);
@@ -107,23 +86,19 @@ export function readSky(sunAltitude: number, sky: SkyConditions | null): SkyRead
 	const alt = Math.round(sunAltitude);
 	const sunWords = alt >= 0 ? `sun ${alt}° up` : `sun ${-alt}° down`;
 	if (sunAltitude < -6) {
-		return { ev: 7, key: 'streets', label: 'Night', why: `${sunWords}: meter the lights, not the sky`, caveat: null, daylight: false };
+		return { ev: 7, label: 'Night', why: `${sunWords}: meter the lights, not the sky`, caveat: null, daylight: false, sunOut: false };
 	}
 	const base = daylightBase(sky);
 	if (sunAltitude < -0.8) {
 		// Civil twilight: about EV 10 just after sunset to EV 6 by its end.
 		const t = (sunAltitude + 0.8) / -5.2;
 		const ev = 10 - 4 * t - (sky && sky.cover >= 80 ? 1 : 0);
-		return { ev, key: null, label: sunAltitude < -4 ? 'Blue hour' : 'Twilight', why: `${base.label} · ${sunWords}`, caveat: 'The sky dims fast now: open up a stop every few minutes.', daylight: false };
+		return { ev, label: sunAltitude < -4 ? 'Blue hour' : 'Twilight', why: `${base.label} · ${sunWords}`, caveat: 'The sky dims fast now: open up a stop every few minutes.', daylight: false, sunOut: false };
 	}
 	const lowSun = sunAltitude >= 20 ? 0 : sunAltitude >= 10 ? 1 : sunAltitude >= 3 ? 2 : 3;
 	const ev = Math.max(8, Math.min(16, base.ev - lowSun));
 	const label = lowSun >= 2 && base.ev >= 14 ? 'Golden hour' : base.label;
-	return { ev, key: nearestKey(ev), label, why: `${base.label} · ${sunWords}`, caveat: base.caveat, daylight: true };
-}
-
-function nearestKey(ev: number): LightKey {
-	return CONDITIONS.reduce((best, c) => (Math.abs(c.ev - ev) < Math.abs(best.ev - ev) ? c : best), CONDITIONS[0]).key;
+	return { ev, label, why: `${base.label} · ${sunWords}`, caveat: base.caveat, daylight: true, sunOut: base.ev >= 14 };
 }
 
 /* ---------- settings that fit the camera ---------- */
@@ -139,11 +114,28 @@ export interface Setting {
 export interface Picks {
 	/** Up to three ways to take it, each for a different reason. */
 	picks: { label: string; setting: Setting }[];
-	/** The light needs more than a hand-held 1/30 at the widest aperture. */
+	/** The light needs a slower shutter than can be hand-held at the widest aperture. */
 	slow: { aperture: number; seconds: number } | null;
 	/** Stops over at the smallest aperture and fastest speed. */
 	over: number;
+	/** The slowest shutter time counted as hand-holdable. */
+	handheld: number;
 }
+
+/** Which way to lean when offering settings. */
+export type PickPrefer = 'everyday' | 'depth' | 'shallow' | 'motion' | 'street' | 'low';
+
+export interface PickOptions {
+	/** Slowest hand-held time, seconds (default 1/30). */
+	handheld?: number;
+	prefer?: PickPrefer;
+}
+
+/**
+ * The slowest shutter to hand-hold: one over the focal length (35mm
+ * equivalent), never slower than 1/30.
+ */
+export const handheldLimit = (focal35: number | null | undefined) => (focal35 && focal35 > 30 ? 1 / focal35 : 1 / 30);
 
 const DIAL = SHUTTERS.filter((s) => s !== 'B').map((s) => ({ s, t: shutterSeconds(s)! }));
 
@@ -155,29 +147,56 @@ function nearestShutter(ideal: number): { s: string; t: number; off: number } {
 }
 
 /**
- * Settings for EV `ev` (at the film's speed) on these apertures: one for
- * everyday (around f/8, fast enough to hand-hold), one to freeze motion,
- * one for shallow focus.
+ * Settings for EV `ev` (at the film's speed) on these apertures, up to
+ * three, each for a reason: everyday (around f/8, fast enough to hand-hold),
+ * freezing motion, shallow focus, deep focus, zone-focused street, or wide
+ * open in low light, led by what the scene asks for. When nothing can be
+ * hand-held, a braced setting (up to two stops slower) is offered if there is one.
  */
-export function pickSettings(ev: number, apertures: number[]): Picks {
+export function pickSettings(ev: number, apertures: number[], opts: PickOptions = {}): Picks {
+	const limit = opts.handheld ?? 1 / 30;
 	const all: Setting[] = apertures.map((aperture) => {
 		const ideal = (aperture * aperture) / 2 ** ev;
 		const n = nearestShutter(ideal);
 		return { aperture, shutter: n.s, seconds: n.t, off: Math.round(n.off * 100) / 100 };
 	});
 	const fits = all.filter((s) => Math.abs(s.off) <= 0.55);
-	const handheld = fits.filter((s) => s.seconds <= 1 / 30 + 1e-9);
-	const picks: Picks['picks'] = [];
-	const add = (label: string, s: Setting | undefined) => {
-		if (s && !picks.some((p) => p.setting.aperture === s.aperture)) picks.push({ label, setting: s });
+	// A third of a stop's grace: 1/60 counts for a 50mm.
+	const holdable = (t: number) => t <= limit * 1.26 + 1e-9;
+	const handheld = fits.filter((s) => holdable(s.seconds));
+	// Braced on a wall or table: up to two stops slower, never past 1/8.
+	const braced = fits.filter((s) => !holdable(s.seconds) && s.seconds <= Math.min(limit * 5.04, 1 / 7) + 1e-9);
+	const near = (list: Setting[], f: number) => [...list].sort((a, b) => Math.abs(Math.log2(a.aperture / f)) - Math.abs(Math.log2(b.aperture / f)))[0];
+
+	const everydayPick = (): [string, Setting | undefined] => {
+		const e = near(handheld.filter((s) => s.seconds <= 1 / 125 + 1e-9), 8);
+		return e ? ['Everyday', e] : ['Hand-held', near(handheld, 8)];
 	};
-	const near8 = (list: Setting[]) => [...list].sort((a, b) => Math.abs(Math.log2(a.aperture / 8)) - Math.abs(Math.log2(b.aperture / 8)))[0];
-	const everyday = near8(handheld.filter((s) => s.seconds <= 1 / 125 + 1e-9));
-	if (everyday) add('Everyday', everyday);
-	else add('Hand-held', near8(handheld));
-	add('Freeze motion', [...handheld].filter((s) => s.seconds <= 1 / 500 + 1e-9).sort((a, b) => a.seconds - b.seconds)[0]);
-	add('Shallow focus', [...handheld].sort((a, b) => a.aperture - b.aperture)[0]);
-	add('Deep focus', [...handheld].filter((s) => s.aperture >= 11).sort((a, b) => Math.abs(a.aperture - 16) - Math.abs(b.aperture - 16))[0]);
+	const options: Record<string, () => [string, Setting | undefined]> = {
+		everyday: everydayPick,
+		motion: () => ['Freeze motion', handheld.filter((s) => s.seconds <= 1 / 500 + 1e-9).sort((a, b) => a.seconds - b.seconds)[0]],
+		shallow: () => ['Shallow focus', [...handheld].sort((a, b) => a.aperture - b.aperture)[0]],
+		depth: () => ['Deep focus', handheld.filter((s) => s.aperture >= 11).sort((a, b) => Math.abs(a.aperture - 16) - Math.abs(b.aperture - 16))[0]],
+		street: () => ['Zone focus', near(handheld.filter((s) => s.aperture >= 8 && s.seconds <= 1 / 250 + 1e-9), 8)],
+		low: () => ['Wide open', [...handheld].sort((a, b) => a.aperture - b.aperture)[0]],
+	};
+	const ORDER: Record<PickPrefer, string[]> = {
+		everyday: ['everyday', 'motion', 'shallow', 'depth'],
+		depth: ['depth', 'everyday', 'shallow'],
+		shallow: ['shallow', 'everyday', 'motion'],
+		motion: ['motion', 'everyday', 'shallow'],
+		street: ['street', 'everyday', 'shallow'],
+		low: ['low', 'everyday', 'depth'],
+	};
+	const picks: Picks['picks'] = [];
+	for (const key of ORDER[opts.prefer ?? 'everyday']) {
+		const [label, s] = options[key]();
+		if (s && !picks.some((p) => p.setting.aperture === s.aperture)) picks.push({ label, setting: s });
+	}
+	if (!picks.length) {
+		const b = [...braced].sort((a, b) => a.aperture - b.aperture)[0];
+		if (b) picks.push({ label: 'Braced', setting: b });
+	}
 	picks.splice(3);
 
 	const widest = Math.min(...apertures);
@@ -188,6 +207,7 @@ export function pickSettings(ev: number, apertures: number[]): Picks {
 		picks,
 		slow: handheld.length ? null : { aperture: widest, seconds: slowest },
 		over: Math.max(0, Math.log2(fastest / ((smallest * smallest) / 2 ** ev))),
+		handheld: limit,
 	};
 }
 
@@ -353,6 +373,15 @@ function dayMoments(ms: number, lat: number, lon: number): SunMoment[] {
 	push('Blue hour', d.goldenEvening?.[1]);
 	push('Dark', dusk);
 	return out;
+}
+
+/** The moon now: share lit, height in degrees, and its phase's name. */
+export function moonAt(ms: number, lat: number, lon: number): { lit: number; altitude: number; name: string } {
+	const jd = julian(ms);
+	const m = moon(jd);
+	const altitude = altitudeDeg(toHorizon(m.ra, m.dec, lstHours(jd, lon) * 15 * DEG, lat * DEG));
+	const p = moonPhase(jd);
+	return { lit: p.illumination, altitude, name: p.name };
 }
 
 /** Where the light is now and what comes next. */

@@ -86,20 +86,26 @@
 
 			<p v-if="rewindHint" class="hint">{{ rewindHint }}</p>
 
-			<!-- Light: a Sunny 16 meter from the sky, long exposures, zone focus, today's sun -->
+			<!-- Light: a meter (the sky, or a photo you take), long exposures, zone focus, today's sun -->
 			<ShootLight
 				:iso="roll.shotAtIso ?? roll.stock.iso"
+				:box-iso="roll.stock.iso"
 				:comp="roll.exposureComp"
 				:stock="roll.stock"
+				:expires="roll.expires"
 				:manual="camera?.kind !== 'point-and-shoot'"
 				:camera-kind="camera?.kind ?? null"
+				:camera-name="roll.camera?.name ?? null"
+				:today="today"
 				:apertures="aperturesFor(widest)"
 				:widest="widest"
 				:focal="focalForLight"
 				:aperture="aperture"
 				:shutter="shutter"
 				:coords="lightCoords"
+				:lift="preflight?.[roll.id]?.lift ?? null"
 				@set="setFromLight"
+				@note="addNote"
 			/>
 
 			<!-- Exposure -->
@@ -260,7 +266,7 @@ const props = defineProps<{
 	spots: string[];
 	today: string;
 	/** Per loaded roll: its pace and one thing worth knowing before the next frame. */
-	preflight?: Record<string, { pace: string | null; hint: string | null }>;
+	preflight?: Record<string, { pace: string | null; hint: string | null; lift?: number | null }>;
 	/** The oldest-dated rolls in the fridge, offered when a roll comes out. */
 	nextUp?: { code: string; stock: string; expires: string | null }[];
 	/** Rolls in the fridge, so one can be loaded here with no signal. */
@@ -347,6 +353,10 @@ const focalForLight = computed(() => {
 });
 /** Where the sun is worked out from: stable between renders, so the drawer doesn't redo it on every dial turn. */
 const lightCoords = computed(() => (locOn.value && fix.value ? { lat: fix.value.lat, lng: fix.value.lng } : null));
+/** The meter's reading, onto this frame's note. */
+function addNote(text: string) {
+	note.value = note.value.trim() ? `${note.value.trim()} · ${text}` : text;
+}
 function setFromLight(a: number, s: string) {
 	manual.value = true;
 	aperture.value = a;

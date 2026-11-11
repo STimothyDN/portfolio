@@ -89,14 +89,26 @@ most recently; with more than one loaded, chips at the top switch between them.
 
 **Light** (the bar under the counter; tap it open):
 
-- **Meter:** a Sunny 16 reading from the sun's height where you are (the observatory's
-  sun math, `src/scripts/sky/astro.ts`) and the weather (Open-Meteo, keyless; only a
-  position rounded to about a kilometre is sent, and a reading is reused for 15 minutes).
-  Or pick the light you see: bright sun to open shade, and a night table (neon, lit
-  streets, indoors, candlelight). It offers three settings that fit the lens and the
-  shutter dial (everyday, freeze motion, shallow or deep focus); tap one to set the dials.
-  It also says how the dials as set compare ("1 stop over, fine on negative film").
-  Point-and-shoots get "plenty of light" or "the flash may fire" instead.
+- **Meter:** pick the **scene** (Auto, or one of 26: bright sun to under trees, snow,
+  backlit, landscape, portrait, golden hour, sunset, blue hour, lit streets, neon,
+  campfire, the moon, fireworks, window light, stage, candlelight…). With no photo, the
+  reading comes from the sun's height where you are (the observatory's sun math,
+  `src/scripts/sky/astro.ts`) and the weather (Open-Meteo, keyless; only a position
+  rounded to about a kilometre is sent, reused for 15 minutes); daylight scenes such as
+  shade, snow and backlight are worked out from that sky, the rest from the standard
+  exposure tables. **Take a reading** opens the phone's back camera (or **From photos**):
+  tap what you want to meter for a spot (about 5°), drag for an area, or let it read the
+  whole frame centre-weighted, then say what the spot is (mid-tone, lighter or deeper
+  skin, shadow detail, snow, sky, a lit sign, the brightest detail…). The meter places
+  that tone where it belongs (skin a stop over, shadow detail two under, snow two over,
+  highlights where the film still holds them) and gives settings for the lens and the
+  dials, led by what the scene wants (deep focus for landscapes, wide open at night,
+  zone focus on the street), with one-over-the-focal-length hand-holding and a braced
+  option. It also shows where the scene's shadows and highlights land on the Zone scale
+  against what this film holds, false colour over the photo, notes with one-tap fixes
+  ("give ⅔ more", "use the 85B"), a bracket when there's doubt, the sum behind the number,
+  a filter on the lens, an adjustment, and tips for the scene. Point-and-shoots get the
+  reading and advice ("use the backlight button") instead of settings.
 - **Long exposure:** metered time → time to expose, with each stock's reciprocity
   (Ilford's published formulas; common estimates for the rest, labelled as such), and a
   bulb timer that counts down with beeps and vibration, or counts up.
@@ -105,7 +117,26 @@ most recently; with more than one loaded, chips at the top switch between them.
 - **Sun:** today's blue hour, golden hours, sunrise and sunset, in your time zone.
 
 With no signal, the meter falls back to the last weather reading (up to 3 hours old), then
-to picking the light yourself.
+to picking the light yourself; a photo reading works anywhere (it never leaves the phone).
+
+**How a photo becomes a reading** (`src/lib/lab/meter/`): `exif.ts` reads the exposure the
+phone wrote into the JPEG (shutter, aperture, ISO, its brightness value, its 35mm focal
+length), so the reading is absolute: camera EV at ISO 100 = log2(N²/t) − log2(ISO/100).
+`luma.ts` turns a 320-pixel copy into scene stops: sRGB to linear light, Rec. 709
+luminance, then the phone's tone curve undone (an inverse filmic curve: phones add a
+little mid-tone contrast and squeeze about four stops of highlights into the top of the
+range), plus a third of a stop between where a JPEG puts middle gray and where a
+K = 12.5 reflected meter does. Spots and areas average in linear light, as a meter does;
+anything the phone clipped is flagged, and the reading becomes "at least" (or "at most").
+When the film camera's lens is known, its frame is drawn on the phone's wider picture
+and the whole-frame reading uses only that. A photo without exposure data is pinned to the
+scene's typical light and said to be an estimate. `advise.ts` does the judgement: the
+reading minus each stop of extra light (the tone's place, a third more for negative film
+unless the roll is already rated slower or has compensation, the filter's factor, your
+adjustment, the roll's compensation) is the exposure, and each tone's landing zone is its
+reading minus that. `scenes.ts` holds the scenes, tones, filters and each film's latitude
+(slide about 4 stops, Portra about 8½; pushing costs shadows). Phones differ by up to half
+a stop: **Calibrate this phone** stores an offset on the device.
 
 **No signal.** Everything you log goes into an outbox on the phone (IndexedDB) and syncs
 as soon as the server answers. The top corner says "Offline · 5 waiting" until then. The
@@ -287,7 +318,8 @@ To start over, delete `.data/film-lab.db*` and run `npm run db:migrate` again (r
 
 ### Tests
 
-`npm test` runs the almanac's maths (vitest, `src/lib/lab/stats/stats.test.ts`). The
+`npm test` runs the almanac's maths and the photo meter's (vitest,
+`src/lib/lab/stats/stats.test.ts`, `src/lib/lab/meter/meter.test.ts`). The
 browser tests drive headless Chrome over CDP with a virtual passkey, against
 `npm run dev` (which only ever uses the local database). Most start by claiming the lab,
 so empty the local logbook first:
@@ -296,7 +328,8 @@ so empty the local logbook first:
 node scripts/lab-harness/reset-db.mjs && node scripts/lab-harness/run.mjs bench
 ```
 
-Modules: `bench`, `binder`, `almanac`, `smoke`, `p2`–`p6`, `audit` (five widths, empty
+Modules: `bench`, `binder`, `almanac`, `meter` (the photo meter, with a generated scene
+carrying iPhone-style EXIF), `offline`, `smoke`, `p2`–`p6`, `audit` (five widths, empty
 and full), `perf`, and `seed` + `look` (screenshots; `LOOK=home,rolls VIEWS=light,phone`).
 Output goes to `.data/harness/` (`LAB_OUT` to change it).
 
@@ -406,6 +439,7 @@ lab as before. Test: `node scripts/lab-harness/run.mjs guest`.
 | `src/lib/lab/server/published.ts`     | the build-time read of what the film desk shows              |
 | `scripts/lib/logbook.mjs`             | the logbook lookups behind `upload-film --roll`              |
 | `src/lib/lab/light.ts`                | EV, Sunny 16 from the sky, dial settings, reciprocity, DoF, sun |
+| `src/lib/lab/meter/`                  | Photo meter: EXIF, pixels to stops, scenes and tones, advice |
 | `src/lib/lab/sky-weather.ts`          | shooting mode's weather reading (Open-Meteo, cached)         |
 | `src/lib/lab/insight.ts`              | scan tone by camera, film and lab; thin frames by light      |
 | `src/lib/lab/frame-search.ts`         | the Frames search: query parsing and matching                |

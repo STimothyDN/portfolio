@@ -38,7 +38,7 @@ const data =
 									: left <= 3 && r.frameCount > 0
 										? 'Last few frames: finish on something you love.'
 										: null;
-						return [r.id, { pace: pace ? `${pace.rate} · ${pace.finish}` : null, hint }];
+						return [r.id, { pace: pace ? `${pace.rate} · ${pace.finish}` : null, hint, lift: lift ?? null }];
 					})
 				);
 				// What to load next: the oldest-dated rolls in the fridge.

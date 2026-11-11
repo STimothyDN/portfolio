@@ -19,6 +19,7 @@ export default async function (h) {
 	check('shooting mode shows the comp with the rating', /ISO 400 · \+1 EV/.test(await text(a, '.head .sub')), await text(a, '.head .sub'));
 	await clickSel(a, '.light .summary');
 	await waitFor(a, `!!document.querySelector('#light-drawer')`);
+	await clickSel(a, '.scene-btn');
 	await clickText(a, 'Bright sun');
 	const picks = await evaluate(a, `[...document.querySelectorAll('#light-drawer .pick')].map((b) => b.innerText.replace(/\\n/g, ' '))`);
 	check('the meter adds the comp: bright sun at ISO 400 +1 is f/8 · 1/1000', picks.some((p) => /Everyday f\/8 · 1\/1000/.test(p)), picks.join(' | '));

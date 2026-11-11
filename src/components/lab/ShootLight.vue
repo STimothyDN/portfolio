@@ -22,26 +22,85 @@
 			</div>
 
 			<template v-if="tab === 'meter'">
-			<!-- The sky: the meter's guess, or the one you see -->
-			<div class="chips" role="group" aria-label="The light where you are">
-				<button type="button" class="chip" :aria-pressed="choice === 'auto'" @click="choice = 'auto'">Auto · {{ reading.label }}</button>
-				<button v-for="c in chipOrder" :key="c.key" type="button" class="chip" :aria-pressed="choice === c.key" @click="choice = c.key">
-					{{ c.label }}
+			<!-- The scene: what you're shooting, or Auto for the sky's reading -->
+			<div class="scene-row">
+				<button type="button" class="scene-btn" :aria-expanded="pickingScene" aria-controls="scene-grid" @click="pickingScene = !pickingScene">
+					<span class="lbl">Scene</span>
+					<b>{{ sceneKey === 'auto' ? `Auto · ${autoLabel}` : scene.label }}</b>
+					<span class="chev" aria-hidden="true"></span>
 				</button>
+				<button v-if="sceneKey !== 'auto'" type="button" class="chip" @click="pickScene('auto')">Auto</button>
 			</div>
-			<p class="why">{{ whyLine }}</p>
+			<div v-if="pickingScene" id="scene-grid" class="scene-grid">
+				<button type="button" class="tile" :aria-pressed="sceneKey === 'auto'" @click="pickScene('auto')">Auto · {{ autoLabel }}</button>
+				<section v-for="g in groupOrder" :key="g.key" :aria-label="g.label">
+					<h4>{{ g.label }}</h4>
+					<div class="tiles">
+						<button v-for="s in g.scenes" :key="s.key" type="button" class="tile" :data-scene="s.key" :aria-pressed="sceneKey === s.key" @click="pickScene(s.key)">{{ s.label }}</button>
+					</div>
+				</section>
+			</div>
+
+			<!-- Take a reading: the phone's camera, then tap what to meter -->
+			<div v-if="!scene.rule" class="take">
+				<label class="take-btn" :class="{ busy: readingPhoto }">
+					<input id="meter-camera" type="file" accept="image/*" capture="environment" class="file" :disabled="readingPhoto" @change="onPhoto" />
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.4-2h5.8l1.4 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z" /><circle cx="12" cy="13" r="3.4" /></svg>
+					<span class="take-text">
+						<b>{{ readingPhoto ? 'Reading the photo…' : photo ? 'New reading' : 'Take a reading' }}</b>
+						<small>{{ photo ? 'Photograph the scene again' : 'Photograph the scene, then tap what to meter' }}</small>
+					</span>
+				</label>
+				<label class="take-alt">
+					<input id="meter-library" type="file" accept="image/*" class="file" :disabled="readingPhoto" @change="onPhoto" />
+					From photos
+				</label>
+			</div>
+			<p v-else class="why">{{ scene.rule === 'moon' ? 'A phone can’t read the moon (a small bright disc in black): the Looney 11 rule is more reliable.' : 'Fireworks follow a rule, not a meter.' }}</p>
+			<p v-if="photoError" class="note bad" role="alert">{{ photoError }}</p>
+
+			<!-- The reading photo -->
+			<div v-if="photo && !scene.rule" class="reading">
+				<p class="prompt">
+					<template v-if="region.kind === 'frame'">Tap what you want to meter, or drag across an area. In this scene, meter {{ scene.meter }}.</template>
+					<template v-else>Metering {{ region.kind === 'spot' ? 'a spot' : 'an area' }}: say what it is below. Tap elsewhere to move it.</template>
+				</p>
+				<PhotoMeter ref="pm" :photo="photo" :region="region" :frame="lensFrame" :zones="showZones ? zones : null" :tag="tag" @region="setRegion" />
+				<div class="finders" role="group" aria-label="Where to meter">
+					<button type="button" class="chip" :aria-pressed="region.kind === 'frame'" @click="setRegion({ kind: 'frame' })">Whole frame</button>
+					<button type="button" class="chip" @click="pm?.find('brightest')">Brightest detail</button>
+					<button type="button" class="chip" @click="pm?.find('darkest')">Darkest detail</button>
+					<button type="button" class="chip" :aria-pressed="showZones" @click="showZones = !showZones">Zones</button>
+				</div>
+				<div v-if="region.kind !== 'frame'" class="tones" role="group" aria-label="What you metered">
+					<span class="lbl">It’s</span>
+					<button v-for="t in TONES" :key="t.key" type="button" class="chip" :data-tone="t.key" :aria-pressed="tone === t.key" :title="t.like" @click="toneOverride = t.key">{{ t.label }}</button>
+				</div>
+				<p class="why">{{ sourceLine }}</p>
+				<ZoneStrip :marks="advice.marks" :toe="advice.film.toe" :shoulder="advice.film.shoulder" :film="stock.name" />
+			</div>
+			<p v-else-if="!scene.rule" class="why">{{ whyLine }}</p>
 
 			<!-- The meter -->
 			<div class="meter">
 				<p class="ev">
-					<b>EV {{ formatEv(ev100) }}</b>
-					<span>{{ rule ? `Sunny 16: ${rule} at 1/${iso}` : `at ISO 100` }} · ISO {{ iso }}{{ isoGuessed ? ' (guessed)' : '' }}{{ comp ? ` · settings include your ${formatComp(comp)}` : '' }}</span>
+					<b>EV {{ formatEv(advice.base.ev) }}</b>
+					<span>{{ evLine }}</span>
 				</p>
-				<ul v-if="manual && picks.picks.length" class="picks">
+				<p class="call">{{ advice.call }}</p>
+				<ul v-if="manual && advice.fixed" class="picks">
+					<li>
+						<button type="button" class="pick" :aria-pressed="aperture === advice.fixed.aperture && shutter === 'B'" @click="emit('set', advice.fixed.aperture, 'B')">
+							<span class="pl">{{ advice.fixed.label }}</span>
+							<span class="pv"><span>{{ formatAperture(advice.fixed.aperture) }} ·</span> <span>B</span></span>
+						</button>
+					</li>
+				</ul>
+				<ul v-else-if="manual && picks.picks.length" class="picks">
 					<li v-for="p in picks.picks" :key="p.label">
 						<button type="button" class="pick" :aria-pressed="aperture === p.setting.aperture && shutter === p.setting.shutter" @click="emit('set', p.setting.aperture, p.setting.shutter)">
 							<span class="pl">{{ p.label }}</span>
-							<span class="pv">{{ formatAperture(p.setting.aperture) }} · {{ p.setting.shutter }}<small v-if="formatOff(p.setting.off)" :title="`${formatOff(p.setting.off)} stop from the reading`">{{ formatOff(p.setting.off) }}</small></span>
+							<span class="pv"><span>{{ formatAperture(p.setting.aperture) }} ·</span> <span>{{ p.setting.shutter }}<small v-if="formatOff(p.setting.off)" :title="`${formatOff(p.setting.off)} stop from the reading`">{{ formatOff(p.setting.off) }}</small></span></span>
 						</button>
 					</li>
 				</ul>
@@ -60,8 +119,70 @@
 					Your {{ formatAperture(aperture) }} · {{ shutter }}: {{ check.text }}
 				</p>
 				<p v-if="caveat" class="note">{{ caveat }}</p>
-				<button v-if="manual && isLong" type="button" class="link" @click="tab = 'long'">Reciprocity and the bulb timer</button>
+
+				<ul v-if="advice.notes.length" class="notes" aria-label="From the meter">
+					<li v-for="n in advice.notes" :key="n.text" :class="n.tone">
+						<span>{{ n.text }}</span>
+						<button v-if="n.nudge" type="button" class="fix" @click="addNudge(n.nudge)">Give {{ signed(n.nudge) }}</button>
+						<button v-if="n.filter" type="button" class="fix" @click="filter = n.filter">Use the {{ filterBy(n.filter).label.replace(/ \(.*\)/, '') }}</button>
+					</li>
+				</ul>
+
+				<div v-if="advice.bracket" class="bracket" role="group" aria-label="Bracket">
+					<span class="lbl">Bracket</span>
+					<template v-for="b in advice.bracket" :key="b.label">
+						<button v-if="b.aperture && b.shutter" type="button" class="chip" @click="emit('set', b.aperture, b.shutter)"><b>{{ b.label }}</b> {{ b.text }}</button>
+						<span v-else class="chip static"><b>{{ b.label }}</b> {{ b.text }}</span>
+					</template>
+				</div>
+
+				<details class="chain">
+					<summary>How it adds up</summary>
+					<ol>
+						<li><span>{{ advice.base.label }} <small>{{ advice.base.from }}</small></span><b>EV {{ formatEv(advice.base.ev) }}</b></li>
+						<li v-for="s in advice.steps" :key="s.label"><span>{{ s.label }}</span><b>{{ signed(s.stops) }}</b></li>
+						<li class="total"><span>Expose for</span><b>EV {{ formatEv(advice.e100) }} at ISO 100 · EV {{ formatEv(advice.evIso) }} at ISO {{ iso }}</b></li>
+					</ol>
+				</details>
+
+				<div class="adjust">
+					<div class="stepper" role="group" aria-label="Adjust the exposure">
+						<span class="lbl">Adjust</span>
+						<button type="button" class="step" aria-label="A third of a stop less" :disabled="nudge <= -3" @click="addNudge(-1 / 3)">−</button>
+						<b>{{ nudge ? signed(nudge) : '±0' }}</b>
+						<button type="button" class="step" aria-label="A third of a stop more" :disabled="nudge >= 3" @click="addNudge(1 / 3)">+</button>
+					</div>
+					<label class="filter">
+						<span class="lbl">Filter</span>
+						<select id="light-filter" v-model="filter" class="sel">
+							<option v-for="f in FILTERS" :key="f.key" :value="f.key">{{ f.label }}</option>
+						</select>
+					</label>
+				</div>
+
+				<details v-if="photo" class="cal">
+					<summary>Calibrate this phone · {{ calibration ? signed(calibration) : '±0' }}</summary>
+					<p>Phones differ by up to half a stop. If negatives from these readings come back thin, add a third; dense, take one off. One reading beside a handheld meter tells you exactly.</p>
+					<div class="stepper" role="group" aria-label="Phone calibration">
+						<button type="button" class="step" aria-label="Read a third darker" :disabled="calibration <= -1" @click="calibrate(-1 / 3)">−</button>
+						<b>{{ calibration ? signed(calibration) : '±0' }}</b>
+						<button type="button" class="step" aria-label="Read a third brighter" :disabled="calibration >= 1" @click="calibrate(1 / 3)">+</button>
+					</div>
+				</details>
+				<div class="links">
+					<button type="button" class="link" @click="noteIt">{{ noted ? 'Added to the frame note' : 'Add to the frame note' }}</button>
+					<button v-if="photo" type="button" class="link" @click="clearPhoto">Clear the reading</button>
+					<button v-if="manual && isLong" type="button" class="link" @click="tab = 'long'">Reciprocity and the bulb timer</button>
+				</div>
 			</div>
+
+			<!-- How to shoot it -->
+			<section v-if="tipScene" class="tips" :aria-label="`Shooting ${tipScene.label.toLowerCase()}`">
+				<h3>Shooting {{ tipScene.label.toLowerCase() }}</h3>
+				<ul>
+					<li v-for="t in tipScene.tips" :key="t">{{ t }}</li>
+				</ul>
+			</section>
 			</template>
 
 			<!-- Long exposure: reciprocity and a bulb timer -->
@@ -129,7 +250,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 
 import { shutterSeconds } from '../../lib/lab/almanac';
 import { formatAperture, formatComp } from '../../lib/lab/inventory';
@@ -137,45 +258,56 @@ import {
 	autoExposureNote,
 	circleOfConfusion,
 	clock,
-	conditionBy,
-	CONDITIONS,
 	correctedSeconds,
 	depthOfField,
-	evAtIso,
 	formatDistance,
 	formatEv,
 	formatOff,
 	formatSeconds,
 	formatWait,
 	hyperfocal,
-	pickSettings,
+	moonAt,
 	readSky,
 	reciprocityFor,
 	sunReport,
-	type LightKey,
 } from '../../lib/lab/light';
+import { advise, dialCheck, measure, signed, zoneName } from '../../lib/lab/meter/advise';
+import { equivalent35, filmGate, FULL, lensBox, METER_OFFSET, readRegion, type Region } from '../../lib/lab/meter/luma';
+import { readPhoto, type Photo } from '../../lib/lab/meter/photo';
+import { autoScene, FILTERS, filterBy, GROUPS, sceneBy, SCENES, TONES, type LightContext, type ToneKey } from '../../lib/lab/meter/scenes';
 import { skyAt, type SkyFetch } from '../../lib/lab/sky-weather';
+import PhotoMeter from './meter/PhotoMeter.vue';
+import ZoneStrip from './meter/ZoneStrip.vue';
 
 const props = defineProps<{
 	/** The speed the roll is rated at. */
 	iso: number | null;
+	/** The film's box speed. */
+	boxIso?: number | null;
 	/** Exposure compensation for the roll, in stops (+1 gives a stop more light). */
 	comp?: number | null;
 	stock: { name: string; brand: string | null; token: string | null; process: string; format: string };
+	/** "2019-06": when the roll's film expires. */
+	expires?: string | null;
 	/** False for cameras that set exposure themselves. */
 	manual: boolean;
 	cameraKind: string | null;
+	cameraName?: string | null;
 	apertures: number[];
 	widest: number | null;
 	focal: number | null;
 	aperture: number | null;
 	shutter: string | null;
 	coords: { lat: number; lng: number } | null;
+	today?: string;
+	/** How this camera's negatives come back against the same film elsewhere (+ thin). */
+	lift?: number | null;
 }>();
-const emit = defineEmits<{ set: [aperture: number, shutter: string] }>();
+const emit = defineEmits<{ set: [aperture: number, shutter: string]; note: [text: string] }>();
 
 const DURHAM = { lat: 35.99, lng: -78.9 };
 const OPEN_KEY = 'lab-light-open';
+const CAL_KEY = 'lab-meter-cal';
 
 const open = ref(false);
 function toggle() {
@@ -197,19 +329,176 @@ const report = computed(() => sunReport(now.value, here.value.lat, here.value.ln
 const reading = computed(() => readSky(report.value.altitude, sky.value));
 const daylight = computed(() => reading.value.daylight || report.value.altitude > -0.8);
 
-const choice = ref<LightKey | 'auto'>('auto');
-const chosen = computed(() => (choice.value === 'auto' ? null : conditionBy(choice.value)));
-const ev100 = computed(() => chosen.value?.ev ?? reading.value.ev);
-const conditionLabel = computed(() => chosen.value?.label ?? reading.value.label);
-const rule = computed(() => chosen.value?.rule ?? (choice.value === 'auto' && reading.value.key ? conditionBy(reading.value.key).rule : undefined));
-const caveat = computed(() => (choice.value === 'auto' ? reading.value.caveat : null));
-const chipOrder = computed(() => {
-	const day = CONDITIONS.filter((c) => !c.night);
-	const night = CONDITIONS.filter((c) => c.night);
-	return reading.value.daylight ? [...day, ...night] : [...night, ...day];
+async function refreshSky() {
+	sky.value = await skyAt(here.value.lat, here.value.lng);
+	skyTried.value = true;
+}
+watch(() => `${here.value.lat},${here.value.lng}`, refreshSky);
+
+/* ---------- the scene ---------- */
+
+const sceneKey = ref('auto');
+const pickingScene = ref(false);
+const scene = computed(() => (sceneKey.value === 'auto' ? autoScene(reading.value, photoLight.value) : (sceneBy(sceneKey.value) ?? autoScene(reading.value, photoLight.value))));
+/** What Auto is going by: the sky, or the photo's own light. */
+const autoLabel = computed(() => (photoLight.value == null ? reading.value.label : photoLight.value < 10 ? 'low light in the photo' : 'daylight in the photo'));
+const ctx = computed<LightContext>(() => ({ sky: reading.value, altitude: report.value.altitude, moon: moonAt(now.value, here.value.lat, here.value.lng) }));
+const sceneLight = computed(() => scene.value.light(ctx.value));
+function pickScene(key: string) {
+	sceneKey.value = key;
+	pickingScene.value = false;
+	toneOverride.value = null;
+}
+/** Groups in the order the light suggests: night and indoors first after dark. */
+const groupOrder = computed(() => {
+	const order = reading.value.daylight ? GROUPS : [...GROUPS].sort((a, b) => Number(a.key === 'day' || a.key === 'low') - Number(b.key === 'day' || b.key === 'low'));
+	return order.map((g) => ({ ...g, scenes: SCENES.filter((s) => s.group === g.key) }));
+});
+/** Auto has no tips of its own: borrow the scene the sky is closest to. */
+const tipScene = computed(() => {
+	if (sceneKey.value !== 'auto') return scene.value;
+	const lit = photoLight.value;
+	if (lit != null) return sceneBy(lit >= 14.5 ? 'sun' : lit >= 13.5 ? 'hazy' : lit >= 12.5 ? 'cloudy' : lit >= 11 ? 'overcast' : lit >= 8 ? 'interior' : lit >= 6 ? 'home' : 'citynight');
+	const r = reading.value;
+	const key = r.label === 'Golden hour' ? 'golden' : !r.daylight ? (r.label === 'Night' ? 'citynight' : 'blue') : r.ev >= 14.5 ? 'sun' : r.ev >= 13.5 ? 'hazy' : r.ev >= 12.5 ? 'cloudy' : 'overcast';
+	return sceneBy(key);
+});
+
+/* ---------- a photo reading ---------- */
+
+const photo = shallowRef<Photo | null>(null);
+const readingPhoto = ref(false);
+const photoError = ref('');
+const region = ref<Region>({ kind: 'frame' });
+const toneOverride = ref<ToneKey | null>(null);
+const tone = computed<ToneKey>(() => toneOverride.value ?? scene.value.tone);
+const showZones = ref(false);
+const pm = ref<InstanceType<typeof PhotoMeter> | null>(null);
+const calibration = ref(0);
+
+async function onPhoto(e: Event) {
+	const input = e.target as HTMLInputElement;
+	const file = input.files?.[0];
+	input.value = '';
+	if (!file) return;
+	readingPhoto.value = true;
+	photoError.value = '';
+	try {
+		const next = await readPhoto(file);
+		if (photo.value) URL.revokeObjectURL(photo.value.url);
+		photo.value = next;
+		region.value = { kind: 'frame' };
+		toneOverride.value = null;
+	} catch (err) {
+		photoError.value = (err as Error).message;
+	} finally {
+		readingPhoto.value = false;
+	}
+}
+function setRegion(r: Region) {
+	region.value = r;
+}
+function clearPhoto() {
+	if (photo.value) URL.revokeObjectURL(photo.value.url);
+	photo.value = null;
+	region.value = { kind: 'frame' };
+	showZones.value = false;
+}
+function calibrate(step: number) {
+	calibration.value = Math.round(Math.max(-1, Math.min(1, calibration.value + step)) * 3) / 3;
+	try {
+		localStorage.setItem(CAL_KEY, String(calibration.value));
+	} catch {
+		// It holds for this visit.
+	}
+}
+
+/** What the film camera sees, drawn on the phone's wider picture. */
+const gate = computed(() => filmGate(props.stock.format, props.cameraName));
+const lens35 = computed(() => (props.focal ? equivalent35(props.focal, gate.value) : null));
+const lensFrame = computed(() => {
+	const p = photo.value;
+	if (!p?.exif?.focal35 || !lens35.value || !props.focal) return null;
+	const f = lensBox(p.w, p.h, p.exif.focal35, lens35.value, gate.value);
+	return { ...f, label: `${props.focal}mm` };
+});
+/** The photo's whole-frame light, when it carries the phone's exposure. */
+const photoLight = computed(() => {
+	const p = photo.value;
+	if (!p?.camera) return null;
+	return p.camera.ev + METER_OFFSET + calibration.value + readRegion(p.map, { kind: 'frame' }, lensFrame.value?.box ?? FULL).stops;
+});
+const measurement = computed(() => {
+	const p = photo.value;
+	if (!p || scene.value.rule) return null;
+	return measure(p.map, region.value, lensFrame.value?.box ?? FULL, p.camera, sceneLight.value.ev, calibration.value);
+});
+
+/* ---------- the meter ---------- */
+
+const isoGuessed = computed(() => !props.iso);
+const iso = computed(() => props.iso ?? 400);
+const filter = ref('none');
+const nudge = ref(0);
+function addNudge(n: number) {
+	nudge.value = Math.round(Math.max(-3, Math.min(3, nudge.value + n)) * 3) / 3;
+}
+// A different roll starts from its own reading.
+watch(
+	() => props.stock.name,
+	() => {
+		nudge.value = 0;
+		filter.value = 'none';
+	}
+);
+
+const advice = computed(() =>
+	advise({
+		scene: scene.value,
+		ctx: ctx.value,
+		measured: measurement.value,
+		tone: tone.value,
+		stock: props.stock,
+		boxIso: props.boxIso ?? null,
+		iso: iso.value,
+		comp: props.comp ?? 0,
+		filter: filter.value,
+		nudge: nudge.value,
+		apertures: props.apertures,
+		widest: props.widest,
+		focal35: lens35.value,
+		manual: props.manual,
+		expires: props.expires ?? null,
+		today: props.today ?? new Date().toISOString().slice(0, 10),
+		focal: props.focal,
+		lift: props.lift ?? null,
+		age: photo.value ? (now.value - photo.value.at) / 60_000 : null,
+	})
+);
+/** The reading in a few words, for the frame's note. */
+const noteText = computed(() => {
+	const a = advice.value;
+	const first = a.fixed ?? a.picks.picks[0]?.setting;
+	return `${a.base.label}, EV ${formatEv(a.base.ev)}${first ? ` → ${formatAperture(first.aperture)} ${first.shutter}` : ''}`;
+});
+const noted = ref(false);
+function noteIt() {
+	emit('note', noteText.value);
+	noted.value = true;
+	setTimeout(() => (noted.value = false), 2500);
+}
+const picks = computed(() => advice.value.picks);
+const autoNote = computed(() => autoExposureNote(advice.value.evIso, iso.value, props.widest ?? 3.5));
+const check = computed(() => dialCheck(advice.value.evIso, props.aperture, props.shutter, advice.value.film.kind === 'slide'));
+const caveat = computed(() => (sceneKey.value === 'auto' && !photo.value ? reading.value.caveat : null));
+
+const conditionLabel = computed(() => (photo.value && !scene.value.rule ? 'Photo reading' : sceneKey.value === 'auto' ? reading.value.label : scene.value.label));
+const evLine = computed(() => {
+	const how = advice.value.rule ? `Sunny 16: ${advice.value.rule} at 1/${iso.value}` : measurement.value ? (measurement.value.kind === 'frame' ? 'whole frame' : 'metered') : 'at ISO 100';
+	return `${how} · ISO ${iso.value}${isoGuessed.value ? ' (guessed)' : ''}${props.comp ? ` · settings include your ${formatComp(props.comp)}` : ''}`;
 });
 const whyLine = computed(() => {
-	if (choice.value !== 'auto') return `Metering for ${conditionLabel.value.toLowerCase()}. Auto goes back to the sky’s reading.`;
+	if (sceneKey.value !== 'auto') return `${scene.value.label}: from the ${sceneLight.value.from}. Auto goes back to the sky’s reading.`;
 	const age = sky.value ? Math.round((Date.now() - sky.value.at) / 60_000) : null;
 	const weather = sky.value
 		? age && age > 1
@@ -220,44 +509,42 @@ const whyLine = computed(() => {
 			: 'checking the weather…';
 	return `${reading.value.why} · ${weather}`;
 });
-
-async function refreshSky() {
-	sky.value = await skyAt(here.value.lat, here.value.lng);
-	skyTried.value = true;
-}
-watch(() => `${here.value.lat},${here.value.lng}`, refreshSky);
-
-/* ---------- the meter ---------- */
-
-const isoGuessed = computed(() => !props.iso);
-const iso = computed(() => props.iso ?? 400);
-// Compensation shifts what the meter aims for: +1 asks for a stop more light.
-const ev = computed(() => evAtIso(ev100.value, iso.value) - (props.comp ?? 0));
-const picks = computed(() => pickSettings(ev.value, props.apertures));
-const autoNote = computed(() => autoExposureNote(ev.value, iso.value, props.widest ?? 3.5));
-const summaryB = computed(() => {
-	if (!props.manual) return autoNote.value.text;
-	const first = picks.value.picks[0];
-	if (first) return `EV ${formatEv(ev100.value)} · ${formatAperture(first.setting.aperture)} at ${first.setting.shutter} for ISO ${iso.value}`;
-	if (picks.value.slow) return `EV ${formatEv(ev100.value)} · ${formatAperture(picks.value.slow.aperture)} needs ${formatSeconds(picks.value.slow.seconds)}`;
-	return `EV ${formatEv(ev100.value)} for ISO ${iso.value}`;
+const sourceLine = computed(() => {
+	const p = photo.value;
+	const m = measurement.value;
+	if (!p || !m) return '';
+	const x = p.exif;
+	const parts: string[] = [];
+	if (m.from === 'settings' && x?.exposureTime && x.fNumber && x.iso)
+		parts.push(`Phone at ${x.exposureTime < 0.4 ? `1/${Math.round(1 / x.exposureTime)}` : formatSeconds(x.exposureTime)}, f/${Math.round(x.fNumber * 10) / 10}, ISO ${Math.round(x.iso)}`);
+	else if (m.from === 'brightness') parts.push('From the phone’s light reading');
+	else parts.push(`No exposure data in this photo: pinned to the ${sceneLight.value.from}`);
+	if (lensFrame.value) parts.push(lensFrame.value.wider ? `your ${props.focal}mm sees wider than the phone` : `${props.focal}mm frame drawn`);
+	if (calibration.value) parts.push(`calibrated ${signed(calibration.value)}`);
+	return parts.join(' · ');
 });
+const tag = computed(() => {
+	const m = measurement.value;
+	if (!m || m.kind === 'frame') return '';
+	const at = advice.value.marks.find((k) => k.key === 'metered')?.at ?? 0;
+	return `EV ${formatEv(m.ev)}${m.bound === 'at-least' ? '+' : m.bound === 'at-most' ? '−' : ''} · ${zoneName(at)}`;
+});
+const zones = computed(() => (measurement.value ? { offset: measurement.value.level - advice.value.e100, lat: { toe: advice.value.film.toe, shoulder: advice.value.film.shoulder } } : null));
 
-/** How the dials as set compare with the reading. */
-const check = computed(() => {
-	const t = shutterSeconds(props.shutter);
-	if (props.aperture == null || t == null) return null;
-	const over = Math.round((ev.value - Math.log2((props.aperture * props.aperture) / t)) * 3) / 3;
-	if (Math.abs(over) < 0.34) return { tone: 'ok', text: 'right on the reading.' };
-	const stops = `${formatEv(Math.abs(over))} ${Math.abs(over) > 1.2 ? 'stops' : 'stop'}`;
-	if (over > 0) return over <= 2.4 ? { tone: 'ok', text: `${stops} over, fine on negative film.` } : { tone: 'warn', text: `${stops} over: close down or speed up.` };
-	return { tone: over >= -0.7 ? 'warn' : 'bad', text: `${stops} under: open up or slow down.` };
+const summaryB = computed(() => {
+	const ev = formatEv(advice.value.base.ev);
+	if (!props.manual) return autoNote.value.text;
+	if (advice.value.fixed) return `${formatAperture(advice.value.fixed.aperture)} on bulb, tripod`;
+	const first = picks.value.picks[0];
+	if (first) return `EV ${ev} · ${formatAperture(first.setting.aperture)} at ${first.setting.shutter} for ISO ${iso.value}`;
+	if (picks.value.slow) return `EV ${ev} · ${formatAperture(picks.value.slow.aperture)} needs ${formatSeconds(picks.value.slow.seconds)}`;
+	return `EV ${ev} for ISO ${iso.value}`;
 });
 
 /* ---------- long exposure ---------- */
 
 const METERED = [1, 2, 4, 8, 15, 30, 60, 120, 240, 480, 960];
-const isLong = computed(() => props.shutter === 'B' || (shutterSeconds(props.shutter) ?? 0) >= 1 || (picks.value.slow?.seconds ?? 0) > 0.5);
+const isLong = computed(() => props.shutter === 'B' || (shutterSeconds(props.shutter) ?? 0) >= 1 || (picks.value.slow?.seconds ?? 0) > 0.5 || !!advice.value.fixed);
 const meteredIndex = ref(3);
 const metered = computed(() => METERED[meteredIndex.value]);
 const recip = computed(() => reciprocityFor(props.stock));
@@ -378,8 +665,10 @@ let clockTimer: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
 	try {
 		open.value = localStorage.getItem(OPEN_KEY) === '1';
+		const cal = Number(localStorage.getItem(CAL_KEY));
+		if (Number.isFinite(cal)) calibration.value = Math.max(-1, Math.min(1, cal));
 	} catch {
-		// Closed by default.
+		// Closed by default, uncalibrated.
 	}
 	refreshSky();
 	clockTimer = setInterval(() => (now.value = Date.now()), 30_000);
@@ -390,6 +679,7 @@ onBeforeUnmount(() => {
 	clearInterval(tick);
 	window.removeEventListener('online', refreshSky);
 	audio?.close();
+	if (photo.value) URL.revokeObjectURL(photo.value.url);
 });
 </script>
 
@@ -571,6 +861,10 @@ onBeforeUnmount(() => {
 	font-family: var(--font-mono);
 	font-size: 0.95rem;
 	color: var(--shoot-ink);
+}
+
+/* Aperture and shutter each stay whole; a narrow card puts the shutter under. */
+.pv > span {
 	white-space: nowrap;
 }
 
@@ -830,6 +1124,402 @@ h3 {
 
 .day li.past {
 	opacity: 0.45;
+}
+
+/* ---------- scene ---------- */
+
+.scene-row {
+	display: flex;
+	gap: 0.4rem;
+	align-items: stretch;
+}
+
+.scene-btn {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	gap: 0.6rem;
+	min-width: 0;
+	min-height: 2.75rem;
+	padding: 0.3rem 0.9rem;
+	border: 1px solid var(--shoot-line);
+	border-radius: 999px;
+	background: var(--shoot-bg);
+	color: var(--shoot-ink);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.scene-btn .lbl,
+.lbl {
+	font-size: 0.72rem;
+	letter-spacing: 0.06em;
+	font-variant-caps: all-small-caps;
+	color: var(--shoot-meta);
+}
+
+.scene-btn b {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 500;
+}
+
+.scene-btn[aria-expanded='true'] .chev {
+	rotate: 225deg;
+	translate: 0 0.1rem;
+}
+
+.scene-grid {
+	display: grid;
+	gap: 0.7rem;
+	padding: 0.75rem;
+	border-radius: 0.75rem;
+	background: var(--shoot-bg);
+}
+
+.scene-grid h4 {
+	margin-bottom: 0.3rem;
+	font-size: 0.72rem;
+	font-weight: 400;
+	letter-spacing: 0.08em;
+	font-variant-caps: all-small-caps;
+	color: var(--shoot-meta);
+}
+
+.tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr));
+	gap: 0.35rem;
+}
+
+.tile {
+	min-height: 2.75rem;
+	padding: 0.35rem 0.7rem;
+	border: 1px solid var(--shoot-line);
+	border-radius: 0.55rem;
+	background: var(--shoot-panel);
+	color: var(--shoot-body);
+	font: inherit;
+	font-size: var(--text-sm);
+	text-align: left;
+	cursor: pointer;
+}
+
+.tile[aria-pressed='true'] {
+	border-color: var(--shoot-btn);
+	background: var(--shoot-btn);
+	color: var(--shoot-btn-ink);
+}
+
+/* ---------- take a reading ---------- */
+
+.take {
+	display: flex;
+	gap: 0.5rem;
+	align-items: stretch;
+}
+
+.take-btn,
+.take-alt {
+	position: relative;
+	display: flex;
+	align-items: center;
+	border-radius: 0.8rem;
+	cursor: pointer;
+}
+
+.take-btn {
+	flex: 1;
+	gap: 0.75rem;
+	min-height: 3.6rem;
+	padding: 0.55rem 0.9rem;
+	background: var(--shoot-btn);
+	color: var(--shoot-btn-ink);
+}
+
+.take-btn svg {
+	flex: none;
+	width: 1.6rem;
+	height: 1.6rem;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.6;
+	stroke-linejoin: round;
+}
+
+.take-btn.busy {
+	opacity: 0.7;
+	cursor: progress;
+}
+
+.take-text {
+	display: grid;
+	gap: 0.05rem;
+}
+
+.take-text b {
+	font-weight: 600;
+}
+
+.take-text small {
+	font-size: 0.72rem;
+	opacity: 0.85;
+}
+
+.take-alt {
+	flex: none;
+	padding: 0 0.9rem;
+	border: 1px solid var(--shoot-line);
+	color: var(--shoot-ink);
+	font-size: var(--text-sm);
+}
+
+.take-btn:focus-within,
+.take-alt:focus-within {
+	outline: 2px solid var(--shoot-mark);
+	outline-offset: 2px;
+}
+
+/* The file inputs stay in the page (keyboard, screen readers) but out of sight. */
+.file {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+}
+
+/* ---------- the reading ---------- */
+
+.reading {
+	display: grid;
+	gap: 0.6rem;
+}
+
+.prompt {
+	font-size: var(--text-sm);
+	line-height: 1.4;
+	color: var(--shoot-ink);
+}
+
+.finders,
+.tones,
+.bracket {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem;
+}
+
+.finders .chip {
+	min-height: 2.4rem;
+}
+
+.tones {
+	gap: 0.3rem;
+}
+
+.tones .chip {
+	min-height: 2.25rem;
+	padding: 0.2rem 0.7rem;
+	font-size: 0.8rem;
+}
+
+.call {
+	font-size: var(--text-sm);
+	line-height: 1.45;
+	color: var(--shoot-ink);
+}
+
+.notes {
+	display: grid;
+	gap: 0.45rem;
+	list-style: none;
+	padding: 0;
+}
+
+.notes li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.3rem 0.6rem;
+	padding-left: 0.75rem;
+	border-left: 2px solid var(--shoot-line);
+	font-size: var(--text-sm);
+	line-height: 1.45;
+}
+
+.notes li.ok {
+	border-color: var(--shoot-btn);
+}
+
+.notes li.warn {
+	border-color: var(--lab-edge-text, var(--shoot-ink));
+	color: var(--shoot-ink);
+}
+
+.notes li.bad {
+	border-color: var(--shoot-mark);
+	color: var(--shoot-ink);
+}
+
+.fix {
+	min-height: 2.2rem;
+	padding: 0.2rem 0.75rem;
+	border: 1px solid var(--shoot-ink);
+	border-radius: 999px;
+	background: none;
+	color: var(--shoot-ink);
+	font: inherit;
+	font-size: 0.78rem;
+	cursor: pointer;
+}
+
+.bracket .chip {
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+}
+
+.bracket .chip b {
+	font-weight: 600;
+	margin-right: 0.25rem;
+}
+
+.chip.static {
+	display: inline-flex;
+	align-items: center;
+	cursor: default;
+}
+
+.chain,
+.cal {
+	font-size: var(--text-sm);
+}
+
+.chain summary,
+.cal summary {
+	min-height: 2.4rem;
+	display: flex;
+	align-items: center;
+	color: var(--shoot-ink);
+	cursor: pointer;
+}
+
+.chain ol {
+	display: grid;
+	gap: 0.3rem;
+	list-style: none;
+	padding: 0.25rem 0 0;
+}
+
+.chain li {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	font-size: 0.78rem;
+}
+
+.chain li small {
+	display: block;
+	color: var(--shoot-meta);
+	font-size: 0.7rem;
+}
+
+.chain li b {
+	flex: none;
+	font-family: var(--font-mono);
+	font-weight: 400;
+	color: var(--shoot-ink);
+	text-align: right;
+}
+
+.chain li.total {
+	padding-top: 0.3rem;
+	border-top: 1px solid var(--shoot-line);
+}
+
+.chain li.total {
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.chain li.total b {
+	font-weight: 600;
+	text-align: left;
+}
+
+.adjust {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.6rem 1rem;
+}
+
+.adjust .stepper b,
+.cal .stepper b {
+	min-width: 3rem;
+}
+
+.filter {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.sel {
+	min-height: 2.6rem;
+	max-width: 11rem;
+	padding: 0.3rem 0.6rem;
+	border: 1px solid var(--shoot-line);
+	border-radius: 0.5rem;
+	background: var(--shoot-bg);
+	color: var(--shoot-ink);
+	font: inherit;
+	font-size: var(--text-sm);
+}
+
+.cal p {
+	margin-bottom: 0.4rem;
+	color: var(--shoot-body);
+	line-height: 1.45;
+}
+
+.links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 1.25rem;
+}
+
+/* ---------- tips ---------- */
+
+.tips {
+	display: grid;
+	gap: 0.4rem;
+	padding: 0.75rem 0.9rem;
+	border-radius: 0.75rem;
+	background: var(--shoot-bg);
+}
+
+.tips h3 {
+	font-family: inherit;
+	font-size: 0.8rem;
+	text-transform: none;
+	letter-spacing: 0.06em;
+	font-variant-caps: all-small-caps;
+}
+
+.tips ul {
+	display: grid;
+	gap: 0.35rem;
+	padding-left: 1.1rem;
+	font-size: var(--text-sm);
+	line-height: 1.45;
 }
 
 @media (prefers-reduced-motion: reduce) {
