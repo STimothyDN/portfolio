@@ -1,0 +1,275 @@
+{
+  "title": "Hurricanesgame",
+  "developed": "2026-11-12",
+  "camera": "ricohaf40",
+  "stock": "cinestill800t",
+  "lab": "bellows",
+  "photos": [
+    {
+      "filename": "timothynav004147-R1-001.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 4,
+      "tone": [0.13, 0.41, 0.92]
+    },
+    {
+      "filename": "timothynav004147-R1-002.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 3,
+      "tone": [0.09, 0.4, 0.91]
+    },
+    {
+      "filename": "timothynav004147-R1-003.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.16, 0.51, 0.98]
+    },
+    {
+      "filename": "timothynav004147-R1-004.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.13, 0.45, 0.93]
+    },
+    {
+      "filename": "timothynav004147-R1-005.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.11, 0.45, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-006.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 5,
+      "tone": [0.13, 0.36, 0.93]
+    },
+    {
+      "filename": "timothynav004147-R1-007.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 4,
+      "tone": [0.13, 0.25, 0.9]
+    },
+    {
+      "filename": "timothynav004147-R1-008.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 4,
+      "tone": [0.11, 0.36, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-009.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 3,
+      "tone": [0.12, 0.36, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-010.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 3,
+      "tone": [0.08, 0.29, 0.94]
+    },
+    {
+      "filename": "timothynav004147-R1-011.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 5,
+      "tone": [0.14, 0.37, 0.97]
+    },
+    {
+      "filename": "timothynav004147-R1-012.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.14, 0.36, 0.96]
+    },
+    {
+      "filename": "timothynav004147-R1-013.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 3,
+      "tone": [0.14, 0.37, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-014.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.17, 0.36, 0.97]
+    },
+    {
+      "filename": "timothynav004147-R1-015.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 4,
+      "tone": [0.12, 0.3, 0.89]
+    },
+    {
+      "filename": "timothynav004147-R1-016.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 2,
+      "tone": [0.14, 0.33, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-017.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.12, 0.35, 0.96]
+    },
+    {
+      "filename": "timothynav004147-R1-018.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 4,
+      "tone": [0.1, 0.31, 0.94]
+    },
+    {
+      "filename": "timothynav004147-R1-019.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 2,
+      "tone": [0.09, 0.31, 0.93]
+    },
+    {
+      "filename": "timothynav004147-R1-020.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.12, 0.34, 0.94]
+    },
+    {
+      "filename": "timothynav004147-R1-021.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 4,
+      "tone": [0.08, 0.3, 0.93]
+    },
+    {
+      "filename": "timothynav004147-R1-022.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 4,
+      "tone": [0.09, 0.31, 0.94]
+    },
+    {
+      "filename": "timothynav004147-R1-023.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 3,
+      "tone": [0.09, 0.3, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-024.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 4,
+      "tone": [0.13, 0.34, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-025.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 4,
+      "tone": [0.1, 0.33, 0.94]
+    },
+    {
+      "filename": "timothynav004147-R1-026.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 3,
+      "tone": [0.15, 0.37, 0.96]
+    },
+    {
+      "filename": "timothynav004147-R1-027.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 4,
+      "tone": [0.13, 0.35, 0.96]
+    },
+    {
+      "filename": "timothynav004147-R1-028.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 2,
+      "tone": [0.12, 0.35, 0.96]
+    },
+    {
+      "filename": "timothynav004147-R1-029.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 5,
+      "tone": [0.13, 0.41, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-030.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 4,
+      "tone": [0.17, 0.32, 0.94]
+    },
+    {
+      "filename": "timothynav004147-R1-031.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 4,
+      "tone": [0.18, 0.35, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-032.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.12, 0.29, 0.97]
+    },
+    {
+      "filename": "timothynav004147-R1-033.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 3,
+      "tone": [0.13, 0.3, 0.95]
+    },
+    {
+      "filename": "timothynav004147-R1-034.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.08, 0.27, 0.94]
+    },
+    {
+      "filename": "timothynav004147-R1-035.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.13, 0.29, 0.93]
+    },
+    {
+      "filename": "timothynav004147-R1-036.jpg",
+      "width": 3649,
+      "height": 5444,
+      "priority": 3,
+      "tone": [0.08, 0.26, 0.9]
+    },
+    {
+      "filename": "timothynav004147-R1-037.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.09, 0.21, 0.89]
+    },
+    {
+      "filename": "timothynav004147-R1-038.jpg",
+      "width": 5444,
+      "height": 3649,
+      "priority": 2,
+      "tone": [0.04, 0.23, 0.96]
+    }
+  ]
+}
