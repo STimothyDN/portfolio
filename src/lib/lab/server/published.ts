@@ -8,6 +8,10 @@
  * in `npm run dev`, against the local file). A plain local `npm run build`
  * skips it so it never touches production; FILM_LAB_BUILD_DATA=1 opts in.
  * On Vercel it reads production. Any failure builds the desk without it.
+ *
+ * With FILM_LAB_API_URL set (https://lab.timo3.dev/api) the three reads below
+ * are one request to the Film Labs API instead of the database: the logbook's
+ * home is moving to its own project, and the portfolio only asks it.
  */
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 
@@ -35,15 +39,47 @@ async function guarded<T>(what: string, empty: T, fn: (config: LabConfig) => Pro
 	}
 }
 
-export const publishedExposures = (desk: { id: string; files: string[] }[]): Promise<PublishedExposures> =>
-	guarded('what the logbook shares', new Map(), (config) => read(config, desk));
+/* ---------- from the Film Labs API ---------- */
+
+const API = ((import.meta.env.FILM_LAB_API_URL as string | undefined) ?? process.env.FILM_LAB_API_URL)?.replace(/\/$/, '');
+
+interface DeskShare {
+	exposures: Record<string, Record<string, PublicExposure>>;
+	marks: Record<string, Record<string, number>>;
+	loaded: LoadedNow[];
+}
+
+let shared: Promise<DeskShare | null> | undefined;
+
+/** One request per build (per page load in dev) for everything the logbook shares; null if it can't be had. */
+function fromApi(desk?: { id: string; files: string[] }[]): Promise<DeskShare | null> {
+	if (shared && !import.meta.env.DEV) return shared;
+	return (shared = (async () => {
+		try {
+			const res = await fetch(`${API}/v1/public/desk-share`, {
+				...(desk ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ desk }) } : {}),
+				signal: AbortSignal.timeout(8000),
+			});
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			return (await res.json()) as DeskShare;
+		} catch (e) {
+			console.warn(`[film lab] Couldn't ask Film Labs what the logbook shares (${(e as Error).message}); building the film desk without it.`);
+			return null;
+		}
+	})());
+}
+
+const nested = <V>(o: Record<string, Record<string, V>> | undefined) => new Map(Object.entries(o ?? {}).map(([k, v]) => [k, new Map(Object.entries(v))]));
+
+export const publishedExposures = async (desk: { id: string; files: string[] }[]): Promise<PublishedExposures> =>
+	API ? nested((await fromApi(desk))?.exposures) : guarded('what the logbook shares', new Map(), (config) => read(config, desk));
 
 /** Desk roll id → scan filename → the owner's grease-pencil mark (1–5, -1 a reject). */
 export type PublishedMarks = Map<string, Map<string, number>>;
 
 /** The owner's marks from the lab's contact sheets: they set each print's place in the desk's pile. */
-export const publishedMarks = (): Promise<PublishedMarks> =>
-	guarded('the contact-sheet marks', new Map(), async (config) => {
+export const publishedMarks = async (): Promise<PublishedMarks> =>
+	API ? nested((await fromApi())?.marks) : guarded('the contact-sheet marks', new Map(), async (config) => {
 		const d = await getDb(config);
 		const [owner] = await d.select({ id: user.id }).from(user).where(eq(user.role, 'owner')).limit(1);
 		if (!owner) return new Map();
@@ -66,8 +102,8 @@ export interface LoadedNow {
 }
 
 /** What's in the owner's cameras, if they chose to show it on the desk. */
-export const publishedLoaded = (): Promise<LoadedNow[]> =>
-	guarded('what’s loaded', [], async (config) => {
+export const publishedLoaded = async (): Promise<LoadedNow[]> =>
+	API ? ((await fromApi())?.loaded ?? []) : guarded('what’s loaded', [], async (config) => {
 		const d = await getDb(config);
 		const [owner] = await d.select({ id: user.id }).from(user).where(eq(user.role, 'owner')).limit(1);
 		if (!owner) return [];

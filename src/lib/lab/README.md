@@ -480,7 +480,27 @@ lab as before. Test: `node scripts/lab-harness/run.mjs guest`.
 | `scripts/lab-harness/`                | browser tests over CDP (`node scripts/lab-harness/run.mjs bench`) |
 | `public/photography/lab/`             | service worker, web app manifest, icons                      |
 
+## Moving out
+
+Film Lab is becoming its own project: the `film-labs` repo (API at `lab.timo3.dev/api`,
+native apps, and later the web app). Until its web app is ready, the pages here keep
+running on the same database, **bug fixes only**. What that means here:
+
+- **The schema belongs to film-labs now.** New tables and columns are added there
+  (`packages/server/drizzle/`) and migrated to production from there. Don't run
+  `drizzle-kit generate` in this repo; `npm run db:migrate` still sets up the local
+  development database with the tables these pages know.
+- **The film desk asks the API.** With `FILM_LAB_API_URL` set, `published.ts` makes one
+  request to `/v1/public/desk-share` instead of reading the database, and
+  `upload-film --roll` uses the API too (with `FILM_LAB_API_TOKEN`). Unset, both work as
+  described below.
+- **`/photography/desk.json`** publishes the desk's rolls and scans for Film Labs to read.
+
 ## Changing the schema
+
+**See *Moving out* above: schema changes now happen in the film-labs repo.** What
+follows is how it worked here.
+
 
 Edit `schema.ts`, run `npm run db:generate`, read the new SQL in `drizzle/`, then run
 `npm run db:migrate` (local) and `npm run db:migrate:prod` (Turso; it reads

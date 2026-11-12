@@ -14,9 +14,7 @@
     "measure-film-tone": "node --env-file=.env scripts/measure-film-tone.mjs",
     "generate-caption": "node --env-file=.env scripts/generate-caption.mjs",
     "sync-work": "node --env-file-if-exists=.env scripts/sync-work.mjs",
-    "db:generate": "drizzle-kit generate",
     "db:migrate": "mkdir -p .data && drizzle-kit migrate",
-    "db:migrate:prod": "DRIZZLE_ENV=prod drizzle-kit migrate",
     "db:studio": "mkdir -p .data && drizzle-kit studio",
     "test": "vitest run"
   },
