@@ -1,16 +1,132 @@
-import { type CollectionEntry, getCollection } from 'astro:content';
-
-import labels from '../data/film-labels.json';
 import { frameExposure, negativeProfileKey } from '../components/film/negative';
 import type { FilmPhotoData, FilmRollData } from '../components/film/types';
+import type { PublicExposure } from '../lib/lab/alignment';
 import type { PublishedExposures } from '../lib/lab/server/published';
 
-export type FilmRoll = CollectionEntry<'film'>;
+/*
+ * The film desk comes from Film Labs, which owns it: every roll and scan, the
+ * display names of cameras, stocks and labs, and what the logbook shares. One
+ * request to GET /v1/public/desk (FILM_LAB_API_URL, default
+ * https://lab.timo3.dev/api) per build; Film Labs rebuilds the site when the
+ * desk changes. In `npm run dev` it's asked again every few seconds, so a
+ * local Film Labs (FILM_LAB_API_URL=http://localhost:4321/api) shows edits live.
+ */
+
+/** A scan on a roll. `priority` sets how close to the top of the pile a print lands (1–5); `tone` is the scan's measured black point, key and white point. */
+export interface FilmPhoto {
+	filename: string;
+	width?: number;
+	height?: number;
+	priority: number;
+	caption?: string;
+	tone?: [number, number, number];
+}
+
+/** One roll on the desk. camera/stock/lab are tokens; their names come with the desk (`filmLabel`). */
+export interface FilmRoll {
+	id: string;
+	data: {
+		title: string;
+		developed: Date;
+		camera: string;
+		stock: string;
+		lab: string;
+		description?: string;
+		/** CDN folder holding the scans; defaults to `film/<roll id>`. */
+		cdnFolder?: string;
+		photos: FilmPhoto[];
+	};
+}
+
 type LabelKind = 'cameras' | 'stocks' | 'labs';
+export type FilmLabels = Record<LabelKind | 'brands', Record<string, string>>;
+
+/** "In the Minolta X-700: Kodak Portra 400, 22 of 36", for each loaded camera the owner shows. */
+export interface LoadedNow {
+	camera: string;
+	stock: string;
+	frames: number;
+	exposures: number;
+}
+
+interface PublicDesk {
+	cdnBase: string;
+	labels: FilmLabels;
+	rolls: (Omit<FilmRoll['data'], 'developed'> & { id: string; developed: string })[];
+	exposures: Record<string, Record<string, PublicExposure>>;
+	marks: Record<string, Record<string, number>>;
+	loaded: LoadedNow[];
+}
+
+export interface FilmDesk {
+	/** False when Film Labs couldn't be reached: everything below is empty. */
+	ok: boolean;
+	rolls: FilmRoll[];
+	labels: FilmLabels;
+	exposures: PublicDesk['exposures'];
+	marks: PublicDesk['marks'];
+	loaded: LoadedNow[];
+}
+
+const API = (
+	(import.meta.env.FILM_LAB_API_URL as string | undefined) ??
+	(typeof process !== 'undefined' ? process.env.FILM_LAB_API_URL : undefined) ??
+	'https://lab.timo3.dev/api'
+).replace(/\/$/, '');
+
+const EMPTY: FilmDesk = { ok: false, rolls: [], labels: { cameras: {}, stocks: {}, labs: {}, brands: {} }, exposures: {}, marks: {}, loaded: [] };
+// Once per build; on the server (the old lab's pages) every minute; in dev every few seconds.
+const FRESH_FOR_MS = import.meta.env.DEV ? 3_000 : 60_000;
+let cached: { at: number; desk: Promise<FilmDesk> } | undefined;
+/** The last desk that loaded, for when Film Labs doesn't answer. */
+let lastGood: FilmDesk | undefined;
+let labels: FilmLabels = EMPTY.labels;
+
+async function fetchDesk(): Promise<FilmDesk> {
+	try {
+		const res = await fetch(`${API}/v1/public/desk`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(15_000) });
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		const raw = (await res.json()) as PublicDesk;
+		const desk: FilmDesk = {
+			ok: true,
+			rolls: raw.rolls.map(({ id, developed, ...data }) => ({ id, data: { ...data, developed: new Date(`${developed.slice(0, 10)}T00:00:00Z`) } })),
+			labels: { cameras: {}, stocks: {}, labs: {}, brands: {}, ...raw.labels },
+			exposures: raw.exposures ?? {},
+			marks: raw.marks ?? {},
+			loaded: raw.loaded ?? [],
+		};
+		lastGood = desk;
+		labels = desk.labels;
+		return desk;
+	} catch (e) {
+		console.warn(`[film desk] Couldn't read the film desk from ${API} (${(e as Error).message}).`);
+		return lastGood ?? EMPTY;
+	}
+}
+
+/** The film desk from Film Labs. Never throws: `ok` says whether it loaded (the film page refuses to build without it). */
+export function getFilmDesk(): Promise<FilmDesk> {
+	if (!cached || Date.now() - cached.at > FRESH_FOR_MS) cached = { at: Date.now(), desk: fetchDesk() };
+	return cached.desk;
+}
+
+/** Every roll on the desk, newest development first. */
+export async function getFilmRolls(): Promise<FilmRoll[]> {
+	return (await getFilmDesk()).rolls;
+}
+
+/** The desk's display names for camera, stock and lab tokens. */
+export async function getFilmLabels(): Promise<FilmLabels> {
+	return (await getFilmDesk()).labels;
+}
+
+export function rollFolder(roll: FilmRoll): string {
+	return roll.data.cdnFolder ?? `film/${roll.id}`;
+}
 
 /**
- * Fallback display name for a folder token with no entry in film-labels.json:
- * splits hyphens, camelCase and letter/digit runs, then title-cases
+ * Fallback display name for a token with no name on the desk: splits hyphens,
+ * camelCase and letter/digit runs, then title-cases
  * ("portra400" → "Portra 400", "downtown-durham" → "Downtown Durham").
  */
 export function humanizeToken(token: string): string {
@@ -28,13 +144,14 @@ export function humanizeToken(token: string): string {
 const MONOCHROME = /\b(hp5|fp4|delta|pan ?f|tri-?x|t-?max|kentmere|fomapan|acros|ortho|retro \d|xp2|double-x|lady ?grey)\b/i;
 export const isMonochrome = (stockLabel: string) => MONOCHROME.test(stockLabel);
 
+/** A token's display name (from the last desk loaded: call `getFilmRolls` or `getFilmLabels` first). */
 export function filmLabel(kind: LabelKind, key: string): string {
-	return (labels[kind] as Record<string, string>)[key] ?? humanizeToken(key);
+	return labels[kind][key] ?? humanizeToken(key);
 }
 
 // A brand is the first word of the display name — with Fuji's product lines
 // counted as Fujifilm, Lomo as Lomography, and a few two-word brands — unless
-// film-labels.json names it outright (for stocks shown without their brand,
+// the desk names it outright (for stocks shown without their brand,
 // like Mr. Negative's or Lomography's).
 const BRAND_ALIASES: Record<string, string> = {
 	fuji: 'Fujifilm',
@@ -45,23 +162,13 @@ const BRAND_ALIASES: Record<string, string> = {
 const MULTIWORD_BRANDS = ['Mr. Negative'];
 
 export function filmBrand(kind: 'cameras' | 'stocks', key: string): string {
-	const named = (labels.brands as Record<string, string> | undefined)?.[key];
+	const named = labels.brands[key];
 	if (named) return named;
 	const label = filmLabel(kind, key).trim();
 	const multi = MULTIWORD_BRANDS.find((b) => label.toLowerCase().startsWith(b.toLowerCase()));
 	if (multi) return multi;
 	const first = label.split(/\s+/)[0];
 	return BRAND_ALIASES[first.toLowerCase()] ?? first;
-}
-
-/** Every roll the site should show, newest development first. Demo rolls are dev-only. */
-export async function getFilmRolls(): Promise<FilmRoll[]> {
-	const rolls = await getCollection('film', (roll) => !(import.meta.env.PROD && roll.data.demo));
-	return rolls.sort((a, b) => b.data.developed.valueOf() - a.data.developed.valueOf());
-}
-
-export function rollFolder(roll: FilmRoll): string {
-	return roll.data.cdnFolder ?? `film/${roll.id}`;
 }
 
 const PREVIEW_FRAMES = 3;

@@ -457,7 +457,7 @@ export async function stepChoices(d: LabDb, userId: string, owner: boolean): Pro
 	};
 }
 
-/* ---------- seeding from film-labels.json ---------- */
+/* ---------- seeding from the film desk's names ---------- */
 
 const STANDARD_ISO = [25, 50, 64, 80, 100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1000, 1600, 3200, 6400];
 const ISO_OVERRIDES: Record<string, number> = { lomocolor92: 400, lomocolor92sunkissed: 400 };
@@ -499,7 +499,7 @@ export function sameName(a: string, b: string, brandA?: string | null, brandB?: 
 type Named = { token: string | null; name: string; brand?: string | null };
 
 /**
- * film-labels.json entries the logbook doesn't have yet, per kind. A row you
+ * The film desk's names the logbook doesn't have yet, per kind. A row you
  * added by hand with the same name counts as having it (the sync adopts it).
  */
 export function labelGaps(
@@ -521,7 +521,7 @@ export function labelGaps(
 }
 
 /**
- * What's safe to say about the cameras already named in film-labels.json.
+ * What's safe to say about the cameras the film desk already names.
  * Anything not listed is left blank to fill in on the Gear page.
  */
 const KNOWN_CAMERAS: Record<string, Partial<{ kind: string; mount: string; battery: string; fixedLens: string }>> = {

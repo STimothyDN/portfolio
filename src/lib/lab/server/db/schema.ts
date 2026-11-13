@@ -165,7 +165,7 @@ export const filmStock = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		userId: owner(),
-		/** film-labels.json key (portra400): ties the stock to the public film desk. */
+		/** The film desk's token for it (portra400): ties the stock to the public film desk. */
 		token: text('token'),
 		brand: text('brand').notNull(),
 		name: text('name').notNull(),
@@ -332,7 +332,7 @@ export const roll = sqliteTable(
 		devRun: text('dev_run'),
 		// Home
 		negativesAt: text('negatives_at'),
-		/** The roll's id on the public film desk (src/content/film/<id>.json). */
+		/** The roll's id on the public film desk (owned by Film Labs). */
 		publicRollId: text('public_roll_id'),
 		/** Rewound mid-roll after this frame; reloading winds past it. */
 		rewoundAtFrame: integer('rewound_at_frame'),

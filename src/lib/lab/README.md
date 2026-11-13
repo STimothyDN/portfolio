@@ -5,7 +5,7 @@ inventory (phase 2: cameras, lenses, film stocks, labs, and every roll from the 
 the negative binder), shooting mode on the phone (phase 3: per-frame logging that works
 with no signal, QR roll labels, rewinding part-way), and the way back to the portfolio
 (phase 4: logged settings in the public film desk's lightbox, a Publish button, and
-`upload-film --roll`), and insight (phase 5: a light meter, reciprocity timer and zone
+`npm run ingest --roll` in film-labs), and insight (phase 5: a light meter, reciprocity timer and zone
 focus on the phone; search across every frame; what your scans say about your cameras,
 film and labs; cost per frame; pace and restock forecasts; and a "loaded now" line on the
 film desk).
@@ -160,13 +160,13 @@ icon. On iPhone, a home-screen app keeps its own sign-in, so sign in once inside
 Bitwarden passkey works there too).
 
 **Bringing in the film desk.** On an empty logbook the light table offers to import the
-public film desk: every camera, stock and lab in `film-labels.json` becomes gear, and every
+public film desk: every camera, stock and lab the desk names becomes gear, and every
 desk roll becomes a roll filed under "Negatives home", linked to its scans (in develop
 order, R-001 onward). Running it again only adds what's new. For a roll you logged before
 uploading its scans, link them from the roll's page (or in the "Scans arrived" step) instead
 of importing, which would make a duplicate.
 
-**New names on the desk.** When `film-labels.json` gains a camera, stock or lab (say
+**New names on the desk.** When the desk gains a camera, stock or lab name (say
 CineStill 800T), the Fridge page offers to add it to your logbook. A stock you already
 added by hand with the same name is matched to it rather than duplicated.
 
@@ -283,29 +283,15 @@ step 6 of *Going live*), and the desk shows the change a minute or two later. Yo
 publish once a minute. In `npm run dev` there's nothing to publish: the desk reads the
 local logbook on every page load.
 
-`src/lib/lab/server/published.ts` does the reading while `/photography/` is built. On
-Vercel it reads production. A plain local `npm run build` skips it, so a build on your
-laptop never reaches production; `FILM_LAB_BUILD_DATA=1 npm run build` opts in (and
-reads whatever `TURSO_DATABASE_URL` points at). If the read fails or takes longer than
-8 seconds, the desk builds without it and the build log says why.
+The film desk now comes whole from Film Labs (`GET /v1/public/desk`, read by
+`src/utils/film.ts` when `/photography/` is built), and Film Labs rebuilds the site by
+itself when the desk changes; Publish is still there to force one.
 
-### Uploading scans for a logbook roll
+### Uploading scans
 
-```bash
-npm run upload-film -- ~/Downloads/scans --roll R-047 --dry-run
-npm run upload-film -- ~/Downloads/scans --roll R-047 [--developed 2026-11-08] [--title "Eno River in fog"]
-```
-
-With `--roll` the folder can have any name. The camera, stock and lab come from the
-logbook roll, and so does the title (or "R-047 · Kodak Gold 200" when the roll has none).
-The developed date is `--developed`, else the day the roll reached "Scans in", else
-today. After uploading, it links the roll to its new desk roll and moves it to **Scans
-in** if it wasn't there yet. A camera, stock or lab you added by hand gets a folder token
-made from its name, saved back to the logbook.
-
-It reads the logbook from `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in `.env`.
-`FILM_LAB_UPLOAD_DB=file:.data/film-lab.db` points it at the local database instead.
-`--dry-run` reads the scans but uploads, writes and links nothing.
+Scans are ingested in the film-labs repo (`npm run ingest -- <folder> --roll R-047`),
+which uploads them, saves the roll on the film desk, links it, and rebuilds this site.
+`npm run upload-film` here only points there.
 
 ## Running it locally
 
@@ -449,7 +435,6 @@ lab as before. Test: `node scripts/lab-harness/run.mjs guest`.
 | `src/lib/lab/offline.ts`              | the phone's outbox (IndexedDB) and its sync                  |
 | `src/lib/lab/alignment.ts`            | which frame each scan is, and what a frame shows publicly    |
 | `src/lib/lab/server/published.ts`     | the build-time read of what the film desk shows              |
-| `scripts/lib/logbook.mjs`             | the logbook lookups behind `upload-film --roll`              |
 | `src/lib/lab/light.ts`                | EV, Sunny 16 from the sky, dial settings, reciprocity, DoF, sun |
 | `src/lib/lab/batteries.ts`            | the battery box: cameras' sets, what's due, what to buy       |
 | `src/lib/lab/darkroom.ts`             | recipes, temperature and reuse compensation, agitation, chemistry |
@@ -490,11 +475,10 @@ running on the same database, **bug fixes only**. What that means here:
   (`packages/server/drizzle/`) and migrated to production from there. Don't run
   `drizzle-kit generate` in this repo; `npm run db:migrate` still sets up the local
   development database with the tables these pages know.
-- **The film desk asks the API.** With `FILM_LAB_API_URL` set, `published.ts` makes one
-  request to `/v1/public/desk-share` instead of reading the database, and
-  `upload-film --roll` uses the API too (with `FILM_LAB_API_TOKEN`). Unset, both work as
-  described below.
-- **`/photography/desk.json`** publishes the desk's rolls and scans for Film Labs to read.
+- **Film Labs owns the film desk.** Rolls, scans, names and what the logbook shares come
+  from `GET /v1/public/desk` (`FILM_LAB_API_URL`, default production); there are no roll
+  files or `film-labels.json` here any more. Scans are ingested in film-labs
+  (`npm run ingest`), and Film Labs rebuilds this site when the desk changes.
 
 ## Changing the schema
 

@@ -8,7 +8,6 @@ import { ActionError, defineAction } from 'astro:actions';
 import { z } from 'astro/zod';
 import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
-import labels from '../data/film-labels.json';
 import { batteryKey, batteryOf, nextCode, SHUTTERS, STAGES, type RollStatus } from '../lib/lab/inventory';
 import { isOwner, labConfig } from '../lib/lab/server/config';
 import { getDb, type LabDb } from '../lib/lab/server/db/client';
@@ -28,7 +27,7 @@ import {
 	sameName,
 } from '../lib/lab/server/inventory';
 import { ownNumbers, trackNumbers } from '../lib/lab/server/tracking';
-import { getFilmRolls, isMonochrome } from '../utils/film';
+import { getFilmLabels, getFilmRolls, isMonochrome } from '../utils/film';
 
 /* ---------- plumbing ---------- */
 
@@ -184,7 +183,7 @@ const stageIndex = (s: string) => (s === 'lost' ? 99 : STAGES.indexOf(s as (type
 
 /**
  * What it takes to give the logbook every camera, stock and lab that
- * film-labels.json names (plus `extra` tokens). Rows match by token, or by
+ * the film desk names (plus `extra` tokens). Rows match by token, or by
  * name when they were added by hand, in which case they adopt the token
  * instead of getting a duplicate. Returns token → id maps and the writes.
  */
@@ -194,6 +193,7 @@ async function planCatalogue(d: LabDb, userId: string, extra: { stocks: string[]
 		d.select({ id: camera.id, token: camera.token, name: camera.name, brand: camera.brand }).from(camera).where(eq(camera.userId, userId)),
 		d.select({ id: lab.id, token: lab.token, name: lab.name }).from(lab).where(eq(lab.userId, userId)),
 	]);
+	const labels = await getFilmLabels();
 	const writes: unknown[] = [];
 	const counts = { stocks: 0, cameras: 0, labs: 0, adopted: 0 };
 
@@ -1102,10 +1102,10 @@ export const server = {
 
 		/**
 		 * Bring the public film desk into the logbook: every camera, stock and lab
-		 * named in film-labels.json, then one roll per desk roll ("Negatives
+		 * the film desk names, then one roll per desk roll ("Negatives
 		 * home", linked to its scans). Safe to run again: it skips what exists.
 		 */
-		/** Add the cameras, stocks and labs named in film-labels.json that the logbook lacks. */
+		/** Add the cameras, stocks and labs the film desk names that the logbook lacks. */
 		syncCatalogue: defineAction({
 			handler: async (_input, context) => {
 				const { d, userId } = await session(context);

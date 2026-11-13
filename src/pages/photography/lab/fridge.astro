@@ -3,7 +3,7 @@ import FridgeShelves from '../../../components/lab/FridgeShelves.vue';
 import LabLayout from '../../../components/lab/LabLayout.astro';
 import BenchCloseup from '../../../components/lab/bench/BenchCloseup.astro';
 import { stageCounts } from '../../../lib/lab/server/bench';
-import labels from '../../../data/film-labels.json';
+import { getFilmLabels } from '../../../utils/film';
 import { todayInDurham } from '../../../lib/lab/inventory';
 import { isOwner, labConfig } from '../../../lib/lab/server/config';
 import { getDb } from '../../../lib/lab/server/db/client';
@@ -18,6 +18,8 @@ const { user, guest } = viewerOf(Astro.locals);
 const config = labConfig();
 // The mini-map's counts, read alongside the page's own data.
 const countsP = user && config.ok ? stageCounts(config.config, user.id) : Promise.resolve({});
+// The film desk's names (from Film Labs), for the owner's "on the desk, not in the logbook yet".
+const labels = user && isOwner(user) ? await getFilmLabels() : { cameras: {}, stocks: {}, labs: {}, brands: {} };
 const data = visible(
 	user && config.ok
 		? await (async () => {

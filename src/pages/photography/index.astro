@@ -5,15 +5,21 @@ import MediumToggle from '../../components/MediumToggle.astro';
 import FilmDesk from '../../components/film/FilmDesk.vue';
 import { packFilmPhotos } from '../../components/film/data';
 import { bunnyUrl } from '../../utils/bunny';
-import { getFilmRolls, rollFolder, toFilmDeskData } from '../../utils/film';
+import { getFilmDesk, rollFolder, toFilmDeskData } from '../../utils/film';
 import { publishedExposures, publishedLoaded, publishedMarks } from '../../lib/lab/server/published';
 
-const rolls = await getFilmRolls();
-// Exposure, lens and place from the Film Lab, for rolls its owner chose to share (build time only).
-const published = await publishedExposures(rolls.map((r) => ({ id: r.id, files: r.data.photos.map((p) => p.filename) })));
+// The whole desk comes from Film Labs. A production build without it fails on purpose,
+// so the live site keeps its last good desk instead of going blank.
+const filmDesk = await getFilmDesk();
+if (!filmDesk.ok && import.meta.env.PROD) {
+	throw new Error('The film desk couldn’t be read from Film Labs (FILM_LAB_API_URL). Not building an empty desk.');
+}
+const rolls = filmDesk.rolls;
+// Exposure, lens and place, for rolls the owner chose to share; and their marks.
+const published = await publishedExposures();
 const marks = await publishedMarks();
 const desk = toFilmDeskData(rolls, published, marks);
-// What's in the cameras right now, if the Film Lab's owner shows it (also build time only).
+// What's in the cameras right now, if the owner shows it.
 const loadedNow = await publishedLoaded();
 
 const formatDate = (date: Date) =>

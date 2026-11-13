@@ -1,6 +1,6 @@
 /**
- * Bunny.net Storage helpers shared by the upload scripts
- * (upload-shoot.mjs for digital shoots, upload-film.mjs for film rolls).
+ * Bunny.net Storage helpers for upload-shoot.mjs (digital shoots). Film scans
+ * are uploaded by Film Labs' ingest (npm run ingest, in the film-labs repo).
  */
 
 import { access } from 'node:fs/promises';

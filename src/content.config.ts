@@ -31,20 +31,6 @@ const photoSchema = z.object({
 	location: photoLocationSchema.optional(),
 });
 
-// One scan from a film roll. Scans carry no EXIF worth showing, so the roll
-// (folder) supplies the metadata; `priority` decides how close to the top of
-// the film desk's pile a print tends to land (1 = buried, 5 = nearly always on top).
-// `tone` is measured by the uploader: the scan's black point, log-average and
-// white point (sRGB luminance), which set how dense its negative looks.
-const filmPhotoSchema = z.object({
-	filename: z.string(),
-	width: z.number().optional(),
-	height: z.number().optional(),
-	priority: z.number().int().min(1).max(5).default(3),
-	caption: z.string().optional(),
-	tone: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1), z.number().min(0).max(1)]).optional(),
-});
-
 export const collections = {
 	work: defineCollection({
 		loader: glob({ pattern: '**/*.md', base: './src/content/work' }),
@@ -89,23 +75,6 @@ export const collections = {
 				path: ['coverPhoto'],
 			}),
 	}),
-	// One JSON per roll, written by `npm run upload-film` from the scan folder's
-	// name (dateDeveloped_camera_filmStock_lab_summary). camera/stock/lab hold the
-	// raw folder tokens; their display names live in src/data/film-labels.json.
-	film: defineCollection({
-		loader: glob({ pattern: '**/*.json', base: './src/content/film' }),
-		schema: z.object({
-			title: z.string(),
-			developed: z.coerce.date(),
-			camera: z.string(),
-			stock: z.string(),
-			lab: z.string(),
-			description: z.string().optional(),
-			// CDN folder holding the scans; defaults to `film/<roll id>`.
-			cdnFolder: z.string().optional(),
-			// Dev-only sample rolls — never included in production builds.
-			demo: z.boolean().optional(),
-			photos: z.array(filmPhotoSchema).min(1),
-		}),
-	}),
+	// The film desk isn't content here any more: Film Labs owns it, and
+	// src/utils/film.ts reads it from the Film Labs API when the site builds.
 };
