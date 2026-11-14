@@ -4,8 +4,7 @@
  * the photography home, and digital shoots moved under /digital. These are
  * prerendered redirect pages (they used to be `redirects` in astro.config,
  * but with the Vercel adapter a rest-param redirect becomes a catch-all 301
- * rule that runs before any file, including /photography/digital/* and the
- * Film Lab).
+ * rule that runs before any file, including /photography/digital/*).
  */
 import { getCollection } from 'astro:content';
 

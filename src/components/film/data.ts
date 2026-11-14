@@ -1,5 +1,4 @@
-import type { PublicExposure } from '../../lib/lab/alignment';
-import type { FilmPhotoData } from './types';
+import type { FilmPhotoData, PublicExposure } from './types';
 
 /**
  * One scan as shipped to the island: [roll index, filename, width, height,

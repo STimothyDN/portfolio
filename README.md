@@ -2,4 +2,4 @@
 
 Built using Astro as a way to learn the framework on the fly.
 
-The private Film Lab (`/photography/lab`) has its own setup notes: [src/lib/lab/README.md](src/lib/lab/README.md).
+The Film Lab lives in its own repo (film-labs) at [lab.timo3.dev](https://lab.timo3.dev); old `/photography/lab/*` links redirect there (`astro.config.mjs`). The film desk on `/photography/` reads Film Labs' public API when the site builds (`src/utils/film.ts`).

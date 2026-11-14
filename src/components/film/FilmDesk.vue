@@ -259,7 +259,7 @@ import '@fontsource/permanent-marker/400.css';
 
 import FilmCanister from './FilmCanister.vue';
 import FilmRollStrip from './FilmRollStrip.vue';
-import type { LoadedNow } from '../../lib/lab/server/published';
+import type { LoadedNow } from '../../utils/published';
 import { bestSplit } from './canister';
 import { unpackFilmPhotos } from './data';
 import { negativeBaseVars, negativeFilter, negativeFilterId, type NegativeProfileKey } from './negative';

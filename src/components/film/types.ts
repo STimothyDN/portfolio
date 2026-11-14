@@ -1,5 +1,4 @@
 import type { NegativeProfileKey } from './negative';
-import type { PublicExposure } from '../../lib/lab/alignment';
 
 /** Facets the film desk can filter on. `roll` is driven by the roll strip. */
 export type FacetKey = 'roll' | 'camera' | 'stock' | 'lab' | 'year';
@@ -59,4 +58,25 @@ export interface FilmPhotoData {
 	c?: string;
 	/** What the Film Lab logbook shares for this frame (exposure, lens, place, note). */
 	e?: PublicExposure;
+}
+
+/**
+ * What the public lightbox gets for one frame, as Film Labs shares it (GET /v1/public/desk).
+ * Short keys: it ships with every shared scan.
+ */
+export interface PublicExposure {
+	/** "f/8" */
+	a?: string;
+	/** "1/125" */
+	s?: string;
+	/** lens name */
+	l?: string;
+	/** focal length, "50mm" */
+	fl?: string;
+	/** rated ISO */
+	i?: number;
+	/** the roll's public place */
+	pl?: string;
+	/** the frame's note, when notes are shared */
+	nt?: string;
 }

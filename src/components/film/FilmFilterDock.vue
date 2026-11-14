@@ -3,9 +3,9 @@
 		<!-- The Digital ⇄ Film switch, passed in from the page. -->
 		<template v-if="$slots.default">
 			<slot />
-			<!-- Film Lab: for everyone. Signed out it's the owner's lab, read-only
-			     (with a guide in the margin); signed in, your own. -->
-			<a class="dock-btn dock-lab" href="/photography/lab/" data-astro-reload title="Film Lab: where these rolls are logged">
+			<!-- Film Lab, on its own site: for everyone. Signed out it's the owner's
+			     lab, read-only (with a guide in the margin); signed in, your own. -->
+			<a class="dock-btn dock-lab" href="https://lab.timo3.dev/" title="Film Lab: where these rolls are logged">
 				<svg viewBox="0 0 256 256" aria-hidden="true">
 					<rect x="56" y="32" width="144" height="192" rx="12" />
 					<path d="M96 32v192M128 80h40M128 112h40" />

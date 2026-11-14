@@ -3,10 +3,10 @@
  * frame's public details (exposure, lens, place, notes, for rolls that share
  * them); the owner's grease-pencil marks; and what's loaded now. Film Labs
  * works all of it out and sends it with the desk (GET /v1/public/desk, read
- * once per build by src/utils/film.ts); these are views of that one answer.
+ * once per build by ./film.ts); these are views of that one answer.
  */
-import type { PublicExposure } from '../alignment';
-import { getFilmDesk, type LoadedNow } from '../../../utils/film';
+import type { PublicExposure } from '../components/film/types';
+import { getFilmDesk, type LoadedNow } from './film';
 
 export type { LoadedNow };
 

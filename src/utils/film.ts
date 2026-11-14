@@ -1,7 +1,6 @@
 import { frameExposure, negativeProfileKey } from '../components/film/negative';
-import type { FilmPhotoData, FilmRollData } from '../components/film/types';
-import type { PublicExposure } from '../lib/lab/alignment';
-import type { PublishedExposures } from '../lib/lab/server/published';
+import type { FilmPhotoData, FilmRollData, PublicExposure } from '../components/film/types';
+import type { PublishedExposures } from './published';
 
 /*
  * The film desk comes from Film Labs, which owns it: every roll and scan, the
