@@ -256,13 +256,13 @@ export const STOCK_CATALOG: CatalogStock[] = [
 	c('lomo800', 'Lomography', 'Color Negative 800', 800, 'c41', { body: '#489808', band: '#d8d8d8', ink: '#ffffff' }, 'color', { formats: ['35mm', '120'], aliases: ['Colour Negative 800', 'Lomography 800'] }),
 	c('ladygrey400', 'Lomography', 'Lady Grey 400', 400, 'bw', { body: '#b8b8b8', band: '#e86808', ink: '#151515' }, 'mono', { ...both, aliases: ['Lady Grey'] }),
 	c('earlgrey100', 'Lomography', 'Earl Grey 100', 100, 'bw', { body: '#141414', band: '#d86808', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Earl Grey'] }),
-	c('berlinkino400', 'Lomography', 'Berlin Kino B&W 400', 400, 'bw', { body: '#f1e9d8', band: '#d9452e', ink: '#d9452e' }, 'mono', {
+	c('berlinkino400', 'Lomography', 'Berlin Kino B&W 400', 400, 'bw', { body: '#f1e9d8', band: '#d9452e', ink: '#f1e9d8' }, 'mono', {
 		...both,
 		aliases: ['Berlin 400', 'Berlin Kino 400', 'Berlin Kino'],
 		madeFrom: 'A cinema black-and-white emulsion (by most accounts ORWO N74 Plus)',
 		dev: { note: 'Standard black-and-white chemistry; Lomography publishes times for common developers.' },
 	}),
-	c('potsdam100', 'Lomography', 'Potsdam Kino B&W 100', 100, 'bw', { body: '#e8e8e8', band: '#284898', ink: '#284898' }, 'mono', { aliases: ['Potsdam 100', 'Potsdam Kino'] }),
+	c('potsdam100', 'Lomography', 'Potsdam Kino B&W 100', 100, 'bw', { body: '#e8e8e8', band: '#284898', ink: '#f4f4f0' }, 'mono', { aliases: ['Potsdam 100', 'Potsdam Kino'] }),
 	c('lomochromepurple', 'Lomography', 'LomoChrome Purple', 400, 'c41', { body: '#6868b8', band: '#c8b878', ink: '#ffffff' }, 'color', { ...both, aliases: ['Lomochrome Purple 100-400', 'Purple'] }),
 	c('lomochromemetropolis', 'Lomography', 'LomoChrome Metropolis', 400, 'c41', { body: '#d8e838', band: '#181818', ink: '#d8e838' }, 'color', { ...both, aliases: ['Metropolis', 'Metropolis 100-400'] }),
 	c('lomocolor92', 'Lomography', "LomoChrome Color '92", 400, 'c41', { body: '#d8b888', band: '#282828', ink: '#ffffff' }, 'color', { ...both, aliases: ["Color '92", "Colour '92"] }),
@@ -292,12 +292,12 @@ export const STOCK_CATALOG: CatalogStock[] = [
 	}),
 	c('reflx800t', 'Reflx Lab', '800T', 800, 'c41', { body: '#1c1c1c', band: '#c82828', ink: '#ffffff' }, 'cineTungsten', { tungsten: true, madeFrom: 'Kodak Vision3 500T, rem-jet removed' }),
 	c('reflx320d', 'Reflx Lab', '320D', 320, 'c41', { body: '#262a52', band: '#e8b838', ink: '#f2efe8' }, 'cine', { alsoProcess: ['ecn2'], aliases: ['320D AHU'], dev: { note: 'No rem-jet: C-41 or ECN-2.' } }),
-	c('santacolor100', 'SantaColor', '100', 100, 'c41', { body: '#f2f0ec', band: '#e04a3c', ink: '#e04a3c' }, 'aerial', {
+	c('santacolor100', 'SantaColor', '100', 100, 'c41', { body: '#f2f0ec', band: '#e04a3c', ink: '#f8f6f2' }, 'aerial', {
 		aliases: ['Santacolor 100', 'Santa Color 100'],
 		madeFrom: 'Fresh Kodak aerial (air-surveillance) colour negative film, spooled in Finland',
 		dev: { note: 'Standard C-41. Its base is clearer and warmer than most negatives, so it scans and prints differently; it can also be cross-processed in E-6.' },
 	}),
-	c('santacolor800', 'SantaColor', '800', 800, 'c41', { body: '#f2f0ec', band: '#f85848', ink: '#f85848' }, 'portra', {
+	c('santacolor800', 'SantaColor', '800', 800, 'c41', { body: '#f2f0ec', band: '#f85848', ink: '#f8f6f2' }, 'portra', {
 		aliases: ['Santacolor 800', 'Santa Color 800'],
 		dev: { note: 'Standard C-41; expose and process it as you would Portra 800.' },
 	}),
@@ -353,7 +353,7 @@ export const STOCK_CATALOG: CatalogStock[] = [
 	c('orwoun54', 'ORWO', 'UN54', 100, 'bw', { body: '#3a6a3a', band: '#f0f0ea', ink: '#1a1a1a' }, 'mono', { aliases: ['UN 54', 'ORWO UN54 100'], madeFrom: 'ORWO’s black-and-white cine negative, re-spooled' }),
 	c('orwon74', 'ORWO', 'N74 Plus', 400, 'bw', { body: '#3a6a3a', band: '#c82828', ink: '#ffffff' }, 'mono', { aliases: ['N74', 'N74+', 'ORWO N74 Plus 400'], madeFrom: 'ORWO’s fast black-and-white cine negative, re-spooled' }),
 	c('optikoldschool200', 'Optik Oldschool', 'Opticolour 200', 200, 'c41', { body: '#f2f0ea', band: '#1a1a1a', ink: '#e8a020' }, 'color', { ...both, aliases: ['Opticolour 200', 'Opticolor 200'], madeFrom: 'Original Wolfen NC200' }),
-	c('konocolor200', 'KONO!', 'Color 200', 200, 'c41', { body: '#f8d838', band: '#1a1a1a', ink: '#1a1a1a' }, 'color', { aliases: ['Kono Color 200', 'KONO! Color 200'], madeFrom: 'Original Wolfen NC200' }),
+	c('konocolor200', 'KONO!', 'Color 200', 200, 'c41', { body: '#f8d838', band: '#1a1a1a', ink: '#f8d838' }, 'color', { aliases: ['Kono Color 200', 'KONO! Color 200'], madeFrom: 'Original Wolfen NC200' }),
 	c('dubblestereo400', 'Dubblefilm', 'Stereo 400', 400, 'c41', { body: '#f0f0f0', band: '#c8383a', ink: '#ffffff' }, 'color', { aliases: ['Dubble Stereo 400', 'Dubblefilm Stereo'] }),
 	c('leicamonopan50', 'Leica', 'Monopan 50', 50, 'bw', { body: '#1a1a1a', band: '#d8101a', ink: '#ffffff' }, 'mono', { aliases: ['Monopan 50', 'Leica Monopan'] }),
 	c('euston400', 'Aperture Printing', 'Euston 400', 400, 'bw', { body: '#1a1a1a', band: '#e8e8e8', ink: '#1a1a1a' }, 'monoSlide', {
@@ -430,6 +430,21 @@ export const stockById = (id: string | null | undefined) => (id ? byId.get(id) ?
 
 /** "Kodak Portra 400" */
 export const catalogLabel = (s: Pick<CatalogStock, 'brand' | 'name'>) => `${s.brand} ${s.name}`;
+
+/** A name that is only a speed ("100", "640T", "50D", "C200"): it says nothing without its maker. */
+const SPEED_ONLY = /^[a-z]{0,2}\s?\d{1,5}\s?[a-z]{0,2}$/i;
+
+/**
+ * What to call a stock where its name stands alone (a roll's title, a fridge stack): its name, with
+ * the maker in front when the name is only a speed, so SantaColor's "100" reads "SantaColor 100"
+ * and Reflx Lab's "640T" reads "Reflx Lab 640T"; Portra 400 stays "Portra 400".
+ */
+export function stockTitle(s: { brand?: string | null; name: string }): string {
+	const name = s.name.trim();
+	const brand = (s.brand ?? '').trim();
+	if (!brand || !SPEED_ONLY.test(name) || name.toLowerCase().startsWith(brand.toLowerCase())) return name;
+	return `${brand} ${name}`;
+}
 
 /**
  * The catalog's film for a stock as it was logged: by its name (with or without the brand, or any
