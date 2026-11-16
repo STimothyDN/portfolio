@@ -2,12 +2,17 @@
 import { type CollectionEntry, getCollection } from 'astro:content';
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import CdnAccess from '../../../components/CdnAccess.astro';
+import { getFilmDesk } from '../../../utils/film';
 
 import ContactCTA from '../../../components/ContactCTA.astro';
 import LightboxData from '../../../components/LightboxData.astro';
 import PhotoParentBar from '../../../components/PhotoParentBar.astro';
 import PhotoGrid from '../../../components/PhotoGrid.astro';
 import PhotoLightbox from '../../../components/PhotoLightbox.vue';
+
+// Signed CDN access comes with the film desk: load it before any image URL is built.
+await getFilmDesk();
 
 interface Props {
 	entry: CollectionEntry<'photography'>;
@@ -32,6 +37,7 @@ const formattedDate = data.date.toLocaleDateString('en-US', {
 ---
 
 <BaseLayout title={data.title} description={data.description ?? `Photos from ${data.title}`}>
+	<CdnAccess slot="head" />
 	<div class="stack gap-20">
 		<div class="shoot-page stack" data-photo-snap-root>
 			<PhotoParentBar />

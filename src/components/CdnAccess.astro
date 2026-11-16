@@ -1,0 +1,13 @@
+---
+/**
+ * Hands the film desk's CDN tokens to the page's islands (they build image URLs in the
+ * browser). Nothing while the pull zone serves files unsigned.
+ */
+import { cdnAccess } from '../utils/bunny';
+import { getFilmDesk } from '../utils/film';
+
+await getFilmDesk();
+const access = cdnAccess();
+---
+
+{Object.keys(access).length > 0 && <script is:inline define:vars={{ access }}>window.__CDN_ACCESS = access;</script>}

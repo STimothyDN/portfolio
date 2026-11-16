@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import CdnAccess from '../../components/CdnAccess.astro';
 
 import MediumToggle from '../../components/MediumToggle.astro';
 import FilmDesk from '../../components/film/FilmDesk.vue';
@@ -31,6 +32,7 @@ const formatDate = (date: Date) =>
 	description="Every film scan Timothy Navarro has, tossed onto one desk — sort them by camera, film stock, lab, year, or roll."
 	immersive
 >
+	<CdnAccess slot="head" />
 	{/*
 		Inline on purpose: if this page contributed any rules to the bundled CSS,
 		its stylesheet would differ from the FilmDesk island's own CSS chunk and

@@ -1,6 +1,7 @@
 import { frameExposure, negativeProfileKey } from '../components/film/negative';
 import type { FilmPhotoData, FilmRollData, PublicExposure } from '../components/film/types';
 import type { PublishedExposures } from './published';
+import { setCdnAccess } from './bunny';
 
 /*
  * The film desk comes from Film Labs, which owns it: every roll and scan, the
@@ -55,6 +56,7 @@ interface PublicDesk {
 	exposures: Record<string, Record<string, PublicExposure>>;
 	marks: Record<string, Record<string, number>>;
 	loaded: LoadedNow[];
+	access?: Record<string, string>;
 }
 
 export interface FilmDesk {
@@ -96,6 +98,7 @@ async function fetchDesk(): Promise<FilmDesk> {
 		};
 		lastGood = desk;
 		labels = desk.labels;
+		setCdnAccess(raw.access);
 		return desk;
 	} catch (e) {
 		console.warn(`[film desk] Couldn't read the film desk from ${API} (${(e as Error).message}).`);

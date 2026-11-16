@@ -7,6 +7,22 @@ export interface BunnyImageOptions {
 
 const CDN_BASE = import.meta.env.PUBLIC_BUNNY_CDN_URL;
 
+/**
+ * Signed access to the pull zone, from the film desk (folder → query string). Empty while the
+ * zone serves files unsigned. Set at build by getFilmDesk; in the browser, CdnAccess.astro
+ * leaves it on window for the islands.
+ */
+type Access = Record<string, string>;
+let access: Access = (globalThis as { __CDN_ACCESS?: Access }).__CDN_ACCESS ?? {};
+export const setCdnAccess = (a: Access | undefined) => void (access = a ?? {});
+export const cdnAccess = () => access;
+
+function signed(path: string, url: string): string {
+	let best = '';
+	for (const f of Object.keys(access)) if (path.startsWith(f) && f.length > best.length) best = f;
+	return best ? `${url}${url.includes('?') ? '&' : '?'}${access[best]}` : url;
+}
+
 /** URL for any file in the pull zone, by its storage path (e.g. `film/<roll>/<scan>`). */
 export function bunnyUrl(path: string, opts: BunnyImageOptions = {}): string {
 	const params = new URLSearchParams();
@@ -17,7 +33,7 @@ export function bunnyUrl(path: string, opts: BunnyImageOptions = {}): string {
 	const qs = params.toString();
 	// Lab scan names can contain spaces; encode each segment, keep the slashes.
 	const encoded = path.split('/').map(encodeURIComponent).join('/');
-	return `${CDN_BASE}/${encoded}${qs ? `?${qs}` : ''}`;
+	return signed(path, `${CDN_BASE}/${encoded}${qs ? `?${qs}` : ''}`);
 }
 
 export function bunnyImageUrl(shootSlug: string, filename: string, opts: BunnyImageOptions = {}): string {

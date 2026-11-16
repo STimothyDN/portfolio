@@ -2,6 +2,8 @@
 import { getCollection } from 'astro:content';
 
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import CdnAccess from '../../../components/CdnAccess.astro';
+import { getFilmDesk } from '../../../utils/film';
 
 import ContactCTA from '../../../components/ContactCTA.astro';
 import LightboxData from '../../../components/LightboxData.astro';
@@ -10,6 +12,9 @@ import ShootCover from '../../../components/ShootCover.astro';
 import ShootPanel from '../../../components/ShootPanel.astro';
 import PhotoLightbox from '../../../components/PhotoLightbox.vue';
 import PhotographyGlobe from '../../../components/PhotographyGlobe.vue';
+
+// Signed CDN access comes with the film desk: load it before any image URL is built.
+await getFilmDesk();
 
 const shoots = (await getCollection('photography')).sort(
 	(a, b) => b.data.date.valueOf() - a.data.date.valueOf()
@@ -49,6 +54,7 @@ const packedPins = JSON.stringify([...pinMap.values()].map((p) => [p.lat, p.lon,
 	title="Digital | Photography | Timothy Navarro"
 	description="A collection of photo shoots by Timothy Navarro"
 >
+	<CdnAccess slot="head" />
 	<div class="stack gap-20">
 		<div class="photography-page stack" data-photo-snap-root>
 			<header class="photography-landing" data-photo-landing>
