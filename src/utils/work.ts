@@ -7,7 +7,7 @@
  * map's layout.
  */
 import { type CollectionEntry, getCollection } from 'astro:content';
-import { forceLink, forceManyBody, forceSimulation, forceX, forceY } from 'd3';
+import { forceLink, forceManyBody, forceSimulation, forceX, forceY } from 'd3-force';
 
 import signals from '../data/work-signals.json';
 
