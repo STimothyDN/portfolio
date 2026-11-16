@@ -15,6 +15,8 @@
  * renders them; the strips, roll previews and lightbox scan all point at them).
  */
 
+import { findStock } from './stocks';
+
 export type RGB = [number, number, number];
 /** A scan's black point, log-average and white point (sRGB luminance, 0–1). */
 export type Tone = [number, number, number];
@@ -31,6 +33,8 @@ export interface NegativeProfile {
 	/** How much of each dye's density bleeds into the other layers. Impure dyes mute a negative's colors. */
 	crosstalk: number;
 	mono?: boolean;
+	/** Slide film: the strip on the light table is the picture itself, on a nearly clear base. */
+	positive?: boolean;
 }
 
 export const NEGATIVE_PROFILES = {
@@ -65,12 +69,29 @@ export const NEGATIVE_PROFILES = {
 	// faint cool cast; Kodak's T-grain films keep a purple one.
 	mono: { base: [0.24, 0.25, 0.22], gamma: [0.62, 0.62, 0.62], latitude: 2, crosstalk: 0, mono: true },
 	kodakMono: { base: [0.25, 0.3, 0.24], gamma: [0.6, 0.6, 0.6], latitude: 2, crosstalk: 0, mono: true },
+	// Chromogenic black and white (XP2 Super): dye, not silver, on a C-41 base: a purplish brown.
+	chromogenicMono: { base: [0.3, 0.44, 0.38], gamma: [0.58, 0.58, 0.58], latitude: 2.2, crosstalk: 0, mono: true },
+	// Aerial colour negative (SantaColor 100): a much clearer, warmer mask than camera films.
+	aerial: { base: [0.12, 0.4, 0.58], gamma: [0.66, 0.7, 0.72], latitude: 1.6, crosstalk: 0.22 },
+	// Slide film (E-6): a positive on a nearly clear base with a faint cool cast; short latitude.
+	slide: { base: [0.08, 0.07, 0.05], gamma: [1, 1, 1], latitude: 1, crosstalk: 0, positive: true },
 } satisfies Record<string, NegativeProfile>;
 
 export type NegativeProfileKey = keyof typeof NEGATIVE_PROFILES;
 
-/** Which profile a stock's negatives follow, from its display name and brand. */
+const MONOCHROME = /\b(hp5|fp4|delta|pan ?f|tri-?x|t-?max|kentmere|fomapan|acros|ortho|retro \d|xp2|double-x|lady ?grey)\b/i;
+
+/** Black-and-white, from the stock's display name (the catalog first, then its name's words). */
+export const isMonochrome = (stockLabel: string) => {
+	const known = findStock({ name: stockLabel });
+	if (known) return known.process === 'bw' || !!(NEGATIVE_PROFILES[known.negative] as NegativeProfile).mono;
+	return MONOCHROME.test(stockLabel);
+};
+
+/** Which profile a stock's negatives follow: the catalog's, or a guess from its display name and brand. */
 export function negativeProfileKey(stockLabel: string, brand: string, mono: boolean): NegativeProfileKey {
+	const known = findStock({ name: stockLabel, brand });
+	if (known) return known.negative;
 	const name = stockLabel.toLowerCase();
 	if (mono) return /t-?max|tri-?x|double-x/.test(name) ? 'kodakMono' : 'mono';
 	if (name.includes('portra')) return 'portra';
@@ -169,6 +190,17 @@ export function negativeFilter(key: NegativeProfileKey, exposure: number): Negat
 	const own = 1 - k + k / 3;
 	const bleed = k / 3;
 	const rows = [0, 1, 2].map((c) => [0, 1, 2].map((j) => (j === c ? own : bleed)).join(' ') + ' 0 0');
+	if (p.positive) {
+		// A slide is the picture: exposure darkens or lightens it, and the base adds its faint tint.
+		const gain = 2 ** -exposure;
+		return {
+			id: negativeFilterId(key, exposure),
+			mono: false,
+			density: [0, 1, 2].map(() => table((v) => clamp(toSrgb(toLinear(v) * gain), 0, 1))),
+			matrix: [0, 1, 2].map((c) => [0, 1, 2].map((j) => (j === c ? 1 : 0)).join(' ') + ' 0 0').concat('0 0 0 1 0').join(' '),
+			transmit: [0, 1, 2].map((c) => table((v) => toSrgb(toLinear(v) * 10 ** -p.base[c]))),
+		};
+	}
 	return {
 		id: negativeFilterId(key, exposure),
 		mono: Boolean(p.mono),
@@ -197,8 +229,10 @@ const baseVars = new Map<NegativeProfileKey, Record<string, string>>();
 export function negativeBaseVars(key: NegativeProfileKey): Record<string, string> {
 	let vars = baseVars.get(key);
 	if (!vars) {
-		const { base } = NEGATIVE_PROFILES[key];
-		vars = {
+		const { base, positive } = NEGATIVE_PROFILES[key] as NegativeProfile;
+		// Unexposed slide film is black: a slide's frame lines and edges are dark, its printing light.
+		if (positive) vars = { '--stock-frame': '#121110', '--stock-rail': '#1b1a18', '--stock-ink': '#d9c27a' };
+		else vars = {
 			'--stock-frame': hex(base.map((d) => shown(d))),
 			'--stock-rail': hex(base.map((d) => shown(d, 0.14))),
 			'--stock-ink': hex(base.map((d) => shown(d, 1.6))),

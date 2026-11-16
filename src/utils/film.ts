@@ -1,4 +1,4 @@
-import { frameExposure, negativeProfileKey } from '../components/film/negative';
+import { frameExposure, isMonochrome as monochrome, negativeProfileKey } from '../components/film/negative';
 import type { FilmPhotoData, FilmRollData, PublicExposure } from '../components/film/types';
 import type { PublishedExposures } from './published';
 import { setCdnAccess } from './bunny';
@@ -142,9 +142,8 @@ export function humanizeToken(token: string): string {
 		.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-/** Black-and-white stocks, by display name (their negatives carry no orange mask). */
-const MONOCHROME = /\b(hp5|fp4|delta|pan ?f|tri-?x|t-?max|kentmere|fomapan|acros|ortho|retro \d|xp2|double-x|lady ?grey)\b/i;
-export const isMonochrome = (stockLabel: string) => MONOCHROME.test(stockLabel);
+/** Black-and-white stocks, by display name (their negatives carry no orange mask): the film catalog's word first. */
+export const isMonochrome = (stockLabel: string) => monochrome(stockLabel);
 
 /** A token's display name (from the last desk loaded: call `getFilmRolls` or `getFilmLabels` first). */
 export function filmLabel(kind: LabelKind, key: string): string {

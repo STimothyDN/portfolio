@@ -1,4 +1,5 @@
 import type { FilmRollData } from './types';
+import { findStock } from './stocks';
 
 // Canister colors by film brand (read from the stock's display name), so a
 // row of rolls reads like a real drawer of them. Unknown brands get a stable hue.
@@ -14,10 +15,15 @@ const BRANDS: [RegExp, string, string][] = [
 	[/lomo/i, '#2f5fb3', '#f4f1e8'],
 ];
 
-/** Body color and label ink for a roll's film canister. */
+/**
+ * Body, band and label ink for a roll's film canister: the catalog's (stocks.ts, measured from
+ * product photos) when it knows the film, else the brand's colours, else a stable hue.
+ */
 export function canisterColors(
 	roll: Pick<FilmRollData, 'stock' | 'stockLabel'> & { stockBrand?: string }
-): { can: string; ink: string } {
+): { can: string; ink: string; band?: string } {
+	const known = findStock({ token: roll.stock, name: roll.stockLabel, brand: roll.stockBrand });
+	if (known) return { can: known.can.body, ink: known.can.ink, band: known.can.band };
 	const name = `${roll.stockBrand ?? ''} ${roll.stockLabel}`;
 	const brand = BRANDS.find(([re]) => re.test(name));
 	if (brand) return { can: brand[1], ink: brand[2] };

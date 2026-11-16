@@ -24,8 +24,8 @@ const props = defineProps<{ stock: string; stockLabel: string; stockBrand?: stri
 
 const label = computed(() => canLabel(props.stockLabel));
 const style = computed(() => {
-	const { can, ink } = canisterColors(props);
-	return { '--can': can, '--can-ink': ink, '--label-fit': label.value.fit.toFixed(3) };
+	const { can, ink, band } = canisterColors(props);
+	return { '--can': can, '--can-band': band ?? can, '--can-ink': ink, '--label-fit': label.value.fit.toFixed(3) };
 });
 </script>
 
@@ -81,6 +81,18 @@ const style = computed(() => {
 	width: calc(100% - var(--can-w) * 0.09);
 	overflow: hidden;
 	background-color: var(--can);
+}
+
+/* The band the film's name is printed on, across the middle of the body. */
+.can-body::before {
+	content: '';
+	position: absolute;
+	inset: 0 28%;
+	background: var(--can-band, var(--can));
+}
+
+.can-label {
+	position: relative;
 }
 
 .can-label {
