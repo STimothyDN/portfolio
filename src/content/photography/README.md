@@ -1,15 +1,14 @@
 # Photography Shoots
 
 This folder holds one JSON file per **shoot**. Each file is a content-collection entry
-(schema defined in [`src/content/config.ts`](../config.ts)) that powers:
+(schema defined in [`src/content.config.ts`](../../content.config.ts)) that powers:
 
 - the digital listing at **`/photography/digital/`** (one cover card per shoot), and
 - a detail page at **`/photography/digital/<shoot-slug>/`** (masonry gallery + lightbox).
 
-`/photography/` itself is the film desk (see [`../film/README.md`](../film/README.md)); old
-`/photography/<shoot-slug>/` links redirect to the new addresses (`astro.config.mjs`).
-
-Film scans have their own workflow and page — see [`../film/README.md`](../film/README.md).
+`/photography/` itself is the film desk, built from shoot.dev.scan's public API
+(`src/utils/film.ts`; film scans go in through that app). Old `/photography/<shoot-slug>/` links
+redirect to the new addresses (`src/pages/photography/[legacy].astro`).
 
 Photos themselves are **not** stored in the repo — they live in a Bunny.net Storage zone
 and are served through a Bunny Pull Zone CDN. This folder only holds the metadata
@@ -216,7 +215,5 @@ should still review). `description`, `coverPhoto`, and manual `location` labels 
 
 ## Testing locally
 
-Run `npm run dev` and visit `/photography/digital/`. A `test-shoot.json` fixture (with local
-placeholder images under `public/photography/test-shoot/`) is included so the gallery and
-lightbox work without any Bunny.net setup. **Delete `test-shoot.json` and that folder once
-you've uploaded a real shoot.**
+Run `npm run dev` and visit `/photography/digital/`. Images come from the Pull Zone in
+`PUBLIC_BUNNY_CDN_URL`, so set that in `.env` to see the photos.
