@@ -17,7 +17,12 @@ let access: Access = (globalThis as { __CDN_ACCESS?: Access }).__CDN_ACCESS ?? {
 export const setCdnAccess = (a: Access | undefined) => void (access = a ?? {});
 export const cdnAccess = () => access;
 
-function signed(path: string, url: string): string {
+/** A path as the CDN sees it, `..` worked out (a desk roll's edit can live in another folder). */
+const normal = (path: string) =>
+	path.split('/').reduce<string[]>((out, part) => (part === '..' ? out.slice(0, -1) : part && part !== '.' ? [...out, part] : out), []).join('/');
+
+function signed(rawPath: string, url: string): string {
+	const path = normal(rawPath);
 	let best = '';
 	for (const f of Object.keys(access)) if (path.startsWith(f) && f.length > best.length) best = f;
 	return best ? `${url}${url.includes('?') ? '&' : '?'}${access[best]}` : url;
