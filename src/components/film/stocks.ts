@@ -6,7 +6,8 @@
  * to type a film in by hand.
  *
  * Canister colours were measured from makers' and retailers' product photos (body, the band the
- * name sits on, and the ink), so they're close but not Pantone. Development times are starting
+ * name sits on, and the ink), so they're close but not Pantone. Colours re-checked against product photos in
+ * November 2026; still estimates: the discontinued films, Euston 400, KONO! Color 200 and Ilford Ortho Plus. Development times are starting
  * points from makers' data sheets where noted; check the sheet that came with your chemistry.
  */
 import type { NegativeProfileKey } from './negative';
@@ -49,7 +50,8 @@ export interface CatalogStock {
 
 /* ---------- canister palettes ---------- */
 
-const ILFORD = (band = '#c81828'): CanisterLook => ({ body: '#ececea', band, ink: '#151515' });
+/** Ilford's white box with its black band; each film's name is in its own colour. */
+const ILFORD = (ink = '#ececea'): CanisterLook => ({ body: '#f0efec', band: '#151515', ink });
 const KODAK_GOLD = '#f2a90d';
 const FUJI_GREEN = '#0b7a3c';
 const CINESTILL = (band: string): CanisterLook => ({ body: '#1b1b1d', band, ink: '#f5f2ec' });
@@ -81,52 +83,130 @@ export const STOCK_CATALOG: CatalogStock[] = [
 	c('kodacolor100', 'Kodak', 'Kodacolor 100', 100, 'c41', { body: '#d89808', band: '#282818', ink: '#e8a808' }, 'kodak'),
 	c('kodacolor200', 'Kodak', 'Kodacolor 200', 200, 'c41', { body: '#d88808', band: '#282818', ink: '#e8a808' }, 'kodak'),
 	c('ektachromee100', 'Kodak', 'Ektachrome E100', 100, 'e6', { body: '#0844ae', band: '#f8c848', ink: '#0838a8' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['E100', 'Ektachrome 100'] }),
-	c('trix400', 'Kodak', 'Tri-X 400', 400, 'bw', { body: '#e8a808', band: '#c81828', ink: '#ffffff' }, 'kodakMono', {
+	c('trix400', 'Kodak', 'Tri-X 400', 400, 'bw', { body: '#f2b705', band: '#141414', ink: '#ffffff' }, 'kodakMono', {
 		...both,
-		aliases: ['Tri-X', '400TX', 'TX 400'],
-		dev: { recipes: ['trix-d76-400', 'trix-d76h-400', 'trix-xtol-400'] },
+		aliases: ['Tri-X', '400TX', 'TX 400', 'Tri-X Pan 400'],
+		dev: { recipes: ['trix-d76-400', 'trix-d76h-400', 'trix-xtols-400', 'trix-xtol-400'], note: 'Forgiving of exposure and developer; pushes well to 1600.' },
 	}),
-	c('tmax100', 'Kodak', 'T-Max 100', 100, 'bw', { body: '#9a9aa8', band: '#e8a808', ink: '#1a1a1a' }, 'kodakMono', { ...both, aliases: ['TMax 100', 'TMX'] }),
-	c('tmax400', 'Kodak', 'T-Max 400', 400, 'bw', { body: '#f6c444', band: '#0c0c0c', ink: '#f6c444' }, 'kodakMono', { ...both, aliases: ['TMax 400', 'TMY'] }),
-	c('tmaxp3200', 'Kodak', 'T-Max P3200', 3200, 'bw', { body: '#383838', band: '#e87808', ink: '#ffffff' }, 'kodakMono', { aliases: ['TMax P3200', 'P3200', 'TMZ'] }),
+	c('tmax100', 'Kodak', 'T-Max 100', 100, 'bw', { body: '#f2b705', band: '#141414', ink: '#ffffff' }, 'kodakMono', {
+		formats: ['35mm', '120', 'sheet'],
+		aliases: ['TMax 100', 'TMX', '100TMX'],
+		dev: { recipes: ['tmax100-d76-100', 'tmax100-xtol-100'], note: 'T-grain films exhaust fixer faster: fix twice the clearing time; a pink cast means fix longer.' },
+	}),
+	c('tmax400', 'Kodak', 'T-Max 400', 400, 'bw', { body: '#f6c444', band: '#0c0c0c', ink: '#f6c444' }, 'kodakMono', {
+		formats: ['35mm', '120', 'sheet'],
+		aliases: ['TMax 400', 'TMY', '400TMY', 'TMY-2'],
+		dev: { recipes: ['tmax400-d76-400', 'tmax400-xtol-400'], note: 'T-grain films exhaust fixer faster: fix twice the clearing time; a pink cast means fix longer.' },
+	}),
+	c('tmaxp3200', 'Kodak', 'T-Max P3200', 3200, 'bw', { body: '#f2b705', band: '#141414', ink: '#f6f2e6' }, 'kodakMono', {
+		aliases: ['TMax P3200', 'P3200', 'TMZ'],
+		dev: { note: 'A multi-speed film around ISO 800 at heart: rated 3200 it is a push, so develop for the EI you shot (Kodak publishes times from 800 to 25,000).' },
+	}),
 	c('doublex', 'Kodak', 'Eastman Double-X 5222', 250, 'bw', { body: '#2a2a2a', band: '#d9d9d9', ink: '#141414' }, 'kodakMono', {
-		aliases: ['Double-X', 'Double X', '5222'],
+		aliases: ['Double-X', 'Double X', '5222', 'Eastman Double-X'],
 		madeFrom: 'Kodak Eastman Double-X 5222 motion picture film, re-spooled',
+		dev: { note: 'Rated 250 in daylight, 200 under tungsten. No rem-jet: ordinary black-and-white chemistry (D-76 or similar).' },
 	}),
-	c('ektacolorpro400', 'Kodak', 'Ektacolor Pro 400', 400, 'c41', { body: '#d9a21a', band: '#5a2a6a', ink: '#ffffff' }, 'expired', { discontinued: true }),
-	c('ektacolorpro800', 'Kodak', 'Ektacolor Pro 800', 800, 'c41', { body: '#d9a21a', band: '#2a4a8a', ink: '#ffffff' }, 'expired', { discontinued: true }),
+	// Eastman Kodak's own labels (March 2026), sold beside Kodak Alaris's Portra and T-Max. Kodak won't say whether
+	// they are the same emulsions; by most accounts they are, so they share Portra's and T-Max's looks and times.
+	c('ektacolorpro160', 'Kodak', 'Ektacolor Pro 160', 160, 'c41', { body: '#eab52e', band: '#1c1a16', ink: '#ffffff' }, 'portra', {
+		formats: ['35mm', '120', 'sheet'],
+		aliases: ['Eastman Kodak Ektacolor Pro 160', 'Ektacolor 160'],
+		madeFrom: 'Eastman Kodak’s 2026 name for its professional colour negative (by most accounts Portra 160)',
+	}),
+	c('ektacolorpro400', 'Kodak', 'Ektacolor Pro 400', 400, 'c41', { body: '#eab52e', band: '#1c1a16', ink: '#ffffff' }, 'portra', {
+		formats: ['35mm', '120', 'sheet'],
+		aliases: ['Eastman Kodak Ektacolor Pro 400', 'Ektacolor 400'],
+		madeFrom: 'Eastman Kodak’s 2026 name for its professional colour negative (by most accounts Portra 400)',
+	}),
+	c('ektacolorpro800', 'Kodak', 'Ektacolor Pro 800', 800, 'c41', { body: '#eab52e', band: '#1c1a16', ink: '#ffffff' }, 'portra', {
+		formats: ['35mm', '120'],
+		aliases: ['Eastman Kodak Ektacolor Pro 800', 'Ektacolor 800'],
+		madeFrom: 'Eastman Kodak’s 2026 name for its professional colour negative (by most accounts Portra 800)',
+	}),
+	c('ektapan100', 'Kodak', 'Ektapan 100', 100, 'bw', { body: '#eab52e', band: '#1c1a16', ink: '#ffffff' }, 'kodakMono', {
+		formats: ['35mm', '120', 'sheet'],
+		aliases: ['Eastman Kodak Ektapan 100', 'Eastman Ektapan 100'],
+		madeFrom: 'Eastman Kodak’s 2026 name for its fine-grain T-grain film (by most accounts T-Max 100)',
+		dev: { recipes: ['tmax100-d76-100', 'tmax100-xtol-100'], note: 'T-Max 100 times are the usual starting point.' },
+	}),
+	c('ektapan400', 'Kodak', 'Ektapan 400', 400, 'bw', { body: '#eab52e', band: '#1c1a16', ink: '#ffffff' }, 'kodakMono', {
+		formats: ['35mm', '120', 'sheet'],
+		aliases: ['Eastman Kodak Ektapan 400', 'Eastman Ektapan 400'],
+		madeFrom: 'Eastman Kodak’s 2026 name for its T-grain 400 film (by most accounts T-Max 400)',
+		dev: { recipes: ['tmax400-d76-400', 'tmax400-xtol-400'], note: 'T-Max 400 times are the usual starting point.' },
+	}),
+	c('ektapan3200', 'Kodak', 'Ektapan P3200', 3200, 'bw', { body: '#eab52e', band: '#1c1a16', ink: '#ffffff' }, 'kodakMono', {
+		aliases: ['Ektapan 3200', 'Eastman Kodak Ektapan P3200', 'Eastman Ektapan 3200'],
+		madeFrom: 'Eastman Kodak’s 2026 name for its multi-speed high-speed film (by most accounts T-Max P3200)',
+		dev: { note: 'Around ISO 800 at heart: rated 3200 it is a push, so develop for the EI you shot.' },
+	}),
+	c('trix320', 'Kodak', 'Tri-X 320', 320, 'bw', { body: '#f2b705', band: '#141414', ink: '#ffffff' }, 'kodakMono', {
+		formats: ['sheet'],
+		aliases: ['320TXP', 'TXP 320', 'Tri-X Pan Professional 320'],
+		dev: { note: 'Sheet film (4×5, 5×7, 8×10), with a longer toe than Tri-X 400 for studio and portrait work. D-76 stock about 6 min at 20 °C in a tray.' },
+	}),
 	c('vision3-50d', 'Kodak', 'Vision3 50D 5203', 50, 'ecn2', { body: '#2a2a2a', band: '#e8a808', ink: '#141414' }, 'cine', { aliases: ['Vision3 50D', '5203'] }),
 	c('vision3-250d', 'Kodak', 'Vision3 250D 5207', 250, 'ecn2', { body: '#2a2a2a', band: '#e8a808', ink: '#141414' }, 'cine', { aliases: ['Vision3 250D', '5207'] }),
+	c('vision3-200t', 'Kodak', 'Vision3 200T 5213', 200, 'ecn2', { body: '#2a2a2a', band: '#e8a808', ink: '#141414' }, 'cineTungsten', { tungsten: true, aliases: ['Vision3 200T', '5213'] }),
 	c('vision3-500t', 'Kodak', 'Vision3 500T 5219', 500, 'ecn2', { body: '#2a2a2a', band: '#e8a808', ink: '#141414' }, 'cineTungsten', { tungsten: true, aliases: ['Vision3 500T', '5219'] }),
+	// Discontinued, but still in freezers and on eBay.
+	c('portra160nc', 'Kodak', 'Portra 160NC', 160, 'c41', { body: '#f0b020', band: '#c88838', ink: '#ffffff' }, 'portra', { formats: ['35mm', '120', 'sheet'], aliases: ['Portra 160 NC'], discontinued: true }),
+	c('portra160vc', 'Kodak', 'Portra 160VC', 160, 'c41', { body: '#f0b020', band: '#c82818', ink: '#ffffff' }, 'portra', { formats: ['35mm', '120', 'sheet'], aliases: ['Portra 160 VC'], discontinued: true }),
+	c('portra400nc', 'Kodak', 'Portra 400NC', 400, 'c41', { body: '#f0b020', band: '#c88838', ink: '#ffffff' }, 'portra', { formats: ['35mm', '120', 'sheet'], aliases: ['Portra 400 NC'], discontinued: true }),
+	c('portra400vc', 'Kodak', 'Portra 400VC', 400, 'c41', { body: '#f0b020', band: '#c82818', ink: '#ffffff' }, 'portra', { formats: ['35mm', '120', 'sheet'], aliases: ['Portra 400 VC'], discontinued: true }),
+	c('portra400uc', 'Kodak', 'Portra 400UC', 400, 'c41', { body: '#f0b020', band: '#882888', ink: '#ffffff' }, 'portra', { ...both, aliases: ['Portra 400 UC'], discontinued: true }),
+	c('e100vs', 'Kodak', 'Ektachrome E100VS', 100, 'e6', { body: '#0844ae', band: '#d82828', ink: '#ffffff' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['E100VS'], discontinued: true }),
+	c('e100g', 'Kodak', 'Ektachrome E100G', 100, 'e6', { body: '#0844ae', band: '#f8c848', ink: '#ffffff' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['E100G', 'E100GX'], discontinued: true }),
+	c('elitechrome100', 'Kodak', 'Elite Chrome 100', 100, 'e6', { body: '#f2b705', band: '#2858b8', ink: '#ffffff' }, 'slide', { aliases: ['Elite Chrome', 'EliteChrome 100', 'EB-3'], discontinued: true }),
+	c('bw400cn', 'Kodak', 'BW400CN', 400, 'c41', { body: '#f2b705', band: '#5a5a5a', ink: '#ffffff' }, 'chromogenicMono', {
+		aliases: ['Professional BW400CN', 'T400CN', 'BW 400CN'],
+		discontinued: true,
+		dev: { note: 'Black and white, but developed in C-41 colour chemistry.' },
+	}),
+	c('plusx125', 'Kodak', 'Plus-X 125', 125, 'bw', { body: '#f2b705', band: '#2a5a3a', ink: '#ffffff' }, 'kodakMono', { ...both, aliases: ['Plus-X', 'Plus-X Pan', '125PX'], discontinued: true }),
 
 	/* ---------- Fujifilm ---------- */
-	c('fuji200', 'Fujifilm', '200', 200, 'c41', { body: '#086a10', band: '#580838', ink: '#ffffff' }, 'kodak', { aliases: ['Fujicolor 200'], madeFrom: 'Made by Kodak for Fujifilm (by most accounts, Kodak Gold 200)' }),
-	c('fuji400', 'Fujifilm', '400', 400, 'c41', { body: '#087818', band: '#08b858', ink: '#ffffff' }, 'kodak', { aliases: ['Fujicolor 400'], madeFrom: 'Made by Kodak for Fujifilm (by most accounts, Kodak UltraMax 400)' }),
-	c('fujicolor100', 'Fujifilm', 'Fujicolor 100', 100, 'c41', { body: '#089810', band: '#d83828', ink: '#ffffff' }, 'fuji', { aliases: ['Fuji 100', 'Fujicolor Industrial 100'] }),
+	c('fuji200', 'Fujifilm', '200', 200, 'c41', { body: '#0a8a3c', band: '#f4f4f0', ink: '#6a1a4a' }, 'kodak', { aliases: ['Fujicolor 200'], madeFrom: 'Made by Kodak for Fujifilm (by most accounts, Kodak Gold 200)' }),
+	c('fuji400', 'Fujifilm', '400', 400, 'c41', { body: '#0a8a3c', band: '#f4f4f0', ink: '#0a8a3c' }, 'kodak', { aliases: ['Fujicolor 400'], madeFrom: 'Made by Kodak for Fujifilm (by most accounts, Kodak UltraMax 400)' }),
+	c('fujicolor100', 'Fujifilm', 'Fujicolor 100', 100, 'c41', { body: '#0a8a3c', band: '#f4f4f0', ink: '#d83828' }, 'fuji', { aliases: ['Fuji 100', 'Fujicolor Industrial 100'] }),
 	c('superia400', 'Fujifilm', 'Superia X-TRA 400', 400, 'c41', { body: '#18a848', band: '#480808', ink: '#ffffff' }, 'fuji', {
 		aliases: ['Superia 400', 'Superia Xtra 400', 'Superia X-Tra', 'Fujicolor Superia X-Tra 400', 'Superia'],
 	}),
-	c('superiapremium400', 'Fujifilm', 'Superia Premium 400', 400, 'c41', { body: '#101010', band: '#087838', ink: '#ffffff' }, 'fuji', { aliases: ['Superia Premium'] }),
+	c('superiapremium400', 'Fujifilm', 'Superia Premium 400', 400, 'c41', { body: '#f2f2ee', band: '#0a8a3c', ink: '#ffffff' }, 'fuji', { aliases: ['Superia Premium'] }),
 	c('c200', 'Fujifilm', 'Fujicolor C200', 200, 'c41', { body: '#087838', band: '#789878', ink: '#ffffff' }, 'fuji', { aliases: ['C200'], discontinued: true }),
 	c('pro400h', 'Fujifilm', 'Pro 400H', 400, 'c41', { body: '#08a848', band: '#682888', ink: '#ffffff' }, 'fuji', { ...both, discontinued: true }),
-	c('velvia50', 'Fujifilm', 'Velvia 50', 50, 'e6', { body: '#d8e6ea', band: '#282898', ink: '#ffffff' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['RVP 50'] }),
-	c('velvia100', 'Fujifilm', 'Velvia 100', 100, 'e6', { body: '#c6cad6', band: '#181888', ink: '#ffffff' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['RVP 100'] }),
-	c('provia100f', 'Fujifilm', 'Provia 100F', 100, 'e6', { body: '#08c848', band: '#0808b8', ink: '#ffffff' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['RDP III', 'Provia 100'] }),
-	c('acros100ii', 'Fujifilm', 'Neopan 100 Acros II', 100, 'bw', { body: FUJI_GREEN, band: '#101010', ink: '#ffffff' }, 'mono', {
+	c('velvia50', 'Fujifilm', 'Velvia 50', 50, 'e6', { body: '#3f9e4a', band: '#f4f4f0', ink: '#1e7a36' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['RVP 50'] }),
+	c('velvia100', 'Fujifilm', 'Velvia 100', 100, 'e6', { body: '#3f9e4a', band: '#f4f4f0', ink: '#1e7a36' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['RVP 100'] }),
+	c('provia100f', 'Fujifilm', 'Provia 100F', 100, 'e6', { body: '#3f9e4a', band: '#f4f4f0', ink: '#0b6a34' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['RDP III', 'Provia 100'] }),
+	c('acros100ii', 'Fujifilm', 'Neopan 100 Acros II', 100, 'bw', { body: '#3f9e4a', band: '#f4f4f0', ink: '#151515' }, 'mono', {
 		...both,
 		aliases: ['Acros 100', 'Acros II', 'Neopan Acros 100', 'Neopan Acros', 'Acros'],
 		dev: { recipes: ['acros-d76-100', 'acros-d76h-100'], note: 'Very fine grain and almost no reciprocity failure up to two minutes.' },
 	}),
+	// Discontinued Fujifilm.
+	c('pro160ns', 'Fujifilm', 'Pro 160NS', 160, 'c41', { body: '#0a8a48', band: '#3a3a3a', ink: '#ffffff' }, 'fuji', { formats: ['120', 'sheet'], aliases: ['Pro 160 NS', 'Fujicolor Pro 160NS', '160NS'], discontinued: true }),
+	c('superia200', 'Fujifilm', 'Superia 200', 200, 'c41', { body: '#0a8a3c', band: '#d82828', ink: '#ffffff' }, 'fuji', { aliases: ['Fujicolor Superia 200'], discontinued: true }),
+	c('superia800', 'Fujifilm', 'Superia X-TRA 800', 800, 'c41', { body: '#0a8a3c', band: '#2848a8', ink: '#ffffff' }, 'fuji', { aliases: ['Superia 800', 'Fujicolor Superia 800'], discontinued: true }),
+	c('superia1600', 'Fujifilm', 'Superia 1600', 1600, 'c41', { body: '#0a7a34', band: '#383838', ink: '#ffffff' }, 'fuji', { aliases: ['Fujicolor Superia 1600'], discontinued: true }),
+	c('natura1600', 'Fujifilm', 'Natura 1600', 1600, 'c41', { body: '#1a1a1a', band: '#c8a040', ink: '#ffffff' }, 'fuji', { aliases: ['Fujicolor Natura 1600', 'Natura'], discontinued: true }),
+	c('neopan400', 'Fujifilm', 'Neopan 400', 400, 'bw', { body: '#101010', band: '#0a7a3c', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Neopan 400 Professional', 'Neopan 400PR'], discontinued: true }),
+	c('neopan1600', 'Fujifilm', 'Neopan 1600', 1600, 'bw', { body: '#101010', band: '#c82828', ink: '#ffffff' }, 'mono', { aliases: ['Neopan 1600 Super Presto'], discontinued: true }),
+	c('neopanss', 'Fujifilm', 'Neopan 100 SS', 100, 'bw', { body: '#101010', band: '#2a5aa8', ink: '#ffffff' }, 'mono', { aliases: ['Neopan SS', 'Neopan 100SS'], discontinued: true }),
+	c('astia100f', 'Fujifilm', 'Astia 100F', 100, 'e6', { body: '#d8dce0', band: '#c84878', ink: '#ffffff' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['Astia 100', 'RAP 100F', 'Fujichrome Astia'], discontinued: true }),
+	c('sensia100', 'Fujifilm', 'Sensia 100', 100, 'e6', { body: '#2878c8', band: '#f0f0f0', ink: '#2878c8' }, 'slide', { aliases: ['Fujichrome Sensia 100', 'Sensia'], discontinued: true }),
+	c('velvia100f', 'Fujifilm', 'Velvia 100F', 100, 'e6', { body: '#c6cad6', band: '#282898', ink: '#ffffff' }, 'slide', { formats: ['35mm', '120', 'sheet'], aliases: ['RVP 100F'], discontinued: true }),
+	c('provia400x', 'Fujifilm', 'Provia 400X', 400, 'e6', { body: '#08c848', band: '#0808b8', ink: '#ffffff' }, 'slide', { ...both, aliases: ['RXP 400X', 'Provia 400'], discontinued: true }),
 
 	/* ---------- Ilford / Harman ---------- */
-	c('hp5', 'Ilford', 'HP5 Plus', 400, 'bw', ILFORD(), 'mono', {
+	c('hp5', 'Ilford', 'HP5 Plus', 400, 'bw', { body: '#f0efec', band: '#151515', ink: '#5aae46' }, 'mono', {
 		formats: ['35mm', '120', 'sheet'],
 		aliases: ['HP5', 'HP5 Plus 400', 'HP5+'],
-		dev: { recipes: ['hp5-ddx-400', 'hp5-ddx-800', 'hp5-ddx-1600', 'hp5-ddx-3200', 'hp5-ilfosol-400'], note: 'Pushes well to 1600 and 3200.' },
+		dev: { recipes: ['hp5-ddx-400', 'hp5-ddx-800', 'hp5-ddx-1600', 'hp5-ddx-3200', 'hp5-id11-400', 'hp5-ilfosol-400'], note: 'Pushes well to 1600 and 3200.' },
 	}),
-	c('fp4', 'Ilford', 'FP4 Plus', 125, 'bw', ILFORD(), 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['FP4', 'FP4 Plus 125', 'FP4+'], dev: { recipes: ['fp4-ddx-125', 'fp4-id11-125'] } }),
-	c('delta100', 'Ilford', 'Delta 100 Professional', 100, 'bw', ILFORD(), 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['Delta 100'], dev: { recipes: ['delta100-ddx-100'] } }),
-	c('delta400', 'Ilford', 'Delta 400 Professional', 400, 'bw', ILFORD(), 'mono', {
+	c('fp4', 'Ilford', 'FP4 Plus', 125, 'bw', { body: '#f0efec', band: '#151515', ink: '#3a6aa8' }, 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['FP4', 'FP4 Plus 125', 'FP4+'], dev: { recipes: ['fp4-ddx-125', 'fp4-id11-125'] } }),
+	c('delta100', 'Ilford', 'Delta 100 Professional', 100, 'bw', { body: '#f0efec', band: '#151515', ink: '#4a78c0' }, 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['Delta 100'], dev: { recipes: ['delta100-ddx-100', 'delta100-id11-100'] } }),
+	c('delta400', 'Ilford', 'Delta 400 Professional', 400, 'bw', { body: '#f0efec', band: '#151515', ink: '#5a9a44' }, 'mono', {
 		...both,
 		aliases: ['Delta 400'],
 		dev: { recipes: ['delta400-ddx-400', 'delta400-id11-400'] },
@@ -136,28 +216,39 @@ export const STOCK_CATALOG: CatalogStock[] = [
 		madeFrom: 'Delta 400 coated on a clearer base with anti-halation protection; same speed and times',
 		dev: { recipes: ['delta400-ddx-400', 'delta400-id11-400'] },
 	}),
-	c('delta3200', 'Ilford', 'Delta 3200 Professional', 3200, 'bw', ILFORD('#2a2a2a'), 'mono', { ...both, aliases: ['Delta 3200'], dev: { note: 'Nominally ISO 1000; rated 3200, it is a push. Follow the data sheet for your EI.' } }),
-	c('panf50', 'Ilford', 'Pan F Plus', 50, 'bw', ILFORD(), 'mono', { ...both, aliases: ['Pan F', 'Pan F Plus 50', 'PanF+'] }),
-	c('xp2', 'Ilford', 'XP2 Super', 400, 'c41', ILFORD(), 'chromogenicMono', {
+	c('delta3200', 'Ilford', 'Delta 3200 Professional', 3200, 'bw', { body: '#f0efec', band: '#151515', ink: '#9a80c8' }, 'mono', { ...both, aliases: ['Delta 3200'], dev: { recipes: ['delta3200-ddx-1600', 'delta3200-ddx-3200', 'delta3200-id11-3200'], note: 'Nominally ISO 1000; rated 3200, it is a push. Follow the data sheet for your EI.' } }),
+	c('panf50', 'Ilford', 'Pan F Plus', 50, 'bw', { body: '#f0efec', band: '#151515', ink: '#d8b23a' }, 'mono', { ...both, aliases: ['Pan F', 'Pan F Plus 50', 'PanF+'], dev: { recipes: ['panf-ddx-50', 'panf-id11-50'], note: 'Very fine grain and high contrast; it rewards careful exposure.' } }),
+	c('xp2', 'Ilford', 'XP2 Super', 400, 'c41', { body: '#f0efec', band: '#151515', ink: '#d0502a' }, 'chromogenicMono', {
 		...both,
 		aliases: ['XP2', 'XP2 Super 400'],
 		dev: { note: 'Black and white, but developed in C-41 colour chemistry, like any colour negative.' },
 	}),
-	c('sfx200', 'Ilford', 'SFX 200', 200, 'bw', ILFORD(), 'mono', { ...both, aliases: ['SFX'], dev: { note: 'Extended red sensitivity: with a deep red filter it gives an infrared-like look.' } }),
-	c('ortho80', 'Ilford', 'Ortho Plus', 80, 'bw', ILFORD('#2a2a2a'), 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['Ortho Plus 80', 'Ortho 80'], dev: { note: 'Orthochromatic: blind to red, so it can be developed under a red safelight.' } }),
-	c('ilfocolor400', 'Ilford', 'Ilfocolor 400 Plus', 400, 'c41', { body: '#ececea', band: '#e05a1a', ink: '#151515' }, 'kodak', { aliases: ['Ilfocolor 400'] }),
-	c('kentmere100', 'Kentmere', 'Pan 100', 100, 'bw', { body: '#c8c8c8', band: '#2878b8', ink: '#151515' }, 'mono', { aliases: ['Kentmere 100'] }),
-	c('kentmere200', 'Kentmere', 'Pan 200', 200, 'bw', { body: '#d0d0d0', band: '#9a9a3a', ink: '#151515' }, 'mono', { aliases: ['Kentmere 200'] }),
-	c('kentmere400', 'Kentmere', 'Pan 400', 400, 'bw', { body: '#c8c8c8', band: '#684898', ink: '#ffffff' }, 'mono', { aliases: ['Kentmere 400'] }),
+	c('sfx200', 'Ilford', 'SFX 200', 200, 'bw', { body: '#f0efec', band: '#151515', ink: '#b8489a' }, 'mono', { ...both, aliases: ['SFX'], dev: { recipes: ['sfx-id11-200'], note: 'Extended red sensitivity: with a deep red filter it gives an infrared-like look.' } }),
+	c('ortho80', 'Ilford', 'Ortho Plus', 80, 'bw', ILFORD('#d8403a'), 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['Ortho Plus 80', 'Ortho 80'], dev: { note: 'Orthochromatic: blind to red, so it can be developed under a red safelight.' } }),
+	c('ilfocolor400', 'Ilford', 'Ilfocolor 400 Plus', 400, 'c41', { body: '#f0efec', band: '#e05a1a', ink: '#151515' }, 'kodak', { aliases: ['Ilfocolor 400'] }),
+	c('kentmere100', 'Kentmere', 'Pan 100', 100, 'bw', { body: '#2b51a4', band: '#5ca0b3', ink: '#ffffff' }, 'mono', { aliases: ['Kentmere 100', 'Kentmere Pan 100'] }),
+	c('kentmere200', 'Kentmere', 'Pan 200', 200, 'bw', { body: '#2f6fb0', band: '#e0cc3a', ink: '#1a1a1a' }, 'mono', { ...both, aliases: ['Kentmere 200', 'Kentmere Pan 200'] }),
+	c('kentmere400', 'Kentmere', 'Pan 400', 400, 'bw', { body: '#5a3ab0', band: '#3a4fc0', ink: '#ffffff' }, 'mono', { aliases: ['Kentmere 400', 'Kentmere Pan 400'] }),
+	c('ilfordpan100', 'Ilford', 'Pan 100', 100, 'bw', { body: '#f0efec', band: '#151515', ink: '#4a78c0' }, 'mono', { aliases: ['Ilford Pan 100'] }),
+	c('ilfordpan400', 'Ilford', 'Pan 400', 400, 'bw', { body: '#f0efec', band: '#151515', ink: '#d03a6a' }, 'mono', { aliases: ['Ilford Pan 400'] }),
 	c('phoenix200', 'Harman', 'Phoenix 200', 200, 'c41', { body: '#e62a2a', band: '#f88868', ink: '#ffffff' }, 'color', { ...both, aliases: ['Phoenix'], dev: { note: 'Low halation protection and strong grain by design; standard C-41.' } }),
-	c('phoenix2', 'Harman', 'Phoenix II 200', 200, 'c41', { body: '#2888c8', band: '#383868', ink: '#ffffff' }, 'color', { aliases: ['Phoenix II'] }),
-	c('harmanred125', 'Harman', 'Red 125', 125, 'c41', { body: '#c80818', band: '#e8e8e8', ink: '#c80818' }, 'color', { aliases: ['Harman Red'], dev: { note: 'Redscale: the film is spooled base-side forward.' } }),
+	c('phoenix2', 'Harman', 'Phoenix II 200', 200, 'c41', { body: '#2888c8', band: '#383868', ink: '#ffffff' }, 'color', { ...both, aliases: ['Phoenix II'] }),
+	c('harmanred125', 'Harman', 'Red 125', 125, 'c41', { body: '#c80818', band: '#e8e8e8', ink: '#c80818' }, 'color', { ...both, aliases: ['Harman Red'], dev: { note: 'Redscale: exposed through the base, so it reads red-orange. Box speed 125; Harman suggests 100–400 for more or less red. Standard C-41.' } }),
 
 	/* ---------- Foma ---------- */
-	c('fomapan100', 'Foma', 'Fomapan 100 Classic', 100, 'bw', { body: '#182878', band: '#d8c828', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Fomapan 100', 'Fomapan Classic 100'] }),
-	c('fomapan200', 'Foma', 'Fomapan 200 Creative', 200, 'bw', { body: '#181878', band: '#d8d8d8', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Fomapan 200', 'Fomapan Creative 200'] }),
-	c('fomapan400', 'Foma', 'Fomapan 400 Action', 400, 'bw', { body: '#080868', band: '#a8e808', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Fomapan 400', 'Fomapan Action 400'] }),
-	c('retropan320', 'Foma', 'Retropan 320 Soft', 320, 'bw', { body: '#080868', band: '#885828', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Retropan 320'] }),
+	c('fomapan100', 'Foma', 'Fomapan 100 Classic', 100, 'bw', { body: '#182878', band: '#d8c828', ink: '#ffffff' }, 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['Fomapan 100', 'Fomapan Classic 100'] }),
+	c('fomapan200', 'Foma', 'Fomapan 200 Creative', 200, 'bw', { body: '#181878', band: '#d8d8d8', ink: '#ffffff' }, 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['Fomapan 200', 'Fomapan Creative 200'] }),
+	c('fomapan400', 'Foma', 'Fomapan 400 Action', 400, 'bw', { body: '#080868', band: '#a8e808', ink: '#ffffff' }, 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['Fomapan 400', 'Fomapan Action 400'] }),
+	c('retropan320', 'Foma', 'Retropan 320 Soft', 320, 'bw', { body: '#080868', band: '#885828', ink: '#ffffff' }, 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['Retropan 320'] }),
+	c('fomaortho400', 'Foma', 'Fomapan Ortho 400', 400, 'bw', { body: '#eceee8', band: '#3a8a48', ink: '#ffffff' }, 'mono', {
+		...both,
+		aliases: ['Foma Ortho 400', 'FomaOrtho 400', 'Ortho 400'],
+		dev: { note: 'Orthochromatic: blind to red, so it can be developed under a red safelight. Common negative developers; rates well from 160 to 1600.' },
+	}),
+	c('fomapanr100', 'Foma', 'Fomapan R 100', 100, 'bw', { body: '#141414', band: '#c82828', ink: '#ffffff' }, 'monoSlide', {
+		aliases: ['Fomapan R', 'Fomapan R100'],
+		dev: { note: 'A black-and-white slide film: Foma’s reversal kit gives positives. In ordinary black-and-white chemistry it develops as a negative.' },
+	}),
 
 	/* ---------- Lomography ---------- */
 	c('lomo100', 'Lomography', 'Color Negative 100', 100, 'c41', { body: '#c81c0c', band: '#f8f8e8', ink: '#c81c0c' }, 'color', { ...both, aliases: ['Colour Negative 100', 'Lomography 100'] }),
@@ -171,16 +262,24 @@ export const STOCK_CATALOG: CatalogStock[] = [
 		madeFrom: 'A cinema black-and-white emulsion (by most accounts ORWO N74 Plus)',
 		dev: { note: 'Standard black-and-white chemistry; Lomography publishes times for common developers.' },
 	}),
-	c('potsdam100', 'Lomography', 'Potsdam Kino B&W 100', 100, 'bw', { body: '#e8e8e8', band: '#284898', ink: '#284898' }, 'mono', { ...both, aliases: ['Potsdam 100', 'Potsdam Kino'] }),
+	c('potsdam100', 'Lomography', 'Potsdam Kino B&W 100', 100, 'bw', { body: '#e8e8e8', band: '#284898', ink: '#284898' }, 'mono', { aliases: ['Potsdam 100', 'Potsdam Kino'] }),
 	c('lomochromepurple', 'Lomography', 'LomoChrome Purple', 400, 'c41', { body: '#6868b8', band: '#c8b878', ink: '#ffffff' }, 'color', { ...both, aliases: ['Lomochrome Purple 100-400', 'Purple'] }),
 	c('lomochromemetropolis', 'Lomography', 'LomoChrome Metropolis', 400, 'c41', { body: '#d8e838', band: '#181818', ink: '#d8e838' }, 'color', { ...both, aliases: ['Metropolis', 'Metropolis 100-400'] }),
 	c('lomocolor92', 'Lomography', "LomoChrome Color '92", 400, 'c41', { body: '#d8b888', band: '#282828', ink: '#ffffff' }, 'color', { ...both, aliases: ["Color '92", "Colour '92"] }),
 	c('lomocolor92sunkissed', 'Lomography', "LomoChrome Color '92 Sun-kissed", 400, 'c41', { body: '#e8b878', band: '#c84828', ink: '#ffffff' }, 'color', { aliases: ["Color '92 Sun-kissed", 'Sunkissed'] }),
+	c('lomochrometurquoise', 'Lomography', 'LomoChrome Turquoise', 400, 'c41', { body: '#3aa0b0', band: '#f0a050', ink: '#ffffff' }, 'color', { ...both, aliases: ['Turquoise', 'LomoChrome Turquoise 100-400'] }),
+	c('redscalexr', 'Lomography', 'Redscale XR 50-200', 100, 'c41', { body: '#f0ece4', band: '#c83a1e', ink: '#ffffff' }, 'color', {
+		...both,
+		aliases: ['Redscale XR', 'Redscale'],
+		dev: { note: 'Redscale: exposed through the base. Rate it anywhere from 50 (yellower) to 200 (redder); standard C-41.' },
+	}),
+	c('babylon13', 'Lomography', 'Babylon Kino B&W 13', 13, 'bw', { body: '#e8e0c8', band: '#a87838', ink: '#3a2a18' }, 'mono', { aliases: ['Babylon 13', 'Babylon Kino'] }),
+	c('fantome8', 'Lomography', 'Fantôme Kino B&W 8', 8, 'bw', { body: '#ececea', band: '#3f7f7c', ink: '#ffffff' }, 'mono', { aliases: ['Fantome Kino 8', 'Fantôme 8', 'Fantome'] }),
 
 	/* ---------- CineStill ---------- */
-	c('cinestill50d', 'CineStill', '50D', 50, 'c41', CINESTILL('#1858d8'), 'cine', { ...both, madeFrom: 'Kodak Vision3 50D, rem-jet removed' }),
+	c('cinestill50d', 'CineStill', '50D', 50, 'c41', CINESTILL('#1858d8'), 'cine', { formats: ['35mm', '120', 'sheet'], madeFrom: 'Kodak Vision3 50D, rem-jet removed' }),
 	c('cinestill400d', 'CineStill', '400D', 400, 'c41', CINESTILL('#6848a8'), 'cine', { ...both, madeFrom: 'A daylight cine-based emulsion, rem-jet free' }),
-	c('cinestill800t', 'CineStill', '800T', 800, 'c41', CINESTILL('#d83838'), 'cineTungsten', { ...both, tungsten: true, madeFrom: 'Kodak Vision3 500T, rem-jet removed (halation around lights)' }),
+	c('cinestill800t', 'CineStill', '800T', 800, 'c41', CINESTILL('#d83838'), 'cineTungsten', { formats: ['35mm', '120', 'sheet'], tungsten: true, madeFrom: 'Kodak Vision3 500T, rem-jet removed (halation around lights)' }),
 	c('cinestillbwxx', 'CineStill', 'BwXX', 250, 'bw', CINESTILL('#b8b8b8'), 'kodakMono', { aliases: ['Double-X BwXX'], madeFrom: 'Kodak Eastman Double-X 5222' }),
 
 	/* ---------- Re-spoolers and small makers ---------- */
@@ -214,8 +313,8 @@ export const STOCK_CATALOG: CatalogStock[] = [
 	c('candido200', 'Candido', '200', 200, 'c41', { body: '#682838', band: '#b88888', ink: '#ffffff' }, 'cine', { aliases: ['Candido 200'], madeFrom: 'Re-spooled Kodak Vision3 cine film, rem-jet removed' }),
 	c('candido400', 'Candido', '400', 400, 'c41', { body: '#384838', band: '#8898a8', ink: '#ffffff' }, 'cineTungsten', { tungsten: true, aliases: ['Candido 400'], madeFrom: 'Re-spooled Kodak Vision3 cine film, rem-jet removed' }),
 	c('candido800', 'Candido', '800', 800, 'c41', { body: '#384888', band: '#8898c8', ink: '#ffffff' }, 'cineTungsten', { tungsten: true, aliases: ['Candido 800'], madeFrom: 'Re-spooled Kodak Vision3 500T, rem-jet removed' }),
-	c('luckyc200', 'Lucky', 'C200', 200, 'c41', { body: '#e62818', band: '#e8e8e8', ink: '#e62818' }, 'lucky', { aliases: ['Lucky Color 200', 'Lucky Colour C200'] }),
-	c('luckyc400', 'Lucky', 'C400', 400, 'c41', { body: '#d80808', band: '#f8e8e8', ink: '#d80808' }, 'lucky', { aliases: ['Lucky Color 400', 'Lucky Colour C400'] }),
+	c('luckyc200', 'Lucky', 'C200', 200, 'c41', { body: '#e62818', band: '#e8e8e8', ink: '#e62818' }, 'lucky', { ...both, aliases: ['Lucky Color 200', 'Lucky Colour C200', 'Lucky Color C200'] }),
+	c('luckyc400', 'Lucky', 'C400', 400, 'c41', { body: '#d80808', band: '#f8e8e8', ink: '#d80808' }, 'lucky', { ...both, aliases: ['Lucky Color 400', 'Lucky Colour C400', 'Lucky Color C400'] }),
 	c('luckyshd100', 'Lucky', 'SHD 100', 100, 'bw', { body: '#586878', band: '#d8d8d8', ink: '#ffffff' }, 'mono', { ...both, aliases: ['SHD100'] }),
 	c('luckyshd400', 'Lucky', 'SHD 400', 400, 'bw', { body: '#d8d8d8', band: '#585858', ink: '#151515' }, 'mono', { ...both, aliases: ['SHD400'] }),
 	c('rpx25', 'Rollei', 'RPX 25', 25, 'bw', { body: '#d8d8d4', band: '#d8b808', ink: '#151515' }, 'mono', { ...both }),
@@ -225,7 +324,7 @@ export const STOCK_CATALOG: CatalogStock[] = [
 	c('retro400s', 'Rollei', 'Retro 400S', 400, 'bw', { body: '#a8b8c8', band: '#38485a', ink: '#ffffff' }, 'mono', { ...both }),
 	c('superpan200', 'Rollei', 'Superpan 200', 200, 'bw', { body: '#e4e8e8', band: '#5848a8', ink: '#ffffff' }, 'mono', { ...both }),
 	c('rolleiir400', 'Rollei', 'Infrared 400', 400, 'bw', { body: '#081848', band: '#a80838', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Infrared 400', 'IR 400'] }),
-	c('chs100', 'Adox', 'CHS 100 II', 100, 'bw', { body: '#0c0c0c', band: '#e8e8e8', ink: '#0c0c0c' }, 'mono', { ...both, aliases: ['CHS 100', 'CHS II'] }),
+	c('chs100', 'Adox', 'CHS 100 II', 100, 'bw', { body: '#0c0c0c', band: '#e8e8e8', ink: '#0c0c0c' }, 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['CHS 100', 'CHS II'] }),
 	c('apx100', 'AgfaPhoto', 'APX 100', 100, 'bw', { body: '#b8b8b8', band: '#383838', ink: '#ffffff' }, 'mono', { aliases: ['Agfa APX 100'] }),
 	c('apx400', 'AgfaPhoto', 'APX 400', 400, 'bw', { body: '#d8d8e8', band: '#484848', ink: '#ffffff' }, 'mono', { aliases: ['Agfa APX 400'] }),
 	c('agfacolor400', 'AgfaPhoto', 'Color 400', 400, 'c41', { body: '#b80818', band: '#e8d8c8', ink: '#b80818' }, 'kodak', { aliases: ['Agfa Color 400', 'AgfaPhoto Colour 400'] }),
@@ -235,7 +334,57 @@ export const STOCK_CATALOG: CatalogStock[] = [
 	c('streetpan400', 'JCH', 'StreetPan 400', 400, 'bw', { body: '#0c0c0c', band: '#e8e8e8', ink: '#0c0c0c' }, 'mono', { ...both, aliases: ['StreetPan'] }),
 	c('pancro400', 'Bergger', 'Pancro 400', 400, 'bw', { body: '#781818', band: '#c8c8c8', ink: '#781818' }, 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['Pancro'] }),
 	c('ferraniap30', 'Ferrania', 'P30', 80, 'bw', { body: '#0c0c0c', band: '#e8e8e8', ink: '#0c0c0c' }, 'mono', { ...both, aliases: ['P30 Alpha'] }),
-	c('ektapan400', 'Kodak', 'Eastman Ektapan 400', 400, 'bw', { body: '#f6b818', band: '#281828', ink: '#f6b818' }, 'kodakMono', { aliases: ['Ektapan 400'] }),
+
+	/* ---------- More makers and re-spoolers ---------- */
+	c('silbersalz50d', 'Silbersalz35', '50D', 50, 'ecn2', { body: '#e8b820', band: '#1a1a1a', ink: '#ffffff' }, 'cine', {
+		aliases: ['Silbersalz 50D'],
+		madeFrom: 'Kodak Vision3 50D 5203, rem-jet intact',
+		dev: { note: 'Sold with processing and scans by Silbersalz’s own lab. At home it is ECN-2 with the rem-jet removed.' },
+	}),
+	c('silbersalz200t', 'Silbersalz35', '200T', 200, 'ecn2', { body: '#e8b820', band: '#1a1a1a', ink: '#ffffff' }, 'cineTungsten', { tungsten: true, aliases: ['Silbersalz 200T'], madeFrom: 'Kodak Vision3 200T 5213, rem-jet intact' }),
+	c('silbersalz250d', 'Silbersalz35', '250D', 250, 'ecn2', { body: '#e8b820', band: '#1a1a1a', ink: '#ffffff' }, 'cine', { aliases: ['Silbersalz 250D'], madeFrom: 'Kodak Vision3 250D 5207, rem-jet intact' }),
+	c('silbersalz500t', 'Silbersalz35', '500T', 500, 'ecn2', { body: '#e8b820', band: '#1a1a1a', ink: '#ffffff' }, 'cineTungsten', { tungsten: true, aliases: ['Silbersalz 500T'], madeFrom: 'Kodak Vision3 500T 5219, rem-jet intact' }),
+	c('flicelektra100', 'Flic Film', 'Elektra 100', 100, 'c41', { body: '#d8d8d4', band: '#1a1a1a', ink: '#e03a2a' }, 'aerial', {
+		aliases: ['Elektra 100', 'Flic Elektra'],
+		madeFrom: 'Kodak Aerocolor aerial colour negative, re-spooled',
+		dev: { note: 'Standard C-41. A clear, low-mask base like other aerial films, so scans need their own profile.' },
+	}),
+	c('wolfennc200', 'ORWO', 'Wolfen NC200', 200, 'c41', { body: '#f4f4ec', band: '#3878c8', ink: '#1a1a1a' }, 'color', { aliases: ['NC200', 'Original Wolfen NC200'] }),
+	c('orwoun54', 'ORWO', 'UN54', 100, 'bw', { body: '#3a6a3a', band: '#f0f0ea', ink: '#1a1a1a' }, 'mono', { aliases: ['UN 54', 'ORWO UN54 100'], madeFrom: 'ORWO’s black-and-white cine negative, re-spooled' }),
+	c('orwon74', 'ORWO', 'N74 Plus', 400, 'bw', { body: '#3a6a3a', band: '#c82828', ink: '#ffffff' }, 'mono', { aliases: ['N74', 'N74+', 'ORWO N74 Plus 400'], madeFrom: 'ORWO’s fast black-and-white cine negative, re-spooled' }),
+	c('optikoldschool200', 'Optik Oldschool', 'Opticolour 200', 200, 'c41', { body: '#f2f0ea', band: '#1a1a1a', ink: '#e8a020' }, 'color', { ...both, aliases: ['Opticolour 200', 'Opticolor 200'], madeFrom: 'Original Wolfen NC200' }),
+	c('konocolor200', 'KONO!', 'Color 200', 200, 'c41', { body: '#f8d838', band: '#1a1a1a', ink: '#1a1a1a' }, 'color', { aliases: ['Kono Color 200', 'KONO! Color 200'], madeFrom: 'Original Wolfen NC200' }),
+	c('dubblestereo400', 'Dubblefilm', 'Stereo 400', 400, 'c41', { body: '#f0f0f0', band: '#c8383a', ink: '#ffffff' }, 'color', { aliases: ['Dubble Stereo 400', 'Dubblefilm Stereo'] }),
+	c('leicamonopan50', 'Leica', 'Monopan 50', 50, 'bw', { body: '#1a1a1a', band: '#d8101a', ink: '#ffffff' }, 'mono', { aliases: ['Monopan 50', 'Leica Monopan'] }),
+	c('euston400', 'Aperture Printing', 'Euston 400', 400, 'bw', { body: '#1a1a1a', band: '#e8e8e8', ink: '#1a1a1a' }, 'monoSlide', {
+		aliases: ['Euston 400'],
+		madeFrom: 'Rollei Retro 400S, sold for black-and-white reversal',
+		dev: { note: 'Meant to be reversal-processed into slides; in ordinary black-and-white chemistry it develops as a negative.' },
+	}),
+	c('gp3', 'Shanghai', 'GP3 100', 100, 'bw', { body: '#141a22', band: '#3a6ab8', ink: '#ffffff' }, 'mono', { formats: ['35mm', '120', 'sheet'], aliases: ['GP3', 'Shanghai GP3'] }),
+	c('streetcandyatm400', 'Street Candy', 'ATM 400', 400, 'bw', { body: '#e08aac', band: '#1a1a1a', ink: '#ffffff' }, 'mono', { aliases: ['ATM400', 'Street Candy ATM400'], madeFrom: 'A re-spooled aerial/surveillance black-and-white film' }),
+	c('cms20', 'Adox', 'CMS 20 II', 20, 'bw', { body: '#c8562e', band: '#f4efe8', ink: '#c8562e' }, 'mono', {
+		formats: ['35mm', '120', 'sheet'],
+		aliases: ['CMS 20', 'CMS 20 II Pro'],
+		dev: { note: 'An extremely fine, high-contrast document film: for pictorial tones it needs Adox Adotech developer.' },
+	}),
+	c('hr50', 'Adox', 'HR-50', 50, 'bw', { body: '#c8562e', band: '#f4efe8', ink: '#1a1a1a' }, 'mono', { ...both, aliases: ['HR 50', 'HR50'], dev: { note: 'Speed-enhanced: box speed 50, with extended red sensitivity.' } }),
+	c('scala50', 'Adox', 'Scala 50', 50, 'bw', { body: '#2a2a2a', band: '#c8562e', ink: '#ffffff' }, 'monoSlide', {
+		aliases: ['Adox Scala', 'Scala 50'],
+		dev: { note: 'A black-and-white slide film: Adox’s reversal kit gives positives.' },
+	}),
+	c('silvermax100', 'Adox', 'Silvermax 100', 100, 'bw', { body: '#0c0c0c', band: '#a8a8b8', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Silvermax'], discontinued: true }),
+	c('colormission200', 'Adox', 'Color Mission 200', 200, 'c41', { body: '#0c0c0c', band: '#e83828', ink: '#ffffff' }, 'color', { ...both, aliases: ['Color Mission'], discontinued: true }),
+	c('ortho25', 'Rollei', 'Ortho 25 Plus', 25, 'bw', { body: '#141414', band: '#c83a2a', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Ortho 25', 'Rollei Ortho 25'], dev: { note: 'Orthochromatic: blind to red, so it can be developed under a red safelight.' } }),
+	c('ferraniaorto50', 'Ferrania', 'Orto 50', 50, 'bw', { body: '#1f4a8a', band: '#f0f0f0', ink: '#1f4a8a' }, 'mono', { aliases: ['Orto', 'Ferrania Orto'], dev: { note: 'Orthochromatic: blind to red, so it can be developed under a red safelight.' } }),
+	c('vista200', 'AgfaPhoto', 'Vista Plus 200', 200, 'c41', { body: '#b80818', band: '#f0c818', ink: '#ffffff' }, 'fuji', { aliases: ['Vista 200', 'Agfa Vista 200', 'Vista Plus'], madeFrom: 'Made for AgfaPhoto by Fujifilm', discontinued: true }),
+	c('vista400', 'AgfaPhoto', 'Vista Plus 400', 400, 'c41', { body: '#b80818', band: '#2858b8', ink: '#ffffff' }, 'fuji', { aliases: ['Vista 400', 'Agfa Vista 400'], madeFrom: 'Made for AgfaPhoto by Fujifilm', discontinued: true }),
+	c('ctprecisa100', 'AgfaPhoto', 'CT Precisa 100', 100, 'e6', { body: '#b80818', band: '#e8e8e8', ink: '#b80818' }, 'slide', { aliases: ['Precisa 100', 'CT Precisa', 'Agfa Precisa'], madeFrom: 'Made for AgfaPhoto by Fujifilm (by most accounts Provia 100F)', discontinued: true }),
+	c('scala200x', 'Agfa', 'Scala 200x', 200, 'bw', { body: '#d81818', band: '#1a1a1a', ink: '#ffffff' }, 'monoSlide', { aliases: ['Agfa Scala', 'Scala 200'], discontinued: true, dev: { note: 'A black-and-white slide film, originally processed only by Agfa-licensed labs.' } }),
+	c('apx25', 'Agfa', 'APX 25', 25, 'bw', { body: '#b8b8b8', band: '#d81818', ink: '#ffffff' }, 'mono', { ...both, aliases: ['Agfapan APX 25'], discontinued: true }),
+	c('centuria200', 'Konica', 'Centuria 200', 200, 'c41', { body: '#1858a8', band: '#d82828', ink: '#ffffff' }, 'color', { aliases: ['Konica Minolta Centuria 200'], discontinued: true }),
+	c('centuria400', 'Konica', 'Centuria 400', 400, 'c41', { body: '#1858a8', band: '#28a858', ink: '#ffffff' }, 'color', { aliases: ['Konica Minolta Centuria 400'], discontinued: true }),
+	c('centuria800', 'Konica', 'Centuria 800', 800, 'c41', { body: '#1858a8', band: '#f0a018', ink: '#ffffff' }, 'color', { aliases: ['Konica Minolta Centuria 800'], discontinued: true }),
 ];
 
 /* ---------- finding a film ---------- */

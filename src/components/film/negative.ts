@@ -75,11 +75,13 @@ export const NEGATIVE_PROFILES = {
 	aerial: { base: [0.12, 0.4, 0.58], gamma: [0.66, 0.7, 0.72], latitude: 1.6, crosstalk: 0.22 },
 	// Slide film (E-6): a positive on a nearly clear base with a faint cool cast; short latitude.
 	slide: { base: [0.08, 0.07, 0.05], gamma: [1, 1, 1], latitude: 1, crosstalk: 0, positive: true },
+	// Black-and-white reversal (Fomapan R, Scala): a silver positive on a clear base.
+	monoSlide: { base: [0.06, 0.06, 0.06], gamma: [1, 1, 1], latitude: 1, crosstalk: 0, mono: true, positive: true },
 } satisfies Record<string, NegativeProfile>;
 
 export type NegativeProfileKey = keyof typeof NEGATIVE_PROFILES;
 
-const MONOCHROME = /\b(hp5|fp4|delta|pan ?f|tri-?x|t-?max|kentmere|fomapan|acros|ortho|retro \d|xp2|double-x|lady ?grey)\b/i;
+const MONOCHROME = /\b(hp5|fp4|delta|pan ?f|tri-?x|t-?max|kentmere|fomapan|acros|ortho|retro \d|xp2|double-x|lady ?grey|ektapan|neopan|rpx|apx|hr-50|chs|earl ?grey|kino)\b/i;
 
 /** Black-and-white, from the stock's display name (the catalog first, then its name's words). */
 export const isMonochrome = (stockLabel: string) => {
@@ -93,13 +95,14 @@ export function negativeProfileKey(stockLabel: string, brand: string, mono: bool
 	const known = findStock({ name: stockLabel, brand });
 	if (known) return known.negative;
 	const name = stockLabel.toLowerCase();
-	if (mono) return /t-?max|tri-?x|double-x/.test(name) ? 'kodakMono' : 'mono';
-	if (name.includes('portra')) return 'portra';
+	if (mono) return /t-?max|tri-?x|double-x|ektapan/.test(name) ? 'kodakMono' : 'mono';
+	// Ektacolor Pro is Eastman Kodak's 2026 name for its professional colour negatives (Portra's family).
+	if (name.includes('portra') || name.includes('ektacolor')) return 'portra';
 	if (name.includes('ektar')) return 'ektar';
 	if (/cinestill|candido|vision ?3|\b\d{2,3}[dt]\b/.test(name)) {
 		return /\b\d{2,3}t\b|tungsten|candido/.test(name) ? 'cineTungsten' : 'cine';
 	}
-	if (/ektacolor|expired/.test(name)) return 'expired';
+	if (/expired/.test(name)) return 'expired';
 	if (brand === 'Lucky') return 'lucky';
 	if (brand === 'Kodak' || /^fujifilm (200|400)$/.test(name)) return 'kodak';
 	if (brand === 'Fujifilm') return 'fuji';
@@ -195,7 +198,7 @@ export function negativeFilter(key: NegativeProfileKey, exposure: number): Negat
 		const gain = 2 ** -exposure;
 		return {
 			id: negativeFilterId(key, exposure),
-			mono: false,
+			mono: Boolean(p.mono),
 			density: [0, 1, 2].map(() => table((v) => clamp(toSrgb(toLinear(v) * gain), 0, 1))),
 			matrix: [0, 1, 2].map((c) => [0, 1, 2].map((j) => (j === c ? 1 : 0)).join(' ') + ' 0 0').concat('0 0 0 1 0').join(' '),
 			transmit: [0, 1, 2].map((c) => table((v) => toSrgb(toLinear(v) * 10 ** -p.base[c]))),
