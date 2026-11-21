@@ -19,7 +19,7 @@ const rolls = filmDesk.rolls;
 // Exposure, lens and place, for rolls the owner chose to share; and their marks.
 const published = await publishedExposures();
 const marks = await publishedMarks();
-const desk = toFilmDeskData(rolls, published, marks);
+const desk = toFilmDeskData(rolls, published, marks, filmDesk.rollMeta);
 // What's in the cameras right now, if the owner shows it.
 const loadedNow = await publishedLoaded();
 

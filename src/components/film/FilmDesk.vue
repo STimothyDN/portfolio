@@ -52,11 +52,11 @@
 				@toggle-open="rollsState = NEXT_ROLLS_STATE[rollsCurrent]"
 				@toggle="pickRoll"
 			/>
-			<p v-if="loadedLine.length" class="loaded-now">
+			<a v-if="loadedLine.length" class="loaded-now" href="https://lab.timo3.dev/" title="Live from shoot.dev.scan — open the logbook">
 				<span class="rec" aria-hidden="true"></span>
 				<span class="sr-only">Loaded now: </span>
 				<span v-for="line in loadedLine" :key="line">{{ line }}</span>
-			</p>
+			</a>
 			<FilmFilterDock
 				class="film-dock"
 				:facets="FILTER_FACETS"
@@ -283,10 +283,19 @@ import type { FacetKey, FacetOption, FilmPhotoData, FilmRollData, RollsState } f
 // Every frame on every roll, packed into one string by the page (data.ts) —
 // static for the island's lifetime, so a plain array, not reactive state.
 const props = defineProps<{ rolls: FilmRollData[]; packedPhotos: string; loadedNow?: LoadedNow[] }>();
-/** "In the Minolta X-700: Kodak Portra 400, 22 of 36" (the Film Lab's, when its owner shows it). */
+const liveLoaded = ref<LoadedNow[]>(props.loadedNow ?? []);
+/** "In the Minolta X-700: Kodak Portra 400, 22 of 36" (hydrated live from shoot.dev.scan). */
 const loadedLine = computed(() =>
-	(props.loadedNow ?? []).slice(0, 2).map((l) => `In the ${l.camera}: ${l.stock}${l.frames ? `, ${l.frames} of ${l.exposures}` : ''}`)
+	liveLoaded.value.slice(0, 2).map((l) => `In the ${l.camera}: ${l.stock}${l.frames ? `, ${l.frames} of ${l.exposures}` : ''}`)
 );
+onMounted(() => {
+	fetch('https://lab.timo3.dev/api/v1/public/loaded', { headers: { accept: 'application/json' } })
+		.then((r) => (r.ok ? r.json() : null))
+		.then((d: { loaded?: LoadedNow[] } | null) => {
+			if (d?.loaded && Array.isArray(d.loaded)) liveLoaded.value = d.loaded;
+		})
+		.catch(() => {});
+});
 const photos: FilmPhotoData[] = unpackFilmPhotos(props.packedPhotos);
 
 /* ── Facets ─────────────────────────────────────────────────────────── */
@@ -680,12 +689,23 @@ function buildLightboxRecord(i: number) {
 		thumbUrl: thumbUrl(i),
 		width: p.w,
 		height: p.h,
-		// The title already names the roll and frame; these are the rest of the folder name.
+		// The title already names the roll and frame; these are the rest of the folder name + live logbook context.
 		details: [
 			{ label: 'Camera', value: roll.cameraLabel },
-			{ label: 'Film', value: roll.stockLabel },
+			{
+				label: 'Film',
+				value:
+					roll.ratedIso && roll.boxIso && roll.ratedIso !== roll.boxIso
+						? `${roll.stockLabel} @ EI ${roll.ratedIso}${roll.devPush ? ` (${roll.devPush > 0 ? `+${roll.devPush}` : `−${-roll.devPush}`})` : ''}`
+						: roll.devPush
+							? `${roll.stockLabel} (${roll.devPush > 0 ? `push +${roll.devPush}` : `pull −${-roll.devPush}`})`
+							: roll.stockLabel,
+			},
 			{ label: 'Lab', value: roll.labLabel },
 			{ label: 'Developed', value: fullDate(roll.developed) },
+			...(roll.labCode
+				? [{ label: 'Shooting log', value: `${roll.labCode} ↗`, href: `https://lab.timo3.dev/rolls/${encodeURIComponent(roll.labCode)}/` }]
+				: []),
 		],
 	};
 }
@@ -1988,7 +2008,14 @@ onBeforeUnmount(() => {
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	color: var(--gray-200);
-	pointer-events: none;
+	text-decoration: none;
+	pointer-events: auto;
+	cursor: pointer;
+	transition: color 0.15s ease;
+}
+
+.loaded-now:hover {
+	color: var(--gray-0);
 }
 
 .loaded-now .rec {

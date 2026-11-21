@@ -142,7 +142,10 @@
 							<!-- Free-form rows (film frames have no EXIF; their roll supplies these). -->
 							<div v-for="d in current?.details ?? []" :key="d.label" class="spec">
 								<dt>{{ d.label }}</dt>
-								<dd>{{ d.value }}</dd>
+								<dd>
+									<a v-if="d.href" class="map-link" :href="d.href" target="_blank" rel="noopener">{{ d.value }}</a>
+									<template v-else>{{ d.value }}</template>
+								</dd>
 							</div>
 							<div v-if="formattedLocation" class="spec">
 								<dt>Location</dt>

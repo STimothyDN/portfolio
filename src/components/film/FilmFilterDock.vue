@@ -568,14 +568,18 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
 		letter-spacing: 0.05em;
 	}
 
-	/* Icon-only actions on phones; the labels stay for screen readers. */
+	/* Icon-only actions on phones; keep "Lab" visible so visitors recognise the link. */
 	.dock-action,
-	.dock-neg,
-	.dock-lab {
+	.dock-neg {
 		padding-inline: 0.7rem;
 	}
 
-	.action-label {
+	.dock-lab {
+		padding-inline: 0.6rem;
+	}
+
+	.dock-action .action-label,
+	.dock-neg .action-label {
 		position: absolute;
 		width: 1px;
 		height: 1px;

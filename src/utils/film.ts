@@ -49,6 +49,13 @@ export interface LoadedNow {
 	exposures: number;
 }
 
+export interface PublicRollMeta {
+	code: string;
+	ratedIso: number | null;
+	boxIso: number | null;
+	devPush: number | null;
+}
+
 interface PublicDesk {
 	cdnBase: string;
 	labels: FilmLabels;
@@ -56,6 +63,7 @@ interface PublicDesk {
 	exposures: Record<string, Record<string, PublicExposure>>;
 	marks: Record<string, Record<string, number>>;
 	loaded: LoadedNow[];
+	rollMeta?: Record<string, PublicRollMeta>;
 	access?: Record<string, string>;
 }
 
@@ -67,6 +75,7 @@ export interface FilmDesk {
 	exposures: PublicDesk['exposures'];
 	marks: PublicDesk['marks'];
 	loaded: LoadedNow[];
+	rollMeta: Record<string, PublicRollMeta>;
 }
 
 const API = (
@@ -75,7 +84,7 @@ const API = (
 	'https://lab.timo3.dev/api'
 ).replace(/\/$/, '');
 
-const EMPTY: FilmDesk = { ok: false, rolls: [], labels: { cameras: {}, stocks: {}, labs: {}, brands: {} }, exposures: {}, marks: {}, loaded: [] };
+const EMPTY: FilmDesk = { ok: false, rolls: [], labels: { cameras: {}, stocks: {}, labs: {}, brands: {} }, exposures: {}, marks: {}, loaded: [], rollMeta: {} };
 // Once per build; on the server (the old lab's pages) every minute; in dev every few seconds.
 const FRESH_FOR_MS = import.meta.env.DEV ? 3_000 : 60_000;
 let cached: { at: number; desk: Promise<FilmDesk> } | undefined;
@@ -95,6 +104,7 @@ async function fetchDesk(): Promise<FilmDesk> {
 			exposures: raw.exposures ?? {},
 			marks: raw.marks ?? {},
 			loaded: raw.loaded ?? [],
+			rollMeta: raw.rollMeta ?? {},
 		};
 		lastGood = desk;
 		labels = desk.labels;
@@ -181,7 +191,8 @@ const exposureOf = (photo: FilmRoll['data']['photos'][number]) => (photo.tone ? 
 export function toFilmDeskData(
 	rolls: FilmRoll[],
 	published?: PublishedExposures,
-	marks?: Map<string, Map<string, number>>
+	marks?: Map<string, Map<string, number>>,
+	rollMeta?: Record<string, PublicRollMeta>
 ): { rolls: FilmRollData[]; photos: FilmPhotoData[] } {
 	// A mark from the lab's contact sheet overrides the uploaded rating: a reject sinks to the bottom of the pile.
 	const priorityOf = (rollId: string, photo: FilmRoll['data']['photos'][number]) => {
@@ -224,6 +235,14 @@ export function toFilmDeskData(
 			folder: rollFolder(roll),
 			count: data.photos.length,
 			previews,
+			...(rollMeta?.[roll.id]
+				? {
+						labCode: rollMeta[roll.id].code,
+						ratedIso: rollMeta[roll.id].ratedIso,
+						boxIso: rollMeta[roll.id].boxIso,
+						devPush: rollMeta[roll.id].devPush,
+					}
+				: {}),
 		};
 	});
 

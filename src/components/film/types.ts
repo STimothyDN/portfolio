@@ -39,6 +39,12 @@ export interface FilmRollData {
 	count: number;
 	/** A few favorite frames for the roll strip's mini contact sheet, with their exposures. */
 	previews: { file: string; exposure: number }[];
+	/** Linked roll code in shoot.dev.scan (e.g. "R-047"), for deep links to the shooting log. */
+	labCode?: string;
+	/** Rated ISO and explicit processing push/pull stops, when logged. */
+	ratedIso?: number | null;
+	boxIso?: number | null;
+	devPush?: number | null;
 }
 
 /**
